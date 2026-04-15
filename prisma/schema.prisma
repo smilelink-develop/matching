@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Person {
+  id              Int      @id @default(autoincrement())
+  name            String
+  photoUrl        String?
+  nationality     String
+  department      String?
+  residenceStatus String
+  channel         String
+  lineUserId      String?
+  messengerPsid   String?
+  email           String?
+  whatsappId      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  messages     Message[]
+  groupMembers GroupMember[]
+  onboarding   PersonOnboarding?
+  documents    PortalDocument[]
+  portalTasks  PortalTask[]
+}
+
+model PersonOnboarding {
+  id                       Int      @id @default(autoincrement())
+  personId                 Int      @unique
+  person                   Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  englishName              String?
+  fullNameKana             String?
+  birthDate                String?
+  phoneNumber              String?
+  postalCode               String?
+  address                  String?
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  emergencyRelationship    String?
+  status                   String   @default("draft")
+  submittedAt              DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+model PortalDocument {
+  id              Int      @id @default(autoincrement())
+  personId        Int
+  person          Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  kind            String
+  fileName        String
+  fileUrl         String
+  mimeType        String?
+  autoJudgeStatus String   @default("pending")
+  autoJudgeNote   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([personId, kind])
+}
+
+model PortalTask {
+  id          Int       @id @default(autoincrement())
+  personId    Int
+  person      Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  description String?
+  href        String?
+  dueDate     DateTime?
+  status      String    @default("pending")
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model LineProfile {
+  id              Int      @id @default(autoincrement())
+  lineUserId      String   @unique
+  displayName     String?
+  lastMessageText String?
+  lastWebhookType String?
+  lastSeenAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model MessengerProfile {
+  id              Int      @id @default(autoincrement())
+  psid            String   @unique
+  lastMessageText String?
+  lastWebhookType String?
+  lastSeenAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Message {
+  id         Int       @id @default(autoincrement())
+  personId   Int?
+  person     Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+  channel    String
+  direction  String
+  content    String
+  externalId String?
+  sentAt     DateTime  @default(now())
+  readAt     DateTime?
+}
+
+model MessageTemplate {
+  id        Int      @id @default(autoincrement())
+  name      String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppSettings {
+  id               Int      @id
+  calendarEmbedUrl String?
+  calendarLabel    String?
+  fixedQuestions   Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model OnboardingFormTemplate {
+  id          Int                      @id @default(autoincrement())
+  name        String
+  description String?
+  questions   OnboardingFormQuestion[]
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+}
+
+model OnboardingFormQuestion {
+  id         Int                    @id @default(autoincrement())
+  templateId Int
+  template   OnboardingFormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fixedKey   String?
+  label      String
+  type       String
+  required   Boolean                @default(false)
+  sortOrder  Int                    @default(0)
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  @@index([templateId, sortOrder])
+}
+
+model Group {
+  id        Int           @id @default(autoincrement())
+  name      String
+  members   GroupMember[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model GroupMember {
+  id       Int    @id @default(autoincrement())
+  group    Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId  Int
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId Int
+
+  @@unique([groupId, personId])
+}
+
+model MessageLog {
+  id           Int       @id @default(autoincrement())
+  title        String?
+  body         String
+  channel      String
+  targetFilter String
+  status       String
+  matchedCount Int
+  sentCount    Int
+  skippedCount Int
+  failedCount  Int       @default(0)
+  recipients   Json?
+  failures     Json?
+  scheduledAt  DateTime?
+  createdAt    DateTime  @default(now())
+}
