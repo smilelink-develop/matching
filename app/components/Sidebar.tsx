@@ -193,8 +193,11 @@ export default function Sidebar() {
           />
         </div>
         <div>
-          <p className="text-lg font-bold tracking-wide text-white">SMILE MATCHING</p>
-          <p className="text-xs text-white/50 mt-0.5">社内紹介コンソール</p>
+          <p className="text-lg font-bold leading-[0.95] tracking-[0.18em] text-white">
+            <span className="block">SMILE</span>
+            <span className="block">MATCHING</span>
+          </p>
+          <p className="mt-1 text-xs text-white/50">人材紹介ダッシュボード</p>
         </div>
       </Link>
 
