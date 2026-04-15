@@ -115,6 +115,8 @@ const NAV: NavItem[] = [
       { label: "連絡先紐づけ", href: "/personnel/link" },
     ],
   },
+  { label: "企業情報", href: "/companies", icon: PersonnelIcon },
+  { label: "パートナー情報", href: "/partners", icon: PersonnelIcon },
   { label: "候補者チャット", href: "/chat", icon: ChatIcon },
   { label: "日程調整", href: "/calendar", icon: CalendarIcon },
   {

@@ -18,6 +18,8 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   await prisma.groupMember.deleteMany();
   await prisma.group.deleteMany();
+  await prisma.partner.deleteMany();
+  await prisma.company.deleteMany();
   await prisma.onboardingFormQuestion.deleteMany();
   await prisma.onboardingFormTemplate.deleteMany();
   await prisma.message.deleteMany();
@@ -247,6 +249,44 @@ async function main() {
         matchedCount: 1,
         sentCount: 1,
         skippedCount: 0,
+      },
+    ],
+  });
+
+  await prisma.company.createMany({
+    data: [
+      {
+        name: "青海テック株式会社",
+        industry: "製造",
+        location: "千葉県",
+        hiringStatus: "募集中",
+        notes: "技能実習と特定技能の両方を検討中",
+      },
+      {
+        name: "みらいケアサービス",
+        industry: "介護",
+        location: "東京都",
+        hiringStatus: "面談調整中",
+        notes: "4名の推薦候補を比較予定",
+      },
+    ],
+  });
+
+  await prisma.partner.createMany({
+    data: [
+      {
+        name: "Hanoi Career Bridge",
+        country: "ベトナム",
+        channel: "LINE",
+        contactName: "Tran Thi Lan",
+        notes: "製造職の候補者送客が得意",
+      },
+      {
+        name: "Jakarta Global Link",
+        country: "インドネシア",
+        channel: "Messenger",
+        contactName: "Budi Santoso",
+        notes: "介護・外食の候補者に強い",
       },
     ],
   });

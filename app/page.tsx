@@ -34,6 +34,8 @@ const FLOW = [
 
 const MODULES = [
   { title: "候補者管理", href: "/personnel", body: "候補者の基本情報、連絡先、SNS導線をまとめて管理します。" },
+  { title: "企業情報", href: "/companies", body: "企業情報は全アカウント共通で持ち、案件や推薦の土台にします。" },
+  { title: "パートナー情報", href: "/partners", body: "海外パートナー情報も共通台帳として持ち、誰でも同じ情報を見られます。" },
   { title: "候補者チャット", href: "/chat", body: "候補者とのLINE / Messenger連絡を一元化します。" },
   { title: "求人票管理", href: "/job-postings", body: "企業から受けた求人票を整理し、自社フォーマットへ落とし込みます。" },
   { title: "案件・進捗管理", href: "/deals", body: "企業、パートナー、候補者の複数軸で案件を追いかけます。" },
@@ -53,6 +55,9 @@ export default async function Home() {
         </h1>
         <p className="mt-3 max-w-4xl text-sm leading-7 text-gray-600">
           候補者への入力依頼、履歴書作成、面談調整、推薦、入社進捗、売上確認までを一つの流れで管理するための社内システムです。
+        </p>
+        <p className="mt-2 max-w-4xl text-sm leading-7 text-gray-500">
+          候補者・企業・パートナー・案件は全員共通で管理し、カレンダーや自分用テンプレートだけをアカウントごとに分けます。
         </p>
       </section>
 

@@ -336,6 +336,9 @@ function SummaryCard({
       <p className="mt-1 text-sm text-gray-500">
         {currentAccount.loginId} / {currentAccount.role === "admin" ? "管理者" : "通常アカウント"}
       </p>
+      <p className="mt-3 text-sm leading-6 text-gray-500">
+        候補者・企業・パートナー・案件は全員共通です。ここで変えるのは主に自分のカレンダーと、管理者だけが触れる共通ルールです。
+      </p>
     </section>
   );
 }
