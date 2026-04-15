@@ -60,7 +60,7 @@ export default function SharedPartnersClient({
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-[#0F172A]">パートナーを追加</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">パートナーを追加</h2>
         <p className="mt-1 text-sm text-gray-500">海外紹介パートナーの台帳を全員で共有します。</p>
         <div className="mt-5 space-y-4">
           <Field label="パートナー名 *">
@@ -82,7 +82,7 @@ export default function SharedPartnersClient({
             type="button"
             onClick={() => void submit()}
             disabled={saving}
-            className="w-full rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-medium text-white hover:bg-[#1D4ED8] disabled:opacity-60"
+            className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
           >
             {saving ? "登録中..." : "パートナーを登録"}
           </button>
@@ -90,11 +90,11 @@ export default function SharedPartnersClient({
       </section>
 
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-[#0F172A]">共有パートナー一覧</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">共有パートナー一覧</h2>
         <div className="mt-4 space-y-3">
           {partners.map((partner) => (
-            <div key={partner.id} className="rounded-2xl border border-gray-200 bg-[#FCFDFF] p-4">
-              <p className="text-sm font-semibold text-[#0F172A]">{partner.name}</p>
+            <div key={partner.id} className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
+              <p className="text-sm font-semibold text-[var(--color-text-dark)]">{partner.name}</p>
               <p className="mt-1 text-xs text-gray-500">
                 {(partner.country || "国未設定")} / {(partner.channel || "連絡手段未設定")}
               </p>
@@ -118,11 +118,11 @@ export default function SharedPartnersClient({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#0F172A]">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-dark)]">{label}</label>
       {children}
     </div>
   );
 }
 
 const INPUT =
-  "w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30";
+  "w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";

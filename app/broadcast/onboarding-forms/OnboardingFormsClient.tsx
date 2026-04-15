@@ -156,10 +156,10 @@ export default function OnboardingFormsClient({
   return (
     <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6">
       <div className="space-y-5">
-        <section className="rounded-2xl border border-[#D6E4FF] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-[var(--color-secondary)] bg-white p-6 shadow-sm">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-base font-semibold text-[#0F172A]">
+              <p className="text-base font-semibold text-[var(--color-text-dark)]">
                 {editId ? "初期登録フォームを編集" : "初期登録フォームを作成"}
               </p>
               <p className="mt-1 text-sm text-gray-500">
@@ -196,13 +196,13 @@ export default function OnboardingFormsClient({
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#D6E4FF] bg-[#F8FBFF] p-6 shadow-sm">
+        <section className="rounded-2xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-6 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[#0F172A]">固定で入る質問</p>
+              <p className="text-sm font-semibold text-[var(--color-text-dark)]">固定で入る質問</p>
               <p className="mt-1 text-xs text-gray-500">この部分は全フォーム共通です。</p>
             </div>
-            <span className="rounded-full bg-[#DBEAFE] px-3 py-1 text-xs font-medium text-[#1D4ED8]">
+            <span className="rounded-full bg-[var(--color-secondary)] px-3 py-1 text-xs font-medium text-[var(--color-primary-hover)]">
               固定
             </span>
           </div>
@@ -211,16 +211,16 @@ export default function OnboardingFormsClient({
             {fixedQuestions.map((question) => (
               <div
                 key={question.fixedKey ?? question.label}
-                className="flex items-center justify-between rounded-xl border border-[#D6E4FF] bg-white px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-[var(--color-secondary)] bg-white px-4 py-3"
               >
                 <div>
-                  <p className="text-sm font-medium text-[#0F172A]">{question.label}</p>
+                  <p className="text-sm font-medium text-[var(--color-text-dark)]">{question.label}</p>
                   <p className="mt-1 text-xs text-gray-500">
                     {question.type === "text" ? "テキスト入力" : "ファイル提出"}
                   </p>
                 </div>
                 <select
-                  className={`rounded-lg px-3 py-2 text-xs font-medium focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 ${badgeClass(question.required)}`}
+                  className={`rounded-lg px-3 py-2 text-xs font-medium focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 ${badgeClass(question.required)}`}
                   value={question.required ? "required" : "optional"}
                   onChange={(event) =>
                     updateFixedQuestion(
@@ -240,14 +240,14 @@ export default function OnboardingFormsClient({
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[#0F172A]">追加質問</p>
+              <p className="text-sm font-semibold text-[var(--color-text-dark)]">追加質問</p>
               <p className="mt-1 text-xs text-gray-500">
                 Google Form のように、質問文と回答形式を追加できます。
               </p>
             </div>
             <button
               onClick={addQuestion}
-              className="rounded-lg border border-[#2563EB] px-3 py-2 text-sm font-medium text-[#2563EB] hover:bg-[#EFF6FF]"
+              className="rounded-lg border border-[var(--color-primary)] px-3 py-2 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
             >
               質問を追加
             </button>
@@ -255,9 +255,9 @@ export default function OnboardingFormsClient({
 
           <div className="mt-4 space-y-4">
             {questions.map((question, index) => (
-              <div key={`${editId ?? "new"}-${index}`} className="rounded-2xl border border-gray-200 bg-[#FCFDFF] p-4">
+              <div key={`${editId ?? "new"}-${index}`} className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-medium text-[#0F172A]">質問 {index + 1}</p>
+                  <p className="text-sm font-medium text-[var(--color-text-dark)]">質問 {index + 1}</p>
                   <button
                     onClick={() => removeQuestion(index)}
                     className="text-xs text-red-400 hover:underline"
@@ -314,7 +314,7 @@ export default function OnboardingFormsClient({
             <button
               onClick={save}
               disabled={saving}
-              className="rounded-lg bg-[#2563EB] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1D4ED8] disabled:opacity-50"
+              className="rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
             >
               {saving ? "保存中..." : editId ? "更新する" : "テンプレートを作成"}
             </button>
@@ -335,13 +335,13 @@ export default function OnboardingFormsClient({
           <div key={template.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold text-[#0F172A]">{template.name}</p>
+                <p className="text-sm font-semibold text-[var(--color-text-dark)]">{template.name}</p>
                 {template.description && (
                   <p className="mt-1 text-sm text-gray-500">{template.description}</p>
                 )}
               </div>
               <div className="flex gap-3 text-xs">
-                <button onClick={() => startEdit(template)} className="text-[#2563EB] hover:underline">
+                <button onClick={() => startEdit(template)} className="text-[var(--color-primary)] hover:underline">
                   編集
                 </button>
                 <button onClick={() => remove(template.id)} className="text-red-400 hover:underline">
@@ -350,14 +350,14 @@ export default function OnboardingFormsClient({
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[#D6E4FF] bg-[#F8FBFF] p-3">
+            <div className="mt-4 rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-3">
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <span>固定質問</span>
                 <span>{fixedQuestionDefaults.length}件</span>
               </div>
               <div className="mt-2 space-y-1">
                 {mergeFixedQuestions(template.questions).map((question) => (
-                  <div key={question.fixedKey ?? question.label} className="flex items-center justify-between text-xs text-[#0F172A]">
+                  <div key={question.fixedKey ?? question.label} className="flex items-center justify-between text-xs text-[var(--color-text-dark)]">
                     <span>{question.label}</span>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${badgeClass(question.required)}`}>
                       {question.required ? "必須" : "任意"}
@@ -381,7 +381,7 @@ export default function OnboardingFormsClient({
                   <div key={question.id ?? `${template.id}-${index}`} className="rounded-xl border border-gray-200 px-3 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-[#0F172A]">{question.label}</p>
+                        <p className="text-sm font-medium text-[var(--color-text-dark)]">{question.label}</p>
                         <p className="mt-1 text-xs text-gray-500">
                           {question.type === "text" ? "テキスト回答" : "ファイル提出"}
                         </p>
@@ -417,7 +417,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const INPUT =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30";
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";
 
 function normalizeTemplate(template: Template): Template {
   return {
@@ -431,6 +431,6 @@ function normalizeTemplate(template: Template): Template {
 
 function badgeClass(required: boolean) {
   return required
-    ? "bg-[#DBEAFE] text-[#1D4ED8] border border-[#BFDBFE]"
+    ? "bg-[var(--color-secondary)] text-[var(--color-primary-hover)] border border-[var(--color-secondary)]"
     : "bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]";
 }

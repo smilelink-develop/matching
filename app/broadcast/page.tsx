@@ -15,7 +15,7 @@ export default async function BroadcastPage() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A]">パートナー一斉連絡</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">パートナー一斉連絡</h1>
         <p className="text-sm text-gray-500 mt-1">
           {account.name}さんのテンプレートを使って、候補者や海外パートナーへ一斉連絡します
         </p>

@@ -29,14 +29,14 @@ export default function AppFrame({ children }: { children: React.ReactNode }) {
 
   if (isPortal || isAuth) {
     return (
-      <body className={`min-h-full ${isAuth ? "bg-[#0F172A] text-white" : "bg-[#EAF4FF] text-[#0F172A]"}`}>
+      <body className={`min-h-full ${isAuth ? "bg-[var(--color-text-dark)] text-white" : "bg-[var(--color-light)] text-[var(--color-text-dark)]"}`}>
         {children}
       </body>
     );
   }
 
   return (
-    <body className="h-full flex bg-[#F8FAFC] text-[#0F172A]">
+    <body className="h-full flex bg-[var(--color-light)] text-[var(--color-text-dark)]">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[1440px]">{children}</div>

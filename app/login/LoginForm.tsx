@@ -70,7 +70,7 @@ export default function LoginForm() {
         type="button"
         onClick={() => void submit()}
         disabled={saving}
-        className="w-full rounded-xl bg-[#60A5FA] px-4 py-3 text-sm font-semibold text-[#0F172A] transition hover:bg-[#93C5FD] disabled:opacity-60"
+        className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-[var(--color-text-dark)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
       >
         {saving ? "ログイン中..." : "ログイン"}
       </button>
@@ -83,4 +83,4 @@ export default function LoginForm() {
 }
 
 const INPUT =
-  "w-full rounded-xl border border-white/15 bg-white/95 px-3 py-3 text-sm text-[#0F172A] placeholder:text-slate-400 focus:border-[#60A5FA] focus:outline-none focus:ring-2 focus:ring-[#60A5FA]/35";
+  "w-full rounded-xl border border-white/15 bg-white/95 px-3 py-3 text-sm text-[var(--color-text-dark)] placeholder:text-slate-400 focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/35";

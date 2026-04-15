@@ -40,8 +40,8 @@ export default async function PortalHomePage({
   return (
     <PortalFrame person={person}>
       <div className="space-y-5">
-        <section className="overflow-hidden rounded-[24px] border border-[#D8E6F8] bg-white/94 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between gap-4 border-b border-[#D8E6F8] bg-[linear-gradient(135deg,_#2563EB_0%,_#4F9BFF_100%)] px-5 py-4 text-white">
+        <section className="overflow-hidden rounded-[24px] border border-[var(--color-secondary)] bg-white/94 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center justify-between gap-4 border-b border-[var(--color-secondary)] bg-[linear-gradient(135deg,var(--color-primary)_0%,var(--color-secondary)_100%)] px-5 py-4 text-white">
             <div>
               <p className="text-sm font-semibold">対応が必要</p>
               <p className="mt-1 text-xs text-white/80">
@@ -55,10 +55,10 @@ export default async function PortalHomePage({
             </div>
           </div>
 
-          <div className="bg-[#F9FBFF] px-3 py-3">
+          <div className="bg-[var(--color-light)] px-3 py-3">
             {pendingTasks.length === 0 ? (
-              <div className="rounded-[18px] border border-dashed border-[#D6E4F5] bg-white px-4 py-5">
-                <p className="text-sm font-semibold text-[#0F172A]">すべて対応済みです</p>
+              <div className="rounded-[18px] border border-dashed border-[var(--color-secondary)] bg-white px-4 py-5">
+                <p className="text-sm font-semibold text-[var(--color-text-dark)]">すべて対応済みです</p>
                 <p className="mt-1 text-xs leading-5 text-[#64748B]">
                   新しい依頼が届いたときだけ、ここにタスクが表示されます。
                 </p>
@@ -79,24 +79,24 @@ export default async function PortalHomePage({
           </div>
         </section>
 
-        <details className="overflow-hidden rounded-[20px] border border-[#D8E6F8] bg-white/82">
+        <details className="overflow-hidden rounded-[20px] border border-[var(--color-secondary)] bg-white/82">
           <summary className="cursor-pointer list-none">
             <div className="flex items-center justify-between px-4 py-4">
               <div>
-                <p className="text-sm font-medium text-[#334155]">対応済み</p>
+                <p className="text-sm font-medium text-[var(--color-text-dark)]">対応済み</p>
                 <p className="mt-1 text-xs text-[#94A3B8]">{completedTasks.length} 件</p>
               </div>
               <span className="text-[#94A3B8]">▾</span>
             </div>
           </summary>
-          <div className="border-t border-[#E6EEF8] bg-[#F8FBFF] px-3 py-3">
+          <div className="border-t border-[var(--color-secondary)] bg-[var(--color-light)] px-3 py-3">
             {completedTasks.length === 0 ? (
               <p className="px-1 text-sm text-[#64748B]">まだ完了したタスクはありません。</p>
             ) : (
               <div className="space-y-2">
                 {completedTasks.map((task) => (
-                  <div key={task.id} className="rounded-[16px] border border-[#E3EBF7] bg-white px-4 py-3">
-                    <p className="text-sm font-medium text-[#0F172A]">{task.title}</p>
+                  <div key={task.id} className="rounded-[16px] border border-[var(--color-secondary)] bg-white px-4 py-3">
+                    <p className="text-sm font-medium text-[var(--color-text-dark)]">{task.title}</p>
                     <p className="mt-1 text-xs text-[#64748B]">
                       {task.completedAt ? `対応済み: ${formatDate(task.completedAt)}` : "対応済み"}
                     </p>
@@ -127,11 +127,11 @@ function TaskCard({
   return (
     <Link
       href={href}
-      className="block rounded-[18px] border border-[#DEE8F5] bg-white px-4 py-3.5 transition-colors hover:border-[#C9DCF3] hover:bg-[#FCFDFF]"
+      className="block rounded-[18px] border border-[var(--color-secondary)] bg-white px-4 py-3.5 transition-colors hover:border-[var(--color-secondary)] hover:bg-[var(--color-light)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[14px] font-semibold text-[#0F172A]">{title}</p>
+          <p className="text-[14px] font-semibold text-[var(--color-text-dark)]">{title}</p>
           <p className="mt-1 text-[12px] leading-5 text-[#64748B]">{description}</p>
         </div>
         <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${dueTone.dot}`} />
@@ -140,7 +140,7 @@ function TaskCard({
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${dueTone.badge}`}>
           {dueTone.label}
         </span>
-        <span className="text-[12px] font-medium text-[#2563EB]">開く →</span>
+        <span className="text-[12px] font-medium text-[var(--color-primary)]">開く →</span>
       </div>
     </Link>
   );
@@ -178,8 +178,8 @@ function getDueTone(dueDate: string | null) {
 
   return {
     label: `期限 ${formatDate(dueDate)}`,
-    badge: "bg-[#EFF6FF] text-[#2563EB]",
-    dot: "bg-[#2563EB]",
+    badge: "bg-[var(--color-light)] text-[var(--color-primary)]",
+    dot: "bg-[var(--color-primary)]",
   };
 }
 

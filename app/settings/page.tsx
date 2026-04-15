@@ -26,7 +26,7 @@ export default async function SettingsPage() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A]">設定</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">設定</h1>
         <p className="mt-1 text-sm text-gray-500">
           カレンダー、自分用テンプレートの基盤、管理者向けの共通設定をここで管理します。
         </p>

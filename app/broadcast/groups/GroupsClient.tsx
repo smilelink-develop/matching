@@ -45,11 +45,11 @@ export default function GroupsClient({ groups: initial, persons }: { groups: Gro
     <div className="grid grid-cols-2 gap-6">
       {/* 作成フォーム */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-4">
-        <p className="font-semibold text-[#0F172A]">グループを作成</p>
+        <p className="font-semibold text-[var(--color-text-dark)]">グループを作成</p>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">グループ名</label>
           <input
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
             value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="ベトナム技能実習グループ"
           />
         </div>
@@ -64,7 +64,7 @@ export default function GroupsClient({ groups: initial, persons }: { groups: Gro
                   type="checkbox"
                   checked={selectedPersonIds.includes(p.id)}
                   onChange={() => togglePerson(p.id)}
-                  className="accent-[#2563EB]"
+                  className="accent-[var(--color-primary)]"
                 />
                 <span className="text-sm">{p.name}</span>
               </label>
@@ -72,7 +72,7 @@ export default function GroupsClient({ groups: initial, persons }: { groups: Gro
           </div>
         </div>
         <button onClick={create} disabled={saving}
-          className="bg-[#2563EB] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#1D4ED8] disabled:opacity-50">
+          className="bg-[var(--color-primary)] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
           {saving ? "作成中..." : "作成"}
         </button>
       </div>
@@ -82,7 +82,7 @@ export default function GroupsClient({ groups: initial, persons }: { groups: Gro
         {groups.map((g) => (
           <div key={g.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <p className="font-medium text-[#0F172A]">{g.name}</p>
+              <p className="font-medium text-[var(--color-text-dark)]">{g.name}</p>
               <div className="flex gap-3 text-xs">
                 <span className="text-gray-400">{g.members.length}名</span>
                 <button onClick={() => del(g.id)} className="text-red-400 hover:underline">削除</button>
@@ -90,7 +90,7 @@ export default function GroupsClient({ groups: initial, persons }: { groups: Gro
             </div>
             <div className="flex flex-wrap gap-1">
               {g.members.map((m) => (
-                <span key={m.id} className="text-xs bg-[#EFF6FF] text-[#2563EB] px-2 py-0.5 rounded-full">
+                <span key={m.id} className="text-xs bg-[var(--color-light)] text-[var(--color-primary)] px-2 py-0.5 rounded-full">
                   {m.name}
                 </span>
               ))}

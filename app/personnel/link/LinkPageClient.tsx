@@ -120,7 +120,7 @@ function ProfileRow({ id, lastMessage, lastSeen, persons, onLink, newHref }: {
       </select>
       <button
         onClick={() => { if (selected) onLink(Number(selected)); else alert("人材を選択してください"); }}
-        className="bg-[#2563EB] text-white text-xs px-3 py-1.5 rounded-lg hover:bg-[#1D4ED8]"
+        className="bg-[var(--color-primary)] text-white text-xs px-3 py-1.5 rounded-lg hover:bg-[var(--color-primary-hover)]"
       >
         紐づけ
       </button>

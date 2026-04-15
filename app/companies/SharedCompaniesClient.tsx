@@ -60,7 +60,7 @@ export default function SharedCompaniesClient({
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-[#0F172A]">企業を追加</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">企業を追加</h2>
         <p className="mt-1 text-sm text-gray-500">登録した企業は全メンバー共通で使います。</p>
         <div className="mt-5 space-y-4">
           <Field label="企業名 *">
@@ -82,7 +82,7 @@ export default function SharedCompaniesClient({
             type="button"
             onClick={() => void submit()}
             disabled={saving}
-            className="w-full rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-medium text-white hover:bg-[#1D4ED8] disabled:opacity-60"
+            className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
           >
             {saving ? "登録中..." : "企業を登録"}
           </button>
@@ -90,18 +90,18 @@ export default function SharedCompaniesClient({
       </section>
 
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-[#0F172A]">共有企業一覧</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">共有企業一覧</h2>
         <div className="mt-4 space-y-3">
           {companies.map((company) => (
-            <div key={company.id} className="rounded-2xl border border-gray-200 bg-[#FCFDFF] p-4">
+            <div key={company.id} className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-[#0F172A]">{company.name}</p>
+                  <p className="text-sm font-semibold text-[var(--color-text-dark)]">{company.name}</p>
                   <p className="mt-1 text-xs text-gray-500">
                     {(company.industry || "業種未設定")} / {(company.location || "所在地未設定")}
                   </p>
                 </div>
-                <span className="rounded-full bg-[#DBEAFE] px-2.5 py-1 text-[11px] font-medium text-[#1D4ED8]">
+                <span className="rounded-full bg-[var(--color-secondary)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary-hover)]">
                   {company.hiringStatus}
                 </span>
               </div>
@@ -122,11 +122,11 @@ export default function SharedCompaniesClient({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-[#0F172A]">{label}</label>
+      <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-dark)]">{label}</label>
       {children}
     </div>
   );
 }
 
 const INPUT =
-  "w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30";
+  "w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";

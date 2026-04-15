@@ -20,12 +20,12 @@ export default async function PersonnelPage() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">候補者一覧</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">候補者一覧</h1>
           <p className="text-sm text-gray-500 mt-1">{persons.length} 件</p>
         </div>
         <Link
           href="/personnel/new"
-          className="bg-[#2563EB] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#1D4ED8] transition-colors"
+          className="bg-[var(--color-primary)] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition-colors"
         >
           + 候補者を追加
         </Link>
@@ -34,7 +34,7 @@ export default async function PersonnelPage() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#EFF6FF] text-[#0F172A]">
+            <tr className="bg-[var(--color-light)] text-[var(--color-text-dark)]">
               <th className="text-left px-4 py-3 font-semibold">名前</th>
               <th className="text-left px-4 py-3 font-semibold">国籍</th>
               <th className="text-left px-4 py-3 font-semibold">部署</th>
@@ -65,7 +65,7 @@ export default async function PersonnelPage() {
                           className="h-10 w-10 rounded-xl object-cover"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563EB] text-sm font-bold text-white">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white">
                           {p.name[0]}
                         </div>
                       )}
@@ -76,7 +76,7 @@ export default async function PersonnelPage() {
                   <td className="px-4 py-3 text-gray-600">{p.department ?? "-"}</td>
                   <td className="px-4 py-3 text-gray-600">{p.residenceStatus}</td>
                   <td className="px-4 py-3">
-                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-[#EFF6FF] text-[#2563EB]">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--color-light)] text-[var(--color-primary)]">
                       {CHANNEL_LABEL[p.channel] ?? p.channel}
                     </span>
                   </td>
@@ -90,7 +90,7 @@ export default async function PersonnelPage() {
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/personnel/${p.id}/edit`}
-                      className="text-[#2563EB] text-xs hover:underline"
+                      className="text-[var(--color-primary)] text-xs hover:underline"
                     >
                       編集
                     </Link>

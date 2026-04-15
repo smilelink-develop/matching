@@ -48,7 +48,7 @@ export default function NewPersonnelPage() {
     <div className="px-8 py-10">
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-[#0F172A]">候補者を追加</h1>
+          <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">候補者を追加</h1>
           <p className="text-sm text-gray-500 mt-2">
             候補者の基本情報と主な連絡手段を登録します。
           </p>
@@ -78,7 +78,7 @@ export default function NewPersonnelPage() {
         </Field>
         <div className="flex gap-3 pt-2">
           <button type="submit" disabled={submitting}
-            className="bg-[#2563EB] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[#1D4ED8] disabled:opacity-50">
+            className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
             {submitting ? "登録中..." : "登録"}
           </button>
           <button type="button" onClick={() => router.back()}
@@ -92,12 +92,12 @@ export default function NewPersonnelPage() {
   );
 }
 
-const INPUT = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]";
+const INPUT = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-[#0F172A] mb-1">{label}</label>
+      <label className="block text-sm font-medium text-[var(--color-text-dark)] mb-1">{label}</label>
       {children}
     </div>
   );

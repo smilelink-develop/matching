@@ -35,18 +35,18 @@ export default async function PortalDocumentsPage({
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-lg font-semibold text-[#0F172A]">{request.title}</p>
+                <p className="text-lg font-semibold text-[var(--color-text-dark)]">{request.title}</p>
                 <p className="mt-2 text-sm leading-6 text-[#64748B]">{request.description}</p>
               </div>
-              <span className="rounded-full bg-[#EFF6FF] px-3 py-1 text-xs font-semibold text-[#2563EB]">
+              <span className="rounded-full bg-[var(--color-light)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)]">
                 {request.record ? "提出済み" : "提出待ち"}
               </span>
             </div>
 
-            <div className="mt-4 rounded-2xl bg-[#F8FAFC] p-4">
+            <div className="mt-4 rounded-2xl bg-[var(--color-light)] p-4">
               {request.record ? (
                 <>
-                  <p className="text-sm font-medium text-[#0F172A]">提出ファイル</p>
+                  <p className="text-sm font-medium text-[var(--color-text-dark)]">提出ファイル</p>
                   <p className="mt-2 text-sm text-[#64748B]">{request.record.fileName}</p>
                   <p className="mt-2 text-sm text-[#64748B]">
                     自動判定: {request.record.autoJudgeStatus}
@@ -57,7 +57,7 @@ export default async function PortalDocumentsPage({
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-medium text-[#0F172A]">まだ提出されていません</p>
+                  <p className="text-sm font-medium text-[var(--color-text-dark)]">まだ提出されていません</p>
                   <p className="mt-2 text-sm text-[#64748B]">
                     初期登録タブからアップロードすると、ここに判定結果が表示されます。
                   </p>

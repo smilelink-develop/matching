@@ -220,7 +220,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-72 shrink-0 bg-[#0F172A] text-white flex flex-col h-screen sticky top-0 px-4 py-5">
+    <aside className="w-72 shrink-0 bg-[var(--color-text-dark)] text-white flex flex-col h-screen sticky top-0 px-4 py-5">
       <Link
         href="/"
         className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors"
@@ -262,7 +262,7 @@ export default function Sidebar() {
                   onClick={() => toggleItem(item.href)}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors ${
                     active
-                      ? "bg-[#2563EB] text-white"
+                      ? "bg-[var(--color-primary)] text-white"
                       : "text-white/80 hover:bg-white/10 hover:text-white"
                   }`}
                 >
@@ -306,14 +306,14 @@ export default function Sidebar() {
                 href={item.href}
                 className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors ${
                   active
-                    ? "bg-[#2563EB] text-white font-medium"
+                    ? "bg-[var(--color-primary)] text-white font-medium"
                     : "text-white/80 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 <Icon active={active} />
                 <span className="flex-1">{item.label}</span>
                 {item.href === "/chat" && unreadChatCount > 0 && (
-                  <span className="min-w-5 rounded-full bg-white px-1.5 py-0.5 text-center text-[11px] font-semibold text-[#2563EB]">
+                  <span className="min-w-5 rounded-full bg-white px-1.5 py-0.5 text-center text-[11px] font-semibold text-[var(--color-primary)]">
                     {unreadChatCount}
                   </span>
                 )}

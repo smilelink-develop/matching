@@ -48,9 +48,9 @@ export default async function Home() {
 
   return (
     <div className="space-y-8 p-8">
-      <section className="rounded-[28px] border border-[#D8E7FF] bg-[linear-gradient(135deg,#F8FBFF_0%,#ECF5FF_100%)] p-8 shadow-sm">
-        <p className="text-xs font-semibold tracking-[0.24em] text-[#2563EB]">SMILE MATCHING</p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight text-[#0F172A]">
+      <section className="rounded-[28px] border border-[var(--color-secondary)] bg-[linear-gradient(135deg,var(--color-light)_0%,var(--color-secondary)_100%)] p-8 shadow-sm">
+        <p className="text-xs font-semibold tracking-[0.24em] text-[var(--color-primary)]">SMILE MATCHING</p>
+        <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--color-text-dark)]">
           {account.name}さんの人材紹介ダッシュボード
         </h1>
         <p className="mt-3 max-w-4xl text-sm leading-7 text-gray-600">
@@ -64,7 +64,7 @@ export default async function Home() {
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-[#0F172A]">標準の進め方</h2>
+            <h2 className="text-xl font-semibold text-[var(--color-text-dark)]">標準の進め方</h2>
             <p className="mt-1 text-sm text-gray-500">
               まずはこの流れで使い始めると、日々の運用が整理しやすくなります。
             </p>
@@ -75,16 +75,16 @@ export default async function Home() {
             <Link
               key={step.title}
               href={step.href}
-              className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-[#BFDBFE] hover:shadow-md"
+              className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--color-secondary)] hover:shadow-md"
             >
               <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#DBEAFE] text-sm font-semibold text-[#1D4ED8]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-secondary)] text-sm font-semibold text-[var(--color-primary-hover)]">
                   {index + 1}
                 </div>
                 <div>
-                  <p className="text-base font-semibold text-[#0F172A]">{step.title}</p>
+                  <p className="text-base font-semibold text-[var(--color-text-dark)]">{step.title}</p>
                   <p className="mt-2 text-sm leading-6 text-gray-600">{step.description}</p>
-                  <p className="mt-4 text-sm font-medium text-[#2563EB]">{step.label} →</p>
+                  <p className="mt-4 text-sm font-medium text-[var(--color-primary)]">{step.label} →</p>
                 </div>
               </div>
             </Link>
@@ -94,7 +94,7 @@ export default async function Home() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-xl font-semibold text-[#0F172A]">主要セクション</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-text-dark)]">主要セクション</h2>
           <p className="mt-1 text-sm text-gray-500">
             今回の業務フローに合わせて、必要な機能をこの構造で整理しています。
           </p>
@@ -104,9 +104,9 @@ export default async function Home() {
             <Link
               key={module.title}
               href={module.href}
-              className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-[#BFDBFE] hover:shadow-md"
+              className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-[var(--color-secondary)] hover:shadow-md"
             >
-              <p className="text-base font-semibold text-[#0F172A]">{module.title}</p>
+              <p className="text-base font-semibold text-[var(--color-text-dark)]">{module.title}</p>
               <p className="mt-2 text-sm leading-6 text-gray-600">{module.body}</p>
             </Link>
           ))}

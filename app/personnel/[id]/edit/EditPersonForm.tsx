@@ -149,12 +149,12 @@ export default function EditPersonForm({ person }: { person: Person }) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
-      <div className="rounded-2xl border border-dashed border-[#BFDBFE] bg-[#F8FBFF] p-6">
-        <p className="text-sm font-medium text-[#0F172A] mb-4">顔写真</p>
+      <div className="rounded-2xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-6">
+        <p className="text-sm font-medium text-[var(--color-text-dark)] mb-4">顔写真</p>
         <div className="flex items-center gap-5">
           <AvatarPreview name={form.name} photoUrl={form.photoUrl} />
           <div className="space-y-3">
-            <label className="inline-flex cursor-pointer items-center rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-medium text-white hover:bg-[#1D4ED8]">
+            <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]">
               {uploadingPhoto ? "読み込み中..." : "写真をアップロード"}
               <input
                 type="file"
@@ -218,19 +218,19 @@ export default function EditPersonForm({ person }: { person: Person }) {
       <hr className="border-gray-100" />
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">提出書類</p>
       {form.documents.map((document) => (
-        <div key={document.kind} className="rounded-2xl border border-[#D6E4FF] bg-[#F8FBFF] p-4 space-y-3">
+        <div key={document.kind} className="rounded-2xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4 space-y-3">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-[#0F172A]">{document.label}</p>
+              <p className="text-sm font-medium text-[var(--color-text-dark)]">{document.label}</p>
               <p className="mt-1 text-xs text-gray-500">
                 {document.fileName ? `現在のファイル: ${document.fileName}` : "まだ提出されていません"}
               </p>
             </div>
-            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-[#2563EB] border border-[#D6E4FF]">
+            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary)] border border-[var(--color-secondary)]">
               {document.autoJudgeStatus === "accepted" ? "確認済み" : "要確認"}
             </span>
           </div>
-          <label className="inline-flex cursor-pointer items-center rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-medium text-white hover:bg-[#1D4ED8]">
+          <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]">
             ファイルを差し替え
             <input
               type="file"
@@ -260,7 +260,7 @@ export default function EditPersonForm({ person }: { person: Person }) {
       <div className="flex items-center justify-between pt-2">
         <div className="flex gap-3">
           <button type="submit" disabled={submitting}
-            className="bg-[#2563EB] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[#1D4ED8] disabled:opacity-50">
+            className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
             {submitting ? "保存中..." : "保存"}
           </button>
           <button type="button" onClick={() => router.back()}
@@ -277,7 +277,7 @@ export default function EditPersonForm({ person }: { person: Person }) {
   );
 }
 
-const INPUT = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]";
+const INPUT = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]";
 
 function AvatarPreview({ name, photoUrl }: { name: string; photoUrl: string }) {
   if (photoUrl) {
@@ -294,7 +294,7 @@ function AvatarPreview({ name, photoUrl }: { name: string; photoUrl: string }) {
   }
 
   return (
-    <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[#2563EB] text-3xl font-bold text-white shadow-sm">
+    <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-3xl font-bold text-white shadow-sm">
       {(name.trim()[0] ?? "人").toUpperCase()}
     </div>
   );
@@ -335,7 +335,7 @@ function buildInitialDocuments(documents: Person["documents"]): DocumentInput[] 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-[#0F172A] mb-1">{label}</label>
+      <label className="block text-sm font-medium text-[var(--color-text-dark)] mb-1">{label}</label>
       {children}
     </div>
   );

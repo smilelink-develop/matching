@@ -84,14 +84,14 @@ export default function BroadcastClient({ persons, templates, groups }: {
       <div className="space-y-5">
         {/* 送信モード */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <p className="text-sm font-semibold text-[#0F172A] mb-3">送信対象</p>
+          <p className="text-sm font-semibold text-[var(--color-text-dark)] mb-3">送信対象</p>
           <div className="flex gap-2 mb-4">
             <button onClick={() => setMode("filter")}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${mode === "filter" ? "bg-[#2563EB] text-white border-[#2563EB]" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${mode === "filter" ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
               フィルタ
             </button>
             <button onClick={() => setMode("group")}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${mode === "group" ? "bg-[#2563EB] text-white border-[#2563EB]" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${mode === "group" ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
               グループ
             </button>
           </div>
@@ -112,12 +112,12 @@ export default function BroadcastClient({ persons, templates, groups }: {
 
         {/* メッセージ */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <p className="text-sm font-semibold text-[#0F172A] mb-3">メッセージ</p>
+          <p className="text-sm font-semibold text-[var(--color-text-dark)] mb-3">メッセージ</p>
           <Select label="テンプレート" value={selectedTemplate} onChange={applyTemplate}
             options={["", ...templates.map((t) => String(t.id))]}
             labels={["テンプレートを選択", ...templates.map((t) => t.name)]} />
           <textarea
-            className="w-full mt-3 border border-gray-300 rounded-lg px-3 py-2 text-sm h-28 resize-none focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]"
+            className="w-full mt-3 border border-gray-300 rounded-lg px-3 py-2 text-sm h-28 resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
             placeholder="配信するメッセージを入力..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -127,22 +127,22 @@ export default function BroadcastClient({ persons, templates, groups }: {
         {/* ボタン */}
         <div className="flex gap-3">
           <button onClick={() => handleSend(false)} disabled={sending}
-            className="flex-1 bg-[#2563EB] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-[#1D4ED8] disabled:opacity-50">
+            className="flex-1 bg-[var(--color-primary)] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
             {sending ? "送信中..." : `この内容で配信 (${targetCount}件)`}
           </button>
           <button onClick={() => setShowSchedule(!showSchedule)}
-            className="border border-[#2563EB] text-[#2563EB] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#EFF6FF]">
+            className="border border-[var(--color-primary)] text-[var(--color-primary)] px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[var(--color-light)]">
             予約
           </button>
         </div>
 
         {showSchedule && (
-          <div className="bg-[#EFF6FF] border border-[#2563EB]/20 rounded-xl p-4 space-y-3">
-            <p className="text-sm font-semibold text-[#0F172A]">送信予約</p>
+          <div className="bg-[var(--color-light)] border border-[var(--color-primary)]/20 rounded-xl p-4 space-y-3">
+            <p className="text-sm font-semibold text-[var(--color-text-dark)]">送信予約</p>
             <input type="datetime-local" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             <button onClick={() => handleSend(true)} disabled={sending}
-              className="w-full bg-[#2563EB] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#1D4ED8] disabled:opacity-50">
+              className="w-full bg-[var(--color-primary)] text-white py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
               予約確定
             </button>
           </div>
@@ -151,15 +151,15 @@ export default function BroadcastClient({ persons, templates, groups }: {
 
       {/* 右: プレビュー */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <p className="text-sm font-semibold text-[#0F172A] mb-3">対象プレビュー ({targetCount} 件)</p>
+        <p className="text-sm font-semibold text-[var(--color-text-dark)] mb-3">対象プレビュー ({targetCount} 件)</p>
         <div className="space-y-1 max-h-96 overflow-y-auto">
           {(mode === "filter" ? filtered : []).map((p) => (
             <div key={p.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50">
-              <div className="w-7 h-7 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="w-7 h-7 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center text-xs font-bold shrink-0">
                 {p.name[0]}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[#0F172A]">{p.name}</p>
+                <p className="text-sm font-medium text-[var(--color-text-dark)]">{p.name}</p>
                 <p className="text-xs text-gray-400">{p.nationality} · {p.residenceStatus}</p>
               </div>
               <span className="ml-auto text-xs text-gray-400">
@@ -189,7 +189,7 @@ function Select({ label, value, onChange, options, labels }: {
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]">
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]">
         {options.map((o, i) => <option key={o} value={o}>{labels?.[i] ?? o}</option>)}
       </select>
     </div>

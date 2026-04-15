@@ -50,7 +50,7 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
   return (
     <div className="grid grid-cols-2 gap-6">
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-4">
-        <p className="font-semibold text-[#0F172A]">{editId ? "テンプレートを編集" : "テンプレートを作成"}</p>
+        <p className="font-semibold text-[var(--color-text-dark)]">{editId ? "テンプレートを編集" : "テンプレートを作成"}</p>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">テンプレート名</label>
           <input className={INPUT} value={name} onChange={(e) => setName(e.target.value)} placeholder="在留期限リマインド" />
@@ -62,7 +62,7 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
         </div>
         <div className="flex gap-2">
           <button onClick={save} disabled={saving}
-            className="bg-[#2563EB] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#1D4ED8] disabled:opacity-50">
+            className="bg-[var(--color-primary)] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
             {saving ? "保存中..." : editId ? "更新" : "作成"}
           </button>
           {editId && <button onClick={reset} className="border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">キャンセル</button>}
@@ -73,9 +73,9 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
         {templates.map((t) => (
           <div key={t.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="flex items-start justify-between">
-              <p className="font-medium text-[#0F172A] text-sm">{t.name}</p>
+              <p className="font-medium text-[var(--color-text-dark)] text-sm">{t.name}</p>
               <div className="flex gap-3 text-xs">
-                <button onClick={() => startEdit(t)} className="text-[#2563EB] hover:underline">編集</button>
+                <button onClick={() => startEdit(t)} className="text-[var(--color-primary)] hover:underline">編集</button>
                 <button onClick={() => del(t.id)} className="text-red-400 hover:underline">削除</button>
               </div>
             </div>
@@ -88,4 +88,4 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
   );
 }
 
-const INPUT = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]";
+const INPUT = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]";

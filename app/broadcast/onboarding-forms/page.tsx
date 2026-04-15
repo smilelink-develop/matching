@@ -27,7 +27,7 @@ export default async function OnboardingFormsPage() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A]">初期登録フォーム</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">初期登録フォーム</h1>
         <p className="mt-1 text-sm text-gray-500">
           {account.name}さん用の依頼フォームを作成します。固定質問は共通、追加質問はアカウント単位で管理できます。
         </p>

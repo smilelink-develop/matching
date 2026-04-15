@@ -213,7 +213,7 @@ export default function SettingsClient({
             {fixedQuestions.map((question) => (
               <div
                 key={question.fixedKey}
-                className="rounded-2xl border border-gray-200 bg-[#FCFDFF] p-4"
+                className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4"
               >
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px_140px]">
                   <Field label="質問名">
@@ -274,11 +274,11 @@ export default function SettingsClient({
             {accountRows.map((account) => (
               <div
                 key={account.id}
-                className="rounded-2xl border border-gray-200 bg-[#FCFDFF] p-4"
+                className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-[#0F172A]">{account.name}</p>
+                    <p className="text-sm font-semibold text-[var(--color-text-dark)]">{account.name}</p>
                     <p className="mt-1 text-xs text-gray-500">
                       {account.loginId} / {account.role === "admin" ? "管理者" : "通常アカウント"}
                     </p>
@@ -331,8 +331,8 @@ function SummaryCard({
 }) {
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-semibold tracking-[0.18em] text-[#2563EB]">CURRENT ACCOUNT</p>
-      <h2 className="mt-2 text-xl font-semibold text-[#0F172A]">{currentAccount.name}</h2>
+      <p className="text-xs font-semibold tracking-[0.18em] text-[var(--color-primary)]">CURRENT ACCOUNT</p>
+      <h2 className="mt-2 text-xl font-semibold text-[var(--color-text-dark)]">{currentAccount.name}</h2>
       <p className="mt-1 text-sm text-gray-500">
         {currentAccount.loginId} / {currentAccount.role === "admin" ? "管理者" : "通常アカウント"}
       </p>
@@ -364,7 +364,7 @@ function SectionCard({
         className="flex w-full items-start justify-between gap-4 text-left"
       >
         <div>
-          <h2 className="text-base font-semibold text-[#0F172A]">{title}</h2>
+          <h2 className="text-base font-semibold text-[var(--color-text-dark)]">{title}</h2>
           <p className="mt-1 text-sm text-gray-500">{description}</p>
         </div>
         <Chevron expanded={open} />
@@ -404,7 +404,7 @@ function ActionButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...props}
-      className={`rounded-lg bg-[#2563EB] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#1D4ED8] disabled:opacity-50 ${props.className ?? ""}`}
+      className={`rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50 ${props.className ?? ""}`}
     />
   );
 }
@@ -419,4 +419,4 @@ function SecondaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
 }
 
 const INPUT =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30";
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";

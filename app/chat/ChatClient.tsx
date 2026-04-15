@@ -37,7 +37,7 @@ function Avatar({ name, photoUrl, className }: { name: string; photoUrl: string 
   }
 
   return (
-    <div className={`${className} flex items-center justify-center bg-[#2563EB] text-white font-bold`}>
+    <div className={`${className} flex items-center justify-center bg-[var(--color-primary)] text-white font-bold`}>
       {name[0]}
     </div>
   );
@@ -229,11 +229,11 @@ export default function ChatClient({ persons, initialMessages, templates }: {
       {/* 左: ユーザー一覧 */}
       <div className="w-[360px] border-r border-gray-200 bg-white flex flex-col">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <span className="font-semibold text-sm text-[#0F172A]">チャット</span>
+          <span className="font-semibold text-sm text-[var(--color-text-dark)]">チャット</span>
           <button
             onClick={reload}
             disabled={reloading}
-            className="text-xs text-[#2563EB] hover:underline disabled:opacity-50"
+            className="text-xs text-[var(--color-primary)] hover:underline disabled:opacity-50"
           >
             {reloading ? "読込中..." : "メッセージ読み込み"}
           </button>
@@ -243,7 +243,7 @@ export default function ChatClient({ persons, initialMessages, templates }: {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="人材名やメッセージで検索"
-            className="w-full rounded-xl border border-gray-200 bg-[#F8FAFC] px-4 py-2.5 text-sm text-[#0F172A] outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10"
+            className="w-full rounded-xl border border-gray-200 bg-[var(--color-light)] px-4 py-2.5 text-sm text-[var(--color-text-dark)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10"
           />
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -255,14 +255,14 @@ export default function ChatClient({ persons, initialMessages, templates }: {
                 key={p.id}
                 onClick={() => setSelectedId(p.id)}
                 className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                  selectedId === p.id ? "bg-[#EFF6FF] border-l-2 border-l-[#2563EB]" : ""
+                  selectedId === p.id ? "bg-[var(--color-light)] border-l-2 border-l-[var(--color-primary)]" : ""
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <Avatar name={p.name} photoUrl={p.photoUrl} className="h-10 w-10 shrink-0 rounded-full text-xs" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium text-[#0F172A] truncate">{p.name}</p>
+                      <p className="text-sm font-medium text-[var(--color-text-dark)] truncate">{p.name}</p>
                       <div className="flex items-center gap-2 shrink-0">
                         {lastMsg && (
                           <span className="text-[11px] text-gray-400">
@@ -270,7 +270,7 @@ export default function ChatClient({ persons, initialMessages, templates }: {
                           </span>
                         )}
                         {unreadCount > 0 && (
-                          <span className="min-w-5 rounded-full bg-[#2563EB] px-1.5 py-0.5 text-center text-[11px] font-semibold text-white">
+                          <span className="min-w-5 rounded-full bg-[var(--color-primary)] px-1.5 py-0.5 text-center text-[11px] font-semibold text-white">
                             {unreadCount}
                           </span>
                         )}
@@ -289,14 +289,14 @@ export default function ChatClient({ persons, initialMessages, templates }: {
       </div>
 
       {/* 右: チャット画面 */}
-      <div className="flex-1 flex flex-col bg-[#F8FAFC]">
+      <div className="flex-1 flex flex-col bg-[var(--color-light)]">
         {selected ? (
           <>
             {/* ヘッダー */}
             <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center gap-3">
               <Avatar name={selected.name} photoUrl={selected.photoUrl} className="h-11 w-11 rounded-full" />
               <div>
-                <p className="font-semibold text-[#0F172A]">{selected.name}</p>
+                <p className="font-semibold text-[var(--color-text-dark)]">{selected.name}</p>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CHANNEL_COLOR[selected.channel] ?? "bg-gray-100 text-gray-600"}`}>
                   {selected.channel}
                 </span>
@@ -312,8 +312,8 @@ export default function ChatClient({ persons, initialMessages, templates }: {
                 <div key={m.id} className={`flex ${m.direction === "outbound" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-xs px-4 py-2 rounded-2xl text-sm shadow-sm ${
                     m.direction === "outbound"
-                      ? "bg-[#2563EB] text-white rounded-br-sm"
-                      : "bg-white text-[#0F172A] border border-gray-200 rounded-bl-sm"
+                      ? "bg-[var(--color-primary)] text-white rounded-br-sm"
+                      : "bg-white text-[var(--color-text-dark)] border border-gray-200 rounded-bl-sm"
                   }`}>
                     <p>{m.content}</p>
                     <p className={`text-xs mt-1 ${m.direction === "outbound" ? "text-blue-200" : "text-gray-400"}`}>
@@ -331,7 +331,7 @@ export default function ChatClient({ persons, initialMessages, templates }: {
             <div className="bg-white border-t border-gray-100 px-4 py-2 flex gap-2 overflow-x-auto">
               <button
                 onClick={() => setShowTemplates(!showTemplates)}
-                className="shrink-0 text-xs border border-[#2563EB] text-[#2563EB] px-3 py-1.5 rounded-full hover:bg-[#EFF6FF]"
+                className="shrink-0 text-xs border border-[var(--color-primary)] text-[var(--color-primary)] px-3 py-1.5 rounded-full hover:bg-[var(--color-light)]"
               >
                 テンプレート
               </button>
@@ -360,9 +360,9 @@ export default function ChatClient({ persons, initialMessages, templates }: {
                   <button
                     key={t.id}
                     onClick={() => applyTemplate(t.content)}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#EFF6FF] text-sm mb-1"
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--color-light)] text-sm mb-1"
                   >
-                    <span className="font-medium text-[#0F172A]">{t.name}</span>
+                    <span className="font-medium text-[var(--color-text-dark)]">{t.name}</span>
                     <span className="text-gray-400 ml-2 text-xs">{t.content.slice(0, 30)}...</span>
                   </button>
                 ))}
@@ -372,7 +372,7 @@ export default function ChatClient({ persons, initialMessages, templates }: {
             {/* 入力欄 */}
             <div className="bg-white border-t border-gray-200 px-4 py-3 flex gap-2">
               <input
-                className="flex-1 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]"
+                className="flex-1 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
                 placeholder="メッセージを入力..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -381,7 +381,7 @@ export default function ChatClient({ persons, initialMessages, templates }: {
               <button
                 onClick={send}
                 disabled={sending || !input.trim()}
-                className="bg-[#2563EB] text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-[#1D4ED8] disabled:opacity-50"
+                className="bg-[var(--color-primary)] text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
               >
                 {sending ? "送信中" : "送信"}
               </button>
