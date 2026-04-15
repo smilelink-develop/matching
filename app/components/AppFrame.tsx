@@ -1,15 +1,35 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import Sidebar from "./Sidebar";
 
 export default function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPortal = pathname.startsWith("/portal");
+  const isAuth = pathname.startsWith("/login");
 
-  if (isPortal) {
+  useEffect(() => {
+    if (isPortal || isAuth) return;
+
+    const checkSession = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        const data = await res.json();
+        if (!data.ok || !data.account) {
+          window.location.href = "/login";
+        }
+      } catch {
+        window.location.href = "/login";
+      }
+    };
+
+    void checkSession();
+  }, [isAuth, isPortal]);
+
+  if (isPortal || isAuth) {
     return (
-      <body className="min-h-full bg-[#EAF4FF] text-[#0F172A]">
+      <body className={`min-h-full ${isAuth ? "bg-[#0F172A] text-white" : "bg-[#EAF4FF] text-[#0F172A]"}`}>
         {children}
       </body>
     );

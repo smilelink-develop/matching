@@ -42,14 +42,23 @@ export function normalizeFixedQuestions(value: unknown): FixedQuestionSetting[] 
   return normalized.length > 0 ? normalized : DEFAULT_FIXED_QUESTIONS;
 }
 
-export async function getAppSettings() {
+export async function getAccountSettings(accountId: number) {
   const settings = await prisma.appSettings.findUnique({
-    where: { id: 1 },
+    where: { accountId },
   });
 
   return {
     calendarEmbedUrl: settings?.calendarEmbedUrl ?? "",
     calendarLabel: settings?.calendarLabel ?? "",
+  };
+}
+
+export async function getCoreSettings() {
+  const settings = await prisma.coreSettings.findUnique({
+    where: { id: 1 },
+  });
+
+  return {
     fixedQuestions: normalizeFixedQuestions(settings?.fixedQuestions),
   };
 }

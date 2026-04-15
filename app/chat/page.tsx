@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { reconcileMessagePersonLinks } from "@/lib/message-linking";
+import { requireCurrentAccount } from "@/lib/auth";
 import ChatClient from "./ChatClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function ChatPage() {
+  const account = await requireCurrentAccount();
   await reconcileMessagePersonLinks();
 
   const persons = await prisma.person.findMany({
@@ -16,7 +18,10 @@ export default async function ChatPage() {
     take: 500,
   });
 
-  const templates = await prisma.messageTemplate.findMany({ orderBy: { name: "asc" } });
+  const templates = await prisma.messageTemplate.findMany({
+    where: { accountId: account.id },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <ChatClient

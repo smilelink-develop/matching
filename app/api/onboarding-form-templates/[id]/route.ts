@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { AuthError, requireApiAccount } from "@/lib/auth";
 
 type QuestionInput = {
   fixedKey?: string | null;
@@ -12,6 +13,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const account = await requireApiAccount();
     const { id } = await params;
     const templateId = Number(id);
     const body = await req.json();
@@ -44,12 +46,21 @@ export async function PUT(
       }))
       .filter((question: { label: string }) => question.label);
 
+    const existing = await prisma.onboardingFormTemplate.findFirst({
+      where: { id: templateId, accountId: account.id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return Response.json({ ok: false, error: "フォームが見つかりません" }, { status: 404 });
+    }
+
     await prisma.onboardingFormQuestion.deleteMany({
-      where: { templateId },
+      where: { templateId: existing.id },
     });
 
     const template = await prisma.onboardingFormTemplate.update({
-      where: { id: templateId },
+      where: { id: existing.id },
       data: {
         name,
         description: description || null,
@@ -68,7 +79,7 @@ export async function PUT(
   } catch (e) {
     return Response.json(
       { ok: false, error: e instanceof Error ? e.message : "error" },
-      { status: 500 }
+      { status: e instanceof AuthError ? e.status : 500 }
     );
   }
 }
@@ -78,15 +89,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const account = await requireApiAccount();
     const { id } = await params;
-    await prisma.onboardingFormTemplate.delete({
-      where: { id: Number(id) },
+    await prisma.onboardingFormTemplate.deleteMany({
+      where: { id: Number(id), accountId: account.id },
     });
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json(
       { ok: false, error: e instanceof Error ? e.message : "error" },
-      { status: 500 }
+      { status: e instanceof AuthError ? e.status : 500 }
     );
   }
 }

@@ -3,6 +3,8 @@ import "dotenv/config";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { getDatabaseUrl } from "../lib/database-url";
+import { DEFAULT_FIXED_QUESTIONS } from "../lib/app-settings";
+import { hashPasscode } from "../lib/auth";
 
 const connectionString = getDatabaseUrl();
 
@@ -16,19 +18,75 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   await prisma.groupMember.deleteMany();
   await prisma.group.deleteMany();
+  await prisma.onboardingFormQuestion.deleteMany();
+  await prisma.onboardingFormTemplate.deleteMany();
   await prisma.message.deleteMany();
   await prisma.messageTemplate.deleteMany();
   await prisma.messageLog.deleteMany();
   await prisma.lineProfile.deleteMany();
   await prisma.messengerProfile.deleteMany();
+  await prisma.portalTask.deleteMany();
+  await prisma.portalDocument.deleteMany();
+  await prisma.personOnboarding.deleteMany();
   await prisma.person.deleteMany();
+  await prisma.appSettings.deleteMany();
+  await prisma.coreSettings.deleteMany();
+  await prisma.staffSession.deleteMany();
+  await prisma.staffAccount.deleteMany();
+
+  await prisma.staffAccount.createMany({
+    data: [
+      {
+        loginId: "admin",
+        name: "管理者",
+        role: "admin",
+        passcodeHash: hashPasscode("smileadmin"),
+      },
+      {
+        loginId: "staff-a",
+        name: "社内メンバーA",
+        role: "member",
+        passcodeHash: hashPasscode("member001"),
+      },
+      {
+        loginId: "staff-b",
+        name: "社内メンバーB",
+        role: "member",
+        passcodeHash: hashPasscode("member002"),
+      },
+      {
+        loginId: "staff-c",
+        name: "社内メンバーC",
+        role: "member",
+        passcodeHash: hashPasscode("member003"),
+      },
+    ],
+  });
+
+  const accounts = await prisma.staffAccount.findMany({ orderBy: { id: "asc" } });
+  const admin = accounts.find((account) => account.loginId === "admin");
+
+  await prisma.coreSettings.create({
+    data: {
+      id: 1,
+      fixedQuestions: DEFAULT_FIXED_QUESTIONS,
+    },
+  });
+
+  await prisma.appSettings.createMany({
+    data: accounts.map((account) => ({
+      accountId: account.id,
+      calendarLabel: `${account.name}カレンダー`,
+      calendarEmbedUrl: "",
+    })),
+  });
 
   await prisma.person.createMany({
     data: [
       {
         name: "グエン・ヴァン・アン",
         nationality: "ベトナム",
-        department: "製造部",
+        department: "候補者プール",
         residenceStatus: "技能実習",
         channel: "LINE",
         lineUserId: "U10000000000000000000000000000001",
@@ -36,7 +94,7 @@ async function main() {
       {
         name: "シティ・ラフマ",
         nationality: "インドネシア",
-        department: "品質管理",
+        department: "候補者プール",
         residenceStatus: "特定技能1号",
         channel: "Messenger",
         messengerPsid: "psid-demo-0002",
@@ -44,7 +102,7 @@ async function main() {
       {
         name: "アウン・モー",
         nationality: "ミャンマー",
-        department: "物流",
+        department: "候補者プール",
         residenceStatus: "特定技能2号",
         channel: "LINE",
         lineUserId: "U10000000000000000000000000000003",
@@ -52,7 +110,7 @@ async function main() {
       {
         name: "マリア・サントス",
         nationality: "フィリピン",
-        department: "総務",
+        department: "候補者プール",
         residenceStatus: "技術・人文知識・国際業務",
         channel: "mail",
         email: "maria.santos@example.com",
@@ -60,15 +118,15 @@ async function main() {
       {
         name: "チャノン・スパチャイ",
         nationality: "タイ",
-        department: "営業",
+        department: "候補者プール",
         residenceStatus: "特定技能1号",
         channel: "WhatsApp",
         whatsappId: "whatsapp-demo-0005",
       },
       {
         name: "リー・メイ",
-        nationality: "その他",
-        department: "開発",
+        nationality: "中国",
+        department: "候補者プール",
         residenceStatus: "技術・人文知識・国際業務",
         channel: "LINE",
         lineUserId: "U10000000000000000000000000000006",
@@ -103,26 +161,57 @@ async function main() {
   });
 
   await prisma.messageTemplate.createMany({
-    data: [
+    data: accounts.flatMap((account) => [
       {
-        name: "面談日程のご案内",
-        content: "いつもありがとうございます。面談日程についてご確認をお願いします。",
+        accountId: account.id,
+        name: "事前面談のご案内",
+        content: "事前面談の日程候補を送ります。参加できる時間を教えてください。",
       },
       {
-        name: "在留期限のお知らせ",
-        content: "在留期限が近づいています。必要書類の準備をお願いします。",
+        accountId: account.id,
+        name: "追加書類のお願い",
+        content: "追加で必要な書類があります。確認のうえ送付をお願いします。",
       },
-      {
-        name: "就業開始のご案内",
-        content: "就業開始日が確定しました。詳細は担当者よりご連絡します。",
-      },
-    ],
+    ]),
   });
+
+  if (admin) {
+    await prisma.onboardingFormTemplate.create({
+      data: {
+        accountId: admin.id,
+        name: "初回ヒアリングフォーム",
+        description: "候補者の基本情報と在留カード、合格書を回収する標準テンプレート",
+        questions: {
+          create: [
+            ...DEFAULT_FIXED_QUESTIONS.map((question, index) => ({
+              fixedKey: question.fixedKey,
+              label: question.label,
+              type: question.type,
+              required: question.required,
+              sortOrder: index,
+            })),
+            {
+              label: "希望職種",
+              type: "text",
+              required: false,
+              sortOrder: DEFAULT_FIXED_QUESTIONS.length,
+            },
+            {
+              label: "希望勤務地",
+              type: "text",
+              required: false,
+              sortOrder: DEFAULT_FIXED_QUESTIONS.length + 1,
+            },
+          ],
+        },
+      },
+    });
+  }
 
   await prisma.group.createMany({
     data: [
-      { name: "製造・物流チーム" },
-      { name: "オフィス連絡先" },
+      { name: "ベトナムパートナー" },
+      { name: "面談対象候補者" },
     ],
   });
 
@@ -140,20 +229,20 @@ async function main() {
   await prisma.messageLog.createMany({
     data: [
       {
-        title: "在留期限に関するお知らせ",
-        body: "在留期限が近い方へ連絡済みです。",
+        title: "パートナー向け募集連絡",
+        body: "海外パートナーへ案件概要を送信しました。",
         channel: "LINE",
-        targetFilter: "国籍: ベトナム / 連絡手段: LINE",
+        targetFilter: "グループ: ベトナムパートナー",
         status: "送信成功",
         matchedCount: 2,
         sentCount: 2,
         skippedCount: 0,
       },
       {
-        title: "面談日の確認",
-        body: "Messenger対象者へ送信しました。",
+        title: "事前面談日程の確認",
+        body: "候補者へ日程候補を送信しました。",
         channel: "Messenger",
-        targetFilter: "部署: 品質管理 / 連絡手段: Messenger",
+        targetFilter: "グループ: 面談対象候補者",
         status: "送信成功",
         matchedCount: 1,
         sentCount: 1,

@@ -106,28 +106,41 @@ function SettingsIcon({ active }: { active: boolean }) {
 
 const NAV: NavItem[] = [
   {
-    label: "人材管理",
+    label: "候補者管理",
     href: "/personnel",
     icon: PersonnelIcon,
     children: [
-      { label: "人材一覧", href: "/personnel" },
-      { label: "人材を追加", href: "/personnel/new" },
-      { label: "連絡手段紐づけ", href: "/personnel/link" },
+      { label: "候補者一覧", href: "/personnel" },
+      { label: "候補者を追加", href: "/personnel/new" },
+      { label: "連絡先紐づけ", href: "/personnel/link" },
     ],
   },
-  { label: "チャット", href: "/chat", icon: ChatIcon },
+  { label: "候補者チャット", href: "/chat", icon: ChatIcon },
+  { label: "日程調整", href: "/calendar", icon: CalendarIcon },
   {
-    label: "配信管理",
+    label: "紹介業務",
     href: "/broadcast",
     icon: BroadcastIcon,
     children: [
-      { label: "配信送付", href: "/broadcast" },
-      { label: "テンプレート", href: "/broadcast/templates" },
-      { label: "初期登録フォーム", href: "/broadcast/onboarding-forms" },
-      { label: "グループ管理", href: "/broadcast/groups" },
+      { label: "パートナー一斉連絡", href: "/broadcast" },
+      { label: "連絡テンプレート", href: "/broadcast/templates" },
+      { label: "入力依頼フォーム", href: "/broadcast/onboarding-forms" },
+      { label: "連携グループ", href: "/broadcast/groups" },
+      { label: "履歴書作成", href: "/resumes" },
+      { label: "推薦リスト", href: "/recommendations" },
     ],
   },
-  { label: "カレンダー", href: "/calendar", icon: CalendarIcon },
+  { label: "求人票管理", href: "/job-postings", icon: PersonnelIcon },
+  {
+    label: "進捗・売上",
+    href: "/deals",
+    icon: BroadcastIcon,
+    children: [
+      { label: "案件管理", href: "/deals" },
+      { label: "入社進捗", href: "/placements" },
+      { label: "売上ダッシュボード", href: "/revenue" },
+    ],
+  },
   { label: "設定", href: "/settings", icon: SettingsIcon },
 ];
 
@@ -135,6 +148,8 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [openItems, setOpenItems] = useState<string[]>([]);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [accountName, setAccountName] = useState("読み込み中...");
+  const [accountRole, setAccountRole] = useState("");
 
   const isSectionActive = (href: string) => {
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -175,6 +190,32 @@ export default function Sidebar() {
       window.clearInterval(intervalId);
     };
   }, []);
+
+  useEffect(() => {
+    const loadAccount = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        const data = await res.json();
+        if (data.ok && data.account) {
+          setAccountName(data.account.name);
+          setAccountRole(data.account.role === "admin" ? "管理者" : "通常アカウント");
+        } else {
+          setAccountName("未ログイン");
+          setAccountRole("");
+        }
+      } catch {
+        setAccountName("未ログイン");
+        setAccountRole("");
+      }
+    };
+
+    void loadAccount();
+  }, []);
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  };
 
   return (
     <aside className="w-72 shrink-0 bg-[#0F172A] text-white flex flex-col h-screen sticky top-0 px-4 py-5">
@@ -280,6 +321,20 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      <div className="space-y-3 border-t border-white/10 pt-4">
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <p className="text-sm font-medium text-white">{accountName}</p>
+          <p className="mt-1 text-xs text-white/55">{accountRole}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/10"
+        >
+          ログアウト
+        </button>
+      </div>
     </aside>
   );
 }

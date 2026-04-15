@@ -1,17 +1,21 @@
 import Link from "next/link";
-import { getAppSettings } from "@/lib/app-settings";
+import { getAccountSettings } from "@/lib/app-settings";
+import { requireCurrentAccount } from "@/lib/auth";
 import CalendarSetupCard from "./CalendarSetupCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
-  const settings = await getAppSettings();
+  const account = await requireCurrentAccount();
+  const settings = await getAccountSettings(account.id);
 
   return (
     <div className="p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[#0F172A]">カレンダー</h1>
-        <p className="mt-1 text-sm text-gray-500">面談や予定を外部カレンダーで確認します</p>
+        <p className="mt-1 text-sm text-gray-500">
+          {account.name}さん専用の面談・予定カレンダーを表示します
+        </p>
       </div>
 
       {settings.calendarEmbedUrl ? (

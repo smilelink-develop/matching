@@ -1,20 +1,44 @@
-import { getAppSettings } from "@/lib/app-settings";
+import { getAccountSettings, getCoreSettings } from "@/lib/app-settings";
+import { requireCurrentAccount } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import SettingsClient from "./SettingsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const settings = await getAppSettings();
+  const account = await requireCurrentAccount();
+  const [settings, coreSettings, accounts] = await Promise.all([
+    getAccountSettings(account.id),
+    getCoreSettings(),
+    account.role === "admin"
+      ? prisma.staffAccount.findMany({
+          orderBy: [{ role: "asc" }, { loginId: "asc" }],
+          select: {
+            id: true,
+            loginId: true,
+            name: true,
+            role: true,
+          },
+        })
+      : Promise.resolve([]),
+  ]);
 
   return (
     <div className="p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[#0F172A]">設定</h1>
         <p className="mt-1 text-sm text-gray-500">
-          カレンダー連携と、初期登録フォームの固定質問を管理します。
+          カレンダー、自分用テンプレートの基盤、管理者向けの共通設定をここで管理します。
         </p>
       </div>
-      <SettingsClient initialSettings={settings} />
+      <SettingsClient
+        currentAccount={account}
+        initialSettings={{
+          ...settings,
+          fixedQuestions: coreSettings.fixedQuestions,
+        }}
+        accounts={accounts}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { AuthError, requireApiAccount } from "@/lib/auth";
 
 type QuestionInput = {
   fixedKey?: string | null;
@@ -8,20 +9,30 @@ type QuestionInput = {
 };
 
 export async function GET() {
-  const templates = await prisma.onboardingFormTemplate.findMany({
-    include: {
-      questions: {
-        orderBy: { sortOrder: "asc" },
+  try {
+    const account = await requireApiAccount();
+    const templates = await prisma.onboardingFormTemplate.findMany({
+      where: { accountId: account.id },
+      include: {
+        questions: {
+          orderBy: { sortOrder: "asc" },
+        },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
 
-  return Response.json({ ok: true, templates });
+    return Response.json({ ok: true, templates });
+  } catch (error) {
+    return Response.json(
+      { ok: false, error: error instanceof Error ? error.message : "error" },
+      { status: error instanceof AuthError ? error.status : 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {
   try {
+    const account = await requireApiAccount();
     const body = await req.json();
     const name = String(body.name ?? "").trim();
     const description = String(body.description ?? "").trim();
@@ -54,6 +65,7 @@ export async function POST(req: Request) {
 
     const template = await prisma.onboardingFormTemplate.create({
       data: {
+        accountId: account.id,
         name,
         description: description || null,
         questions: {
@@ -71,7 +83,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return Response.json(
       { ok: false, error: e instanceof Error ? e.message : "error" },
-      { status: 500 }
+      { status: e instanceof AuthError ? e.status : 500 }
     );
   }
 }

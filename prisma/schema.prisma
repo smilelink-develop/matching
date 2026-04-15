@@ -29,6 +29,33 @@ model Person {
   portalTasks  PortalTask[]
 }
 
+model StaffAccount {
+  id                       Int                      @id @default(autoincrement())
+  loginId                  String                   @unique
+  name                     String
+  role                     String                   @default("member")
+  passcodeHash             String
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  sessions                 StaffSession[]
+  appSettings              AppSettings?
+  onboardingFormTemplates  OnboardingFormTemplate[]
+  messageTemplates         MessageTemplate[]
+}
+
+model StaffSession {
+  id               Int          @id @default(autoincrement())
+  accountId        Int
+  token            String       @unique
+  impersonatedById Int?
+  expiresAt        DateTime
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  account          StaffAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
 model PersonOnboarding {
   id                       Int      @id @default(autoincrement())
   personId                 Int      @unique
@@ -114,6 +141,8 @@ model Message {
 
 model MessageTemplate {
   id        Int      @id @default(autoincrement())
+  accountId Int
+  account   StaffAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   name      String
   content   String
   createdAt DateTime @default(now())
@@ -121,16 +150,26 @@ model MessageTemplate {
 }
 
 model AppSettings {
-  id               Int      @id
+  id               Int          @id @default(autoincrement())
+  accountId        Int          @unique
+  account          StaffAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   calendarEmbedUrl String?
   calendarLabel    String?
-  fixedQuestions   Json?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
 
+model CoreSettings {
+  id             Int      @id
+  fixedQuestions Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model OnboardingFormTemplate {
   id          Int                      @id @default(autoincrement())
+  accountId   Int
+  account     StaffAccount             @relation(fields: [accountId], references: [id], onDelete: Cascade)
   name        String
   description String?
   questions   OnboardingFormQuestion[]

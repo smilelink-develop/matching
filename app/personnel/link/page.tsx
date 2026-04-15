@@ -19,9 +19,9 @@ export default async function LinkPage() {
   return (
     <div className="p-8 space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A]">連絡手段の紐づけ</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          webhook で受信した ID を人材に紐づけます
+          <h1 className="text-2xl font-bold text-[#0F172A]">連絡先の紐づけ</h1>
+          <p className="text-sm text-gray-500 mt-1">
+          webhook で受信した ID を候補者に紐づけます
         </p>
       </div>
 

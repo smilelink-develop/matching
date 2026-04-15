@@ -48,9 +48,9 @@ export default function NewPersonnelPage() {
     <div className="px-8 py-10">
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-[#0F172A]">人材を追加</h1>
+          <h1 className="text-3xl font-bold text-[#0F172A]">候補者を追加</h1>
           <p className="text-sm text-gray-500 mt-2">
-            人材の基本情報と主な連絡手段を登録します。
+            候補者の基本情報と主な連絡手段を登録します。
           </p>
         </div>
 

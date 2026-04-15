@@ -9,8 +9,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "SMILE MATCHING 社内紹介コンソール",
-  description: "外国人候補者・企業・紹介パートナーをつなぐ社内システム",
+  title: "SMILE MATCHING 人材紹介ダッシュボード",
+  description: "外国人候補者、企業、海外パートナーをつなぐ社内向け人材紹介システム",
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",
