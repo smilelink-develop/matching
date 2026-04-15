@@ -39,34 +39,34 @@ async function main() {
   await prisma.staffAccount.createMany({
     data: [
       {
-        loginId: "admin",
-        name: "管理者",
+        loginId: "tsuchida",
+        name: "土田",
         role: "admin",
-        passcodeHash: hashPasscode("smileadmin"),
+        passcodeHash: hashPasscode("111111"),
       },
       {
-        loginId: "staff-a",
-        name: "社内メンバーA",
+        loginId: "minh",
+        name: "ミン",
         role: "member",
-        passcodeHash: hashPasscode("member001"),
+        passcodeHash: hashPasscode("123456"),
       },
       {
-        loginId: "staff-b",
-        name: "社内メンバーB",
+        loginId: "thuy",
+        name: "トウイ",
         role: "member",
-        passcodeHash: hashPasscode("member002"),
+        passcodeHash: hashPasscode("123456"),
       },
       {
-        loginId: "staff-c",
-        name: "社内メンバーC",
+        loginId: "cindy",
+        name: "チンディ",
         role: "member",
-        passcodeHash: hashPasscode("member003"),
+        passcodeHash: hashPasscode("123456"),
       },
     ],
   });
 
   const accounts = await prisma.staffAccount.findMany({ orderBy: { id: "asc" } });
-  const admin = accounts.find((account) => account.loginId === "admin");
+  const admin = accounts.find((account) => account.loginId === "tsuchida");
 
   await prisma.coreSettings.create({
     data: {

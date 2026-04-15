@@ -48,7 +48,7 @@ export default function LoginForm() {
           className={INPUT}
           value={loginId}
           onChange={(event) => setLoginId(event.target.value)}
-          placeholder="admin / staff-a"
+          placeholder="tsuchida / minh"
         />
       </div>
       <div>
@@ -76,7 +76,7 @@ export default function LoginForm() {
       </button>
       <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs leading-6 text-white/65">
         <p>初期アカウントは seed で作成します。</p>
-        <p>例: admin / staff-a / staff-b / staff-c</p>
+        <p>例: tsuchida / minh / thuy / cindy</p>
       </div>
     </div>
   );
