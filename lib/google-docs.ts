@@ -64,8 +64,22 @@ export async function createResumeDocumentFromTemplate({
   const folderId = parseGoogleDriveFolderId(folderUrl);
   const { drive, docs } = await getGoogleClients();
 
+  try {
+    await drive.files.get({
+      fileId: templateId,
+      fields: "id,name,mimeType",
+      supportsAllDrives: true,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    throw new Error(
+      `テンプレートの Google Docs にアクセスできません。サービスアカウントへ共有されているか、ファイルIDが正しいかを確認してください。詳細: ${message}`
+    );
+  }
+
   const copied = await drive.files.copy({
     fileId: templateId,
+    supportsAllDrives: true,
     requestBody: {
       name: title,
       parents: folderId ? [folderId] : undefined,
