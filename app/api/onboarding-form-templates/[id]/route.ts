@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 
 type QuestionInput = {
-  fixedKey?: string | null;
   label?: string;
   type?: string;
   required?: boolean;
@@ -19,22 +18,11 @@ export async function PUT(
     const body = await req.json();
     const name = String(body.name ?? "").trim();
     const description = String(body.description ?? "").trim();
-    const fixedQuestions = Array.isArray(body.fixedQuestions) ? body.fixedQuestions : [];
     const questions = Array.isArray(body.questions) ? body.questions : [];
 
     if (!name) {
       return Response.json({ ok: false, error: "フォーム名を入力してください" }, { status: 400 });
     }
-
-    const sanitizedFixedQuestions = fixedQuestions
-      .map((question: QuestionInput, index: number) => ({
-        fixedKey: String(question.fixedKey ?? "").trim(),
-        label: String(question.label ?? "").trim(),
-        type: question.type === "file" ? "file" : "text",
-        required: Boolean(question.required),
-        sortOrder: index,
-      }))
-      .filter((question: { fixedKey: string; label: string }) => question.fixedKey && question.label);
 
     const sanitizedQuestions = questions
       .map((question: QuestionInput, index: number) => ({
@@ -42,7 +30,7 @@ export async function PUT(
         label: String(question.label ?? "").trim(),
         type: question.type === "file" ? "file" : "text",
         required: Boolean(question.required),
-        sortOrder: sanitizedFixedQuestions.length + index,
+        sortOrder: index,
       }))
       .filter((question: { label: string }) => question.label);
 
@@ -65,7 +53,7 @@ export async function PUT(
         name,
         description: description || null,
         questions: {
-          create: [...sanitizedFixedQuestions, ...sanitizedQuestions],
+          create: sanitizedQuestions,
         },
       },
       include: {

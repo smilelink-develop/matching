@@ -1,4 +1,3 @@
-import { getCoreSettings } from "@/lib/app-settings";
 import { requireCurrentAccount } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import OnboardingFormsClient from "./OnboardingFormsClient";
@@ -11,29 +10,25 @@ function normalizeQuestionType(type: string): "text" | "file" {
 
 export default async function OnboardingFormsPage() {
   const account = await requireCurrentAccount();
-  const [templates, settings] = await Promise.all([
-    prisma.onboardingFormTemplate.findMany({
-      where: { accountId: account.id },
-      include: {
-        questions: {
-          orderBy: { sortOrder: "asc" },
-        },
+  const templates = await prisma.onboardingFormTemplate.findMany({
+    where: { accountId: account.id },
+    include: {
+      questions: {
+        orderBy: { sortOrder: "asc" },
       },
-      orderBy: { createdAt: "desc" },
-    }),
-    getCoreSettings(),
-  ]);
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div className="p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">初期登録フォーム</h1>
         <p className="mt-1 text-sm text-gray-500">
-          {account.name}さん用の依頼フォームを作成します。固定質問は共通、追加質問はアカウント単位で管理できます。
+          {account.name}さん用の候補者入力依頼フォームを、質問ごとに一から作成できます。
         </p>
       </div>
       <OnboardingFormsClient
-        fixedQuestionDefaults={settings.fixedQuestions}
         templates={templates.map((template) => ({
           id: template.id,
           name: template.name,

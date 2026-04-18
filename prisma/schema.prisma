@@ -27,6 +27,8 @@ model Person {
   onboarding   PersonOnboarding?
   documents    PortalDocument[]
   portalTasks  PortalTask[]
+  resumeDocuments ResumeDocument[]
+  dealCandidates DealCandidate[]
 }
 
 model Company {
@@ -38,6 +40,8 @@ model Company {
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  deals       Deal[]
 }
 
 model Partner {
@@ -49,6 +53,8 @@ model Partner {
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  deals       Deal[]
 }
 
 model StaffAccount {
@@ -64,6 +70,9 @@ model StaffAccount {
   appSettings              AppSettings?
   onboardingFormTemplates  OnboardingFormTemplate[]
   messageTemplates         MessageTemplate[]
+  resumeTemplates          ResumeTemplate[]
+  createdResumes           ResumeDocument[]
+  ownedDeals               Deal[]
 }
 
 model StaffSession {
@@ -171,6 +180,35 @@ model MessageTemplate {
   updatedAt DateTime @updatedAt
 }
 
+model ResumeTemplate {
+  id               Int          @id @default(autoincrement())
+  accountId        Int
+  account          StaffAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name             String
+  templateUrl      String
+  driveFolderUrl   String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  resumeDocuments  ResumeDocument[]
+}
+
+model ResumeDocument {
+  id               Int          @id @default(autoincrement())
+  personId         Int
+  person           Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  templateId       Int
+  template         ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  accountId        Int
+  account          StaffAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  title            String
+  documentUrl      String?
+  driveFolderUrl   String
+  status           String       @default("draft")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
 model AppSettings {
   id               Int          @id @default(autoincrement())
   accountId        Int          @unique
@@ -230,6 +268,38 @@ model GroupMember {
   personId Int
 
   @@unique([groupId, personId])
+}
+
+model Deal {
+  id           Int          @id @default(autoincrement())
+  title        String
+  companyId    Int
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  partnerId    Int?
+  partner      Partner?     @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  ownerId      Int?
+  owner        StaffAccount? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  priority     String       @default("normal")
+  status       String       @default("active")
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  candidates   DealCandidate[]
+}
+
+model DealCandidate {
+  id          Int      @id @default(autoincrement())
+  dealId      Int
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  personId    Int
+  person      Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  stage       String   @default("new")
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([dealId, personId])
 }
 
 model MessageLog {

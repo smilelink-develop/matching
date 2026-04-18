@@ -18,6 +18,10 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   await prisma.groupMember.deleteMany();
   await prisma.group.deleteMany();
+  await prisma.dealCandidate.deleteMany();
+  await prisma.deal.deleteMany();
+  await prisma.resumeDocument.deleteMany();
+  await prisma.resumeTemplate.deleteMany();
   await prisma.partner.deleteMany();
   await prisma.company.deleteMany();
   await prisma.onboardingFormQuestion.deleteMany();
@@ -287,6 +291,90 @@ async function main() {
         channel: "Messenger",
         contactName: "Budi Santoso",
         notes: "介護・外食の候補者に強い",
+      },
+    ],
+  });
+
+  const companies = await prisma.company.findMany({ orderBy: { id: "asc" } });
+  const partners = await prisma.partner.findMany({ orderBy: { id: "asc" } });
+
+  await prisma.resumeTemplate.createMany({
+    data: accounts.map((account, index) => ({
+      accountId: account.id,
+      name: index === 0 ? "標準履歴書テンプレート" : `${account.name}用履歴書テンプレート`,
+      templateUrl: "https://docs.google.com/document/d/example-template/edit",
+      driveFolderUrl: "https://drive.google.com/drive/folders/example-folder",
+    })),
+  });
+
+  const resumeTemplates = await prisma.resumeTemplate.findMany({
+    orderBy: { id: "asc" },
+  });
+
+  if (admin) {
+    await prisma.resumeDocument.create({
+      data: {
+        personId: persons[0].id,
+        templateId: resumeTemplates[0].id,
+        accountId: admin.id,
+        title: `${persons[0].name} 履歴書`,
+        documentUrl: "https://docs.google.com/document/d/example-resume/edit",
+        driveFolderUrl: resumeTemplates[0].driveFolderUrl,
+        status: "linked",
+      },
+    });
+  }
+
+  await prisma.deal.createMany({
+    data: [
+      {
+        title: "青海テック / 製造スタッフ紹介",
+        companyId: companies[0].id,
+        partnerId: partners[0].id,
+        ownerId: accounts[1]?.id ?? admin?.id ?? null,
+        priority: "urgent",
+        status: "active",
+        notes: "今月中に2名推薦が必要",
+      },
+      {
+        title: "みらいケア / 介護人材紹介",
+        companyId: companies[1].id,
+        partnerId: partners[1].id,
+        ownerId: accounts[2]?.id ?? admin?.id ?? null,
+        priority: "normal",
+        status: "active",
+        notes: "事前面談を3名分進行中",
+      },
+    ],
+  });
+
+  const deals = await prisma.deal.findMany({ orderBy: { id: "asc" } });
+
+  await prisma.dealCandidate.createMany({
+    data: [
+      {
+        dealId: deals[0].id,
+        personId: persons[0].id,
+        stage: "推薦済み",
+        note: "在留カード確認済み",
+      },
+      {
+        dealId: deals[0].id,
+        personId: persons[2].id,
+        stage: "事前面談済み",
+        note: "日本語面談を実施済み",
+      },
+      {
+        dealId: deals[1].id,
+        personId: persons[1].id,
+        stage: "推薦候補",
+        note: "候補者の書類回収中",
+      },
+      {
+        dealId: deals[1].id,
+        personId: persons[3].id,
+        stage: "内定",
+        note: "受け入れ準備へ移行",
       },
     ],
   });
