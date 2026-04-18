@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
+import { buildResumePlaceholders } from "@/lib/resume-placeholders";
+import { createResumeDocumentFromTemplate } from "@/lib/google-docs";
+
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
@@ -27,12 +31,22 @@ export async function POST(req: Request) {
 
     const person = await prisma.person.findUnique({
       where: { id: personId },
-      select: { id: true, name: true },
+      include: {
+        onboarding: true,
+        resumeProfile: true,
+      },
     });
 
     if (!person) {
       return Response.json({ ok: false, error: "候補者が見つかりません" }, { status: 404 });
     }
+
+    const generated = await createResumeDocumentFromTemplate({
+      templateUrl: template.templateUrl,
+      folderUrl: template.driveFolderUrl,
+      title,
+      replacements: buildResumePlaceholders({ person }),
+    });
 
     const resume = await prisma.resumeDocument.create({
       data: {
@@ -40,9 +54,10 @@ export async function POST(req: Request) {
         templateId: template.id,
         accountId: account.id,
         title,
-        documentUrl: documentUrl || null,
+        documentId: generated.documentId,
+        documentUrl: generated.documentUrl || documentUrl || null,
         driveFolderUrl: template.driveFolderUrl,
-        status: documentUrl ? "linked" : "draft",
+        status: "generated",
       },
       include: {
         person: { select: { name: true } },

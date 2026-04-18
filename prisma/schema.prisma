@@ -27,6 +27,7 @@ model Person {
   onboarding   PersonOnboarding?
   documents    PortalDocument[]
   portalTasks  PortalTask[]
+  resumeProfile ResumeProfile?
   resumeDocuments ResumeDocument[]
   dealCandidates DealCandidate[]
 }
@@ -202,11 +203,38 @@ model ResumeDocument {
   accountId        Int
   account          StaffAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   title            String
+  documentId       String?
   documentUrl      String?
   driveFolderUrl   String
   status           String       @default("draft")
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
+}
+
+model ResumeProfile {
+  id              Int      @id @default(autoincrement())
+  personId        Int      @unique
+  person          Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  gender          String?
+  country         String?
+  spouseStatus    String?
+  childrenCount   String?
+  phoneHome       String?
+  visaType        String?
+  visaExpiryDate  String?
+  workVisa        String?
+  remarks         String?
+  educations      Json?
+  workExperiences Json?
+  certifications  Json?
+  motivation      String?
+  selfIntroduction String?
+  japanPurpose    String?
+  currentJob      String?
+  retirementReason String?
+  preferenceNote  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model AppSettings {

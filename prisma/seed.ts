@@ -21,6 +21,7 @@ async function main() {
   await prisma.dealCandidate.deleteMany();
   await prisma.deal.deleteMany();
   await prisma.resumeDocument.deleteMany();
+  await prisma.resumeProfile.deleteMany();
   await prisma.resumeTemplate.deleteMany();
   await prisma.partner.deleteMany();
   await prisma.company.deleteMany();
@@ -142,6 +143,66 @@ async function main() {
 
   const persons = await prisma.person.findMany({
     orderBy: { id: "asc" },
+  });
+
+  await prisma.personOnboarding.createMany({
+    data: [
+      {
+        personId: persons[0].id,
+        englishName: "NGUYEN VAN AN",
+        birthDate: "1999-05-10",
+        phoneNumber: "090-1111-2222",
+        postalCode: "260-0013",
+        address: "千葉県千葉市中央区中央1-1-1",
+        status: "submitted",
+        submittedAt: new Date(),
+      },
+      {
+        personId: persons[1].id,
+        englishName: "SITI RAHMA",
+        birthDate: "1998-11-03",
+        phoneNumber: "080-3333-4444",
+        postalCode: "136-0071",
+        address: "東京都江東区亀戸2-2-2",
+        status: "submitted",
+        submittedAt: new Date(),
+      },
+    ],
+  });
+
+  await prisma.resumeProfile.createMany({
+    data: [
+      {
+        personId: persons[0].id,
+        gender: "男性",
+        country: "ベトナム",
+        spouseStatus: "無",
+        childrenCount: "0",
+        phoneHome: "043-123-4567",
+        visaType: "技能実習",
+        visaExpiryDate: "2027-03-31",
+        workVisa: "有",
+        remarks: "夜勤対応可能",
+        educations: [
+          { date: "2015/04", label: "ハノイ工業高校", result: "入学" },
+          { date: "2018/03", label: "ハノイ工業高校", result: "卒業" },
+        ],
+        workExperiences: [
+          { date: "2018/05", label: "ABC Factory", result: "入社" },
+          { date: "2024/01", label: "ABC Factory", result: "退社" },
+        ],
+        certifications: [
+          { date: "2022/06", label: "日本語能力試験 N3" },
+          { date: "2023/09", label: "フォークリフト" },
+        ],
+        motivation: "日本で製造技術を学び、長く安定して働きたいです。",
+        selfIntroduction: "真面目で周囲と協力しながら仕事を進めることが得意です。",
+        japanPurpose: "日本のものづくりを学び、家族を支えたいです。",
+        currentJob: "工場で金属加工の仕事をしています。",
+        retirementReason: "より条件の良い環境でスキルアップしたいため。",
+        preferenceNote: "寮付き、残業は月20時間程度まで希望。",
+      },
+    ],
   });
 
   const linePersons = persons.filter((person) => person.lineUserId);
@@ -318,9 +379,10 @@ async function main() {
         templateId: resumeTemplates[0].id,
         accountId: admin.id,
         title: `${persons[0].name} 履歴書`,
+        documentId: "example-resume-id",
         documentUrl: "https://docs.google.com/document/d/example-resume/edit",
         driveFolderUrl: resumeTemplates[0].driveFolderUrl,
-        status: "linked",
+        status: "generated",
       },
     });
   }

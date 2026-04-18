@@ -11,6 +11,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
     include: {
       onboarding: true,
       documents: true,
+      resumeProfile: true,
     },
   });
   if (!person) notFound();

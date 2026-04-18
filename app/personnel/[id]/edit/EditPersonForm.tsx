@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { parseResumeLines, stringifyResumeLines } from "@/lib/resume-placeholders";
 
 const NATIONALITIES = ["ベトナム", "インドネシア", "ミャンマー", "フィリピン", "タイ", "その他"];
 const RESIDENCE_STATUSES = ["技能実習", "特定技能1号", "特定技能2号", "技術・人文知識・国際業務"];
@@ -25,6 +26,26 @@ type Person = {
     phoneNumber: string | null;
     postalCode: string | null;
     address: string | null;
+  } | null;
+  resumeProfile: {
+    gender: string | null;
+    country: string | null;
+    spouseStatus: string | null;
+    childrenCount: string | null;
+    phoneHome: string | null;
+    visaType: string | null;
+    visaExpiryDate: string | null;
+    workVisa: string | null;
+    remarks: string | null;
+    educations: unknown;
+    workExperiences: unknown;
+    certifications: unknown;
+    motivation: string | null;
+    selfIntroduction: string | null;
+    japanPurpose: string | null;
+    currentJob: string | null;
+    retirementReason: string | null;
+    preferenceNote: string | null;
   } | null;
   documents: {
     kind: string;
@@ -67,6 +88,24 @@ export default function EditPersonForm({ person }: { person: Person }) {
     phoneNumber: person.onboarding?.phoneNumber ?? "",
     postalCode: person.onboarding?.postalCode ?? "",
     address: person.onboarding?.address ?? "",
+    resumeGender: person.resumeProfile?.gender ?? "",
+    resumeCountry: person.resumeProfile?.country ?? "",
+    resumeSpouseStatus: person.resumeProfile?.spouseStatus ?? "",
+    resumeChildrenCount: person.resumeProfile?.childrenCount ?? "",
+    resumePhoneHome: person.resumeProfile?.phoneHome ?? "",
+    resumeVisaType: person.resumeProfile?.visaType ?? "",
+    resumeVisaExpiryDate: person.resumeProfile?.visaExpiryDate ?? "",
+    resumeWorkVisa: person.resumeProfile?.workVisa ?? "",
+    resumeRemarks: person.resumeProfile?.remarks ?? "",
+    resumeEducations: stringifyResumeLines(asResumeLines(person.resumeProfile?.educations)),
+    resumeWorkExperiences: stringifyResumeLines(asResumeLines(person.resumeProfile?.workExperiences)),
+    resumeCertifications: stringifyResumeLines(asResumeLines(person.resumeProfile?.certifications)),
+    resumeMotivation: person.resumeProfile?.motivation ?? "",
+    resumeSelfIntroduction: person.resumeProfile?.selfIntroduction ?? "",
+    resumeJapanPurpose: person.resumeProfile?.japanPurpose ?? "",
+    resumeCurrentJob: person.resumeProfile?.currentJob ?? "",
+    resumeRetirementReason: person.resumeProfile?.retirementReason ?? "",
+    resumePreferenceNote: person.resumeProfile?.preferenceNote ?? "",
     documents: buildInitialDocuments(person.documents),
   });
 
@@ -100,7 +139,12 @@ export default function EditPersonForm({ person }: { person: Person }) {
       const res = await fetch(`/api/personnel/${person.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          resumeEducations: parseResumeLines(form.resumeEducations),
+          resumeWorkExperiences: parseResumeLines(form.resumeWorkExperiences),
+          resumeCertifications: parseResumeLines(form.resumeCertifications),
+        }),
       });
       const data = await res.json();
       if (!data.ok) { alert(`更新失敗: ${data.error}`); return; }
@@ -214,6 +258,64 @@ export default function EditPersonForm({ person }: { person: Person }) {
       </Field>
       <Field label="住所">
         <textarea className={`${INPUT} min-h-28`} value={form.address} onChange={(e) => set("address", e.target.value)} />
+      </Field>
+      <hr className="border-gray-100" />
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">履歴書用情報</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="性別">
+          <input className={INPUT} value={form.resumeGender} onChange={(e) => set("resumeGender", e.target.value)} placeholder="男性" />
+        </Field>
+        <Field label="国籍（履歴書用）">
+          <input className={INPUT} value={form.resumeCountry} onChange={(e) => set("resumeCountry", e.target.value)} placeholder="ベトナム" />
+        </Field>
+        <Field label="配偶者">
+          <input className={INPUT} value={form.resumeSpouseStatus} onChange={(e) => set("resumeSpouseStatus", e.target.value)} placeholder="有 / 無" />
+        </Field>
+        <Field label="子供数">
+          <input className={INPUT} value={form.resumeChildrenCount} onChange={(e) => set("resumeChildrenCount", e.target.value)} placeholder="0" />
+        </Field>
+        <Field label="固定電話">
+          <input className={INPUT} value={form.resumePhoneHome} onChange={(e) => set("resumePhoneHome", e.target.value)} placeholder="043-xxxx-xxxx" />
+        </Field>
+        <Field label="ビザの種類">
+          <input className={INPUT} value={form.resumeVisaType} onChange={(e) => set("resumeVisaType", e.target.value)} placeholder="特定技能1号" />
+        </Field>
+        <Field label="在留資格の有効期限">
+          <input className={INPUT} value={form.resumeVisaExpiryDate} onChange={(e) => set("resumeVisaExpiryDate", e.target.value)} placeholder="2027-03-31" />
+        </Field>
+        <Field label="就労ビザ">
+          <input className={INPUT} value={form.resumeWorkVisa} onChange={(e) => set("resumeWorkVisa", e.target.value)} placeholder="有" />
+        </Field>
+      </div>
+      <Field label="備考欄">
+        <textarea className={`${INPUT} min-h-24`} value={form.resumeRemarks} onChange={(e) => set("resumeRemarks", e.target.value)} placeholder="通勤時間や家族情報など" />
+      </Field>
+      <Field label="学歴・職歴（1行 = 年月 | 内容 | 補足）">
+        <textarea className={`${INPUT} min-h-28`} value={form.resumeEducations} onChange={(e) => set("resumeEducations", e.target.value)} placeholder={"2018/04 | ハノイ工業高校 | 入学\n2021/03 | ハノイ工業高校 | 卒業"} />
+      </Field>
+      <Field label="職歴（1行 = 年月 | 会社名 | 退社ラベル）">
+        <textarea className={`${INPUT} min-h-28`} value={form.resumeWorkExperiences} onChange={(e) => set("resumeWorkExperiences", e.target.value)} placeholder={"2021/04 | ABC Factory | 入社\n2024/02 | ABC Factory | 退社"} />
+      </Field>
+      <Field label="免許・資格（1行 = 年月 | 資格名）">
+        <textarea className={`${INPUT} min-h-24`} value={form.resumeCertifications} onChange={(e) => set("resumeCertifications", e.target.value)} placeholder={"2022/06 | 日本語能力試験 N3\n2024/01 | フォークリフト"} />
+      </Field>
+      <Field label="志望動機">
+        <textarea className={`${INPUT} min-h-24`} value={form.resumeMotivation} onChange={(e) => set("resumeMotivation", e.target.value)} />
+      </Field>
+      <Field label="自己紹介">
+        <textarea className={`${INPUT} min-h-24`} value={form.resumeSelfIntroduction} onChange={(e) => set("resumeSelfIntroduction", e.target.value)} />
+      </Field>
+      <Field label="来日目的">
+        <textarea className={`${INPUT} min-h-24`} value={form.resumeJapanPurpose} onChange={(e) => set("resumeJapanPurpose", e.target.value)} />
+      </Field>
+      <Field label="現在の仕事">
+        <textarea className={`${INPUT} min-h-24`} value={form.resumeCurrentJob} onChange={(e) => set("resumeCurrentJob", e.target.value)} />
+      </Field>
+      <Field label="退職理由">
+        <textarea className={`${INPUT} min-h-24`} value={form.resumeRetirementReason} onChange={(e) => set("resumeRetirementReason", e.target.value)} />
+      </Field>
+      <Field label="本人希望記入欄">
+        <textarea className={`${INPUT} min-h-24`} value={form.resumePreferenceNote} onChange={(e) => set("resumePreferenceNote", e.target.value)} />
       </Field>
       <hr className="border-gray-100" />
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">提出書類</p>
@@ -330,6 +432,10 @@ function buildInitialDocuments(documents: Person["documents"]): DocumentInput[] 
       autoJudgeNote: documents.find((document) => document.kind === "certificate")?.autoJudgeNote ?? "",
     },
   ];
+}
+
+function asResumeLines(value: unknown) {
+  return Array.isArray(value) ? value as { date?: string | null; label?: string | null; result?: string | null }[] : [];
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

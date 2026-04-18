@@ -47,7 +47,6 @@ export default function ResumesClient({
     personId: persons[0]?.id ? String(persons[0].id) : "",
     templateId: initialTemplates[0]?.id ? String(initialTemplates[0].id) : "",
     title: "",
-    documentUrl: "",
   });
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [savingResume, setSavingResume] = useState(false);
@@ -106,7 +105,6 @@ export default function ResumesClient({
           title:
             resumeForm.title.trim() ||
             `${selectedPerson?.name ?? "候補者"} 履歴書`,
-          documentUrl: resumeForm.documentUrl.trim(),
         }),
       });
       const data = await res.json();
@@ -118,9 +116,8 @@ export default function ResumesClient({
       setResumeForm((current) => ({
         ...current,
         title: "",
-        documentUrl: "",
       }));
-      alert("履歴書情報を候補者に紐づけました");
+      alert("Google Docs で履歴書を作成して候補者へ紐づけました");
     } finally {
       setSavingResume(false);
     }
@@ -155,7 +152,7 @@ export default function ResumesClient({
 
         <section className="rounded-2xl border border-[var(--color-secondary)] bg-white p-6 shadow-sm">
           <h2 className="text-base font-semibold text-[var(--color-text-dark)]">履歴書を作成</h2>
-          <p className="mt-1 text-sm text-gray-500">候補者とテンプレートを選び、作成後の Docs リンクを候補者データに紐づけます。</p>
+          <p className="mt-1 text-sm text-gray-500">候補者とテンプレートを選ぶと、Google Docs を複製して候補者データに自動で紐づけます。</p>
           <div className="mt-5 space-y-4">
             <Field label="候補者">
               <select className={INPUT} value={resumeForm.personId} onChange={(e) => setResumeForm((c) => ({ ...c, personId: e.target.value }))}>
@@ -179,12 +176,10 @@ export default function ResumesClient({
             <Field label="履歴書名">
               <input className={INPUT} value={resumeForm.title} onChange={(e) => setResumeForm((c) => ({ ...c, title: e.target.value }))} placeholder={selectedPerson ? `${selectedPerson.name} 履歴書` : "履歴書タイトル"} />
             </Field>
-            <Field label="作成後の Google Docs リンク">
-              <input className={INPUT} value={resumeForm.documentUrl} onChange={(e) => setResumeForm((c) => ({ ...c, documentUrl: e.target.value }))} placeholder="https://docs.google.com/document/d/..." />
-            </Field>
             <div className="rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] px-4 py-3 text-xs leading-6 text-[var(--color-text-dark)]">
               <p>テンプレート: {selectedTemplate?.templateUrl || "未選択"}</p>
               <p>保存先: {selectedTemplate?.driveFolderUrl || "未選択"}</p>
+              <p>作成方式: Google Docs を複製して差し込み</p>
             </div>
             <button
               type="button"
@@ -192,7 +187,7 @@ export default function ResumesClient({
               disabled={savingResume}
               className="w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
             >
-              {savingResume ? "登録中..." : "履歴書を候補者に紐づける"}
+              {savingResume ? "作成中..." : "Google Docsで履歴書を作成"}
             </button>
           </div>
         </section>

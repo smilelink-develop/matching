@@ -8,6 +8,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     include: {
       onboarding: true,
       documents: true,
+      resumeProfile: true,
     },
   });
   if (!person) return Response.json({ ok: false, error: "not found" }, { status: 404 });
@@ -57,6 +58,51 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         address: body.address || null,
         status: body.birthDate || body.address ? "submitted" : "draft",
         submittedAt: body.birthDate || body.address ? new Date() : null,
+      },
+    });
+
+    await prisma.resumeProfile.upsert({
+      where: { personId },
+      create: {
+        personId,
+        gender: body.resumeGender || null,
+        country: body.resumeCountry || null,
+        spouseStatus: body.resumeSpouseStatus || null,
+        childrenCount: body.resumeChildrenCount || null,
+        phoneHome: body.resumePhoneHome || null,
+        visaType: body.resumeVisaType || null,
+        visaExpiryDate: body.resumeVisaExpiryDate || null,
+        workVisa: body.resumeWorkVisa || null,
+        remarks: body.resumeRemarks || null,
+        educations: body.resumeEducations ?? [],
+        workExperiences: body.resumeWorkExperiences ?? [],
+        certifications: body.resumeCertifications ?? [],
+        motivation: body.resumeMotivation || null,
+        selfIntroduction: body.resumeSelfIntroduction || null,
+        japanPurpose: body.resumeJapanPurpose || null,
+        currentJob: body.resumeCurrentJob || null,
+        retirementReason: body.resumeRetirementReason || null,
+        preferenceNote: body.resumePreferenceNote || null,
+      },
+      update: {
+        gender: body.resumeGender || null,
+        country: body.resumeCountry || null,
+        spouseStatus: body.resumeSpouseStatus || null,
+        childrenCount: body.resumeChildrenCount || null,
+        phoneHome: body.resumePhoneHome || null,
+        visaType: body.resumeVisaType || null,
+        visaExpiryDate: body.resumeVisaExpiryDate || null,
+        workVisa: body.resumeWorkVisa || null,
+        remarks: body.resumeRemarks || null,
+        educations: body.resumeEducations ?? [],
+        workExperiences: body.resumeWorkExperiences ?? [],
+        certifications: body.resumeCertifications ?? [],
+        motivation: body.resumeMotivation || null,
+        selfIntroduction: body.resumeSelfIntroduction || null,
+        japanPurpose: body.resumeJapanPurpose || null,
+        currentJob: body.resumeCurrentJob || null,
+        retirementReason: body.resumeRetirementReason || null,
+        preferenceNote: body.resumePreferenceNote || null,
       },
     });
 

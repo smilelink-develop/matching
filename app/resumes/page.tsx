@@ -30,7 +30,10 @@ export default async function ResumesPage() {
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">履歴書作成</h1>
         <p className="mt-1 text-sm text-gray-500">
-          候補者と履歴書テンプレートを選び、Google Docs と Google Drive のリンクを候補者情報へ紐づけます。
+          候補者情報をもとに Google Docs の履歴書を自動生成し、候補者データへ紐づけます。
+        </p>
+        <p className="mt-2 text-xs text-gray-400">
+          テンプレート内では {"{{カタカナ名}}"} や {"{{英語名}}"} のようなプレースホルダを使います。
         </p>
       </div>
       <ResumesClient
