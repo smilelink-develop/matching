@@ -77,6 +77,21 @@ export async function createResumeDocumentFromTemplate({
     );
   }
 
+  if (folderId) {
+    try {
+      await drive.files.get({
+        fileId: folderId,
+        fields: "id,name,mimeType",
+        supportsAllDrives: true,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown error";
+      throw new Error(
+        `保存先の Google Drive フォルダにアクセスできません。サービスアカウントへ共有されているか、Shared Drive のルートではなく実際のフォルダURLを指定しているかを確認してください。詳細: ${message}`
+      );
+    }
+  }
+
   const copied = await drive.files.copy({
     fileId: templateId,
     supportsAllDrives: true,
