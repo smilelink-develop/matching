@@ -13,6 +13,10 @@ const CHANNEL_LABEL: Record<string, string> = {
 
 export default async function PersonnelPage() {
   const persons = await prisma.person.findMany({
+    include: {
+      partner: { select: { name: true } },
+      onboarding: { select: { phoneNumber: true, englishName: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -37,11 +41,11 @@ export default async function PersonnelPage() {
             <tr className="bg-[var(--color-light)] text-[var(--color-text-dark)]">
               <th className="text-left px-4 py-3 font-semibold">名前</th>
               <th className="text-left px-4 py-3 font-semibold">国籍</th>
-              <th className="text-left px-4 py-3 font-semibold">部署</th>
+              <th className="text-left px-4 py-3 font-semibold">英語名</th>
               <th className="text-left px-4 py-3 font-semibold">在留資格</th>
+              <th className="text-left px-4 py-3 font-semibold">紹介パートナー</th>
               <th className="text-left px-4 py-3 font-semibold">連絡手段</th>
               <th className="text-left px-4 py-3 font-semibold">ID紐づけ</th>
-              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -54,47 +58,32 @@ export default async function PersonnelPage() {
               return (
                 <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {p.photoUrl ? (
-                        <Image
-                          src={p.photoUrl}
-                          alt={p.name}
-                          width={40}
-                          height={40}
-                          unoptimized
-                          className="h-10 w-10 rounded-xl object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white">
-                          {p.name[0]}
-                        </div>
-                      )}
-                      <span className="font-medium">{p.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{p.nationality}</td>
-                  <td className="px-4 py-3 text-gray-600">{p.department ?? "-"}</td>
-                  <td className="px-4 py-3 text-gray-600">{p.residenceStatus}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--color-light)] text-[var(--color-primary)]">
-                      {CHANNEL_LABEL[p.channel] ?? p.channel}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {hasId ? (
-                      <span className="text-green-600 text-xs font-medium">登録済み</span>
-                    ) : (
-                      <span className="text-gray-400 text-xs">未登録</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/personnel/${p.id}/edit`}
-                      className="text-[var(--color-primary)] text-xs hover:underline"
-                    >
-                      編集
+                    <Link href={`/personnel/${p.id}/edit`} className="block -mx-4 -my-3 px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {p.photoUrl ? (
+                          <Image
+                            src={p.photoUrl}
+                            alt={p.name}
+                            width={40}
+                            height={40}
+                            unoptimized
+                            className="h-10 w-10 rounded-xl object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white">
+                            {p.name[0]}
+                          </div>
+                        )}
+                        <span className="font-medium">{p.name}</span>
+                      </div>
                     </Link>
                   </td>
+                  <td className="px-4 py-3 text-gray-600"><Link href={`/personnel/${p.id}/edit`} className="block -mx-4 -my-3 px-4 py-3">{p.nationality}</Link></td>
+                  <td className="px-4 py-3 text-gray-600"><Link href={`/personnel/${p.id}/edit`} className="block -mx-4 -my-3 px-4 py-3">{p.onboarding?.englishName ?? "-"}</Link></td>
+                  <td className="px-4 py-3 text-gray-600"><Link href={`/personnel/${p.id}/edit`} className="block -mx-4 -my-3 px-4 py-3">{p.residenceStatus}</Link></td>
+                  <td className="px-4 py-3 text-gray-600"><Link href={`/personnel/${p.id}/edit`} className="block -mx-4 -my-3 px-4 py-3">{p.partner?.name ?? "未設定"}</Link></td>
+                  <td className="px-4 py-3"><Link href={`/personnel/${p.id}/edit`} className="block -mx-4 -my-3 px-4 py-3"><span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--color-light)] text-[var(--color-primary)]">{CHANNEL_LABEL[p.channel] ?? p.channel}</span></Link></td>
+                  <td className="px-4 py-3"><Link href={`/personnel/${p.id}/edit`} className="block -mx-4 -my-3 px-4 py-3">{hasId ? <span className="text-green-600 text-xs font-medium">登録済み</span> : <span className="text-gray-400 text-xs">未登録</span>}</Link></td>
                 </tr>
               );
             })}

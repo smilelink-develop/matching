@@ -2,24 +2,31 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { parseResumeLines, stringifyResumeLines } from "@/lib/resume-placeholders";
-
-const NATIONALITIES = ["ベトナム", "インドネシア", "ミャンマー", "フィリピン", "タイ", "その他"];
-const RESIDENCE_STATUSES = ["技能実習", "特定技能1号", "特定技能2号", "技術・人文知識・国際業務"];
-const CHANNELS = [
-  { value: "LINE", label: "LINE" },
-  { value: "Messenger", label: "Messenger" },
-  { value: "mail", label: "メール" },
-  { value: "WhatsApp", label: "WhatsApp" },
-];
+import { useMemo, useState } from "react";
+import {
+  calculateAge,
+  CHANNELS,
+  GENDERS,
+  getDocumentDefinitions,
+  NATIONALITIES,
+  normalizeWorkHistories,
+  RESIDENCE_STATUSES,
+  type WorkHistoryEntry,
+} from "@/lib/candidate-profile";
 
 type Person = {
-  id: number; name: string; nationality: string; department: string | null;
+  id: number;
+  name: string;
+  nationality: string;
+  department: string | null;
   photoUrl: string | null;
-  residenceStatus: string; channel: string;
-  lineUserId: string | null; messengerPsid: string | null;
-  email: string | null; whatsappId: string | null;
+  residenceStatus: string;
+  partnerId: number | null;
+  channel: string;
+  lineUserId: string | null;
+  messengerPsid: string | null;
+  email: string | null;
+  whatsappId: string | null;
   onboarding: {
     englishName: string | null;
     birthDate: string | null;
@@ -29,23 +36,29 @@ type Person = {
   } | null;
   resumeProfile: {
     gender: string | null;
-    country: string | null;
     spouseStatus: string | null;
     childrenCount: string | null;
-    phoneHome: string | null;
-    visaType: string | null;
     visaExpiryDate: string | null;
-    workVisa: string | null;
-    remarks: string | null;
-    educations: unknown;
-    workExperiences: unknown;
-    certifications: unknown;
     motivation: string | null;
     selfIntroduction: string | null;
     japanPurpose: string | null;
     currentJob: string | null;
     retirementReason: string | null;
     preferenceNote: string | null;
+    japaneseLevel: string | null;
+    japaneseLevelDate: string | null;
+    licenseName: string | null;
+    licenseExpiryDate: string | null;
+    otherQualificationName: string | null;
+    otherQualificationExpiryDate: string | null;
+    traineeExperience: string | null;
+    highSchoolName: string | null;
+    highSchoolStartDate: string | null;
+    highSchoolEndDate: string | null;
+    universityName: string | null;
+    universityStartDate: string | null;
+    universityEndDate: string | null;
+    workExperiences: unknown;
   } | null;
   documents: {
     kind: string;
@@ -57,8 +70,13 @@ type Person = {
   }[];
 };
 
+type PartnerOption = {
+  id: number;
+  name: string;
+};
+
 type DocumentInput = {
-  kind: "residence-card" | "certificate";
+  kind: string;
   label: string;
   fileName: string;
   fileUrl: string;
@@ -67,49 +85,76 @@ type DocumentInput = {
   autoJudgeNote: string;
 };
 
-export default function EditPersonForm({ person }: { person: Person }) {
+const SECTION_ITEMS = [
+  { id: "basic", label: "基本情報" },
+  { id: "qualification", label: "資格・学歴" },
+  { id: "visa", label: "各在留資格" },
+] as const;
+
+export default function EditPersonForm({
+  person,
+  partners,
+}: {
+  person: Person;
+  partners: PartnerOption[];
+}) {
   const router = useRouter();
+  const [activeSection, setActiveSection] = useState<(typeof SECTION_ITEMS)[number]["id"]>("basic");
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [form, setForm] = useState({
     name: person.name,
     photoUrl: person.photoUrl ?? "",
+    englishName: person.onboarding?.englishName ?? "",
+    partnerId: person.partnerId ? String(person.partnerId) : "",
     nationality: person.nationality,
-    department: person.department ?? "",
     residenceStatus: person.residenceStatus,
     channel: person.channel,
+    phoneNumber: person.onboarding?.phoneNumber ?? "",
+    gender: person.resumeProfile?.gender ?? "",
+    birthDate: person.onboarding?.birthDate ?? "",
+    postalCode: person.onboarding?.postalCode ?? "",
+    address: person.onboarding?.address ?? "",
+    spouseStatus: person.resumeProfile?.spouseStatus ?? "",
+    childrenCount: person.resumeProfile?.childrenCount ?? "",
+    motivation: person.resumeProfile?.motivation ?? "",
+    selfIntroduction: person.resumeProfile?.selfIntroduction ?? "",
+    japanPurpose: person.resumeProfile?.japanPurpose ?? "",
+    currentJob: person.resumeProfile?.currentJob ?? "",
+    retirementReason: person.resumeProfile?.retirementReason ?? "",
+    preferenceNote: person.resumeProfile?.preferenceNote ?? "",
+    visaExpiryDate: person.resumeProfile?.visaExpiryDate ?? "",
+    japaneseLevel: person.resumeProfile?.japaneseLevel ?? "",
+    japaneseLevelDate: person.resumeProfile?.japaneseLevelDate ?? "",
+    licenseName: person.resumeProfile?.licenseName ?? "",
+    licenseExpiryDate: person.resumeProfile?.licenseExpiryDate ?? "",
+    otherQualificationName: person.resumeProfile?.otherQualificationName ?? "",
+    otherQualificationExpiryDate: person.resumeProfile?.otherQualificationExpiryDate ?? "",
+    traineeExperience: person.resumeProfile?.traineeExperience ?? "",
+    highSchoolName: person.resumeProfile?.highSchoolName ?? "",
+    highSchoolStartDate: person.resumeProfile?.highSchoolStartDate ?? "",
+    highSchoolEndDate: person.resumeProfile?.highSchoolEndDate ?? "",
+    universityName: person.resumeProfile?.universityName ?? "",
+    universityStartDate: person.resumeProfile?.universityStartDate ?? "",
+    universityEndDate: person.resumeProfile?.universityEndDate ?? "",
+    workExperiences: withInitialWorkRow(normalizeWorkHistories(person.resumeProfile?.workExperiences)),
     lineUserId: person.lineUserId ?? "",
     messengerPsid: person.messengerPsid ?? "",
     email: person.email ?? "",
     whatsappId: person.whatsappId ?? "",
-    englishName: person.onboarding?.englishName ?? "",
-    birthDate: person.onboarding?.birthDate ?? "",
-    phoneNumber: person.onboarding?.phoneNumber ?? "",
-    postalCode: person.onboarding?.postalCode ?? "",
-    address: person.onboarding?.address ?? "",
-    resumeGender: person.resumeProfile?.gender ?? "",
-    resumeCountry: person.resumeProfile?.country ?? "",
-    resumeSpouseStatus: person.resumeProfile?.spouseStatus ?? "",
-    resumeChildrenCount: person.resumeProfile?.childrenCount ?? "",
-    resumePhoneHome: person.resumeProfile?.phoneHome ?? "",
-    resumeVisaType: person.resumeProfile?.visaType ?? "",
-    resumeVisaExpiryDate: person.resumeProfile?.visaExpiryDate ?? "",
-    resumeWorkVisa: person.resumeProfile?.workVisa ?? "",
-    resumeRemarks: person.resumeProfile?.remarks ?? "",
-    resumeEducations: stringifyResumeLines(asResumeLines(person.resumeProfile?.educations)),
-    resumeWorkExperiences: stringifyResumeLines(asResumeLines(person.resumeProfile?.workExperiences)),
-    resumeCertifications: stringifyResumeLines(asResumeLines(person.resumeProfile?.certifications)),
-    resumeMotivation: person.resumeProfile?.motivation ?? "",
-    resumeSelfIntroduction: person.resumeProfile?.selfIntroduction ?? "",
-    resumeJapanPurpose: person.resumeProfile?.japanPurpose ?? "",
-    resumeCurrentJob: person.resumeProfile?.currentJob ?? "",
-    resumeRetirementReason: person.resumeProfile?.retirementReason ?? "",
-    resumePreferenceNote: person.resumeProfile?.preferenceNote ?? "",
-    documents: buildInitialDocuments(person.documents),
+    documents: buildInitialDocuments(person.documents, person.residenceStatus),
   });
 
-  const set = (k: string, v: string | DocumentInput[]) => setForm((f) => ({ ...f, [k]: v }));
+  const age = useMemo(() => calculateAge(form.birthDate), [form.birthDate]);
+  const visibleDocuments = useMemo(
+    () => mergeDocumentsForStatus(form.documents, form.residenceStatus),
+    [form.documents, form.residenceStatus]
+  );
+
+  const setValue = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
+    setForm((current) => ({ ...current, [key]: value }));
+  };
 
   const handlePhotoChange = async (file: File | null) => {
     if (!file) return;
@@ -125,76 +170,135 @@ export default function EditPersonForm({ person }: { person: Person }) {
     setUploadingPhoto(true);
     try {
       const dataUrl = await readFileAsDataUrl(file);
-      set("photoUrl", dataUrl);
+      setValue("photoUrl", dataUrl);
     } finally {
       setUploadingPhoto(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name.trim()) { alert("名前を入力してください"); return; }
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/personnel/${person.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          resumeEducations: parseResumeLines(form.resumeEducations),
-          resumeWorkExperiences: parseResumeLines(form.resumeWorkExperiences),
-          resumeCertifications: parseResumeLines(form.resumeCertifications),
-        }),
-      });
-      const data = await res.json();
-      if (!data.ok) { alert(`更新失敗: ${data.error}`); return; }
-      router.push("/personnel");
-      router.refresh();
-    } catch { alert("更新に失敗しました"); }
-    finally { setSubmitting(false); }
-  };
-
-  const updateDocument = async (kind: DocumentInput["kind"], file: File | null) => {
+  const updateDocument = async (kind: string, file: File | null) => {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       alert("ファイルは5MB以下にしてください");
       return;
     }
-
     const fileUrl = await readFileAsDataUrl(file);
     setForm((current) => ({
       ...current,
-      documents: current.documents.map((document) =>
-        document.kind === kind
-          ? {
-              ...document,
-              fileName: file.name,
-              fileUrl,
-              mimeType: file.type,
-              autoJudgeStatus: "accepted",
-              autoJudgeNote: "管理画面から更新",
-            }
-          : document
+      documents: upsertDocument(current.documents, {
+        kind,
+        label: getDocumentDefinitions(current.residenceStatus).find((document) => document.kind === kind)?.label ?? kind,
+        fileName: file.name,
+        fileUrl,
+        mimeType: file.type,
+        autoJudgeStatus: "accepted",
+        autoJudgeNote: "管理画面から更新",
+      }),
+    }));
+  };
+
+  const updateWorkExperience = (index: number, key: keyof WorkHistoryEntry, value: string) => {
+    setForm((current) => ({
+      ...current,
+      workExperiences: current.workExperiences.map((entry, currentIndex) =>
+        currentIndex === index ? { ...entry, [key]: value } : entry
       ),
     }));
+  };
+
+  const addWorkExperience = () => {
+    setForm((current) => ({
+      ...current,
+      workExperiences: [
+        ...current.workExperiences,
+        { companyName: "", startDate: "", endDate: "", reason: "" },
+      ],
+    }));
+  };
+
+  const removeWorkExperience = (index: number) => {
+    setForm((current) => ({
+      ...current,
+      workExperiences: current.workExperiences.filter((_, currentIndex) => currentIndex !== index),
+    }));
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.name.trim()) {
+      alert("カタカナ名を入力してください");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch(`/api/personnel/${person.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          partnerId: form.partnerId ? Number(form.partnerId) : null,
+          workExperiences: form.workExperiences.filter(
+            (entry) => entry.companyName || entry.startDate || entry.endDate || entry.reason
+          ),
+          documents: visibleDocuments,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(`更新失敗: ${result.error}`);
+        return;
+      }
+      router.push("/personnel");
+      router.refresh();
+    } catch {
+      alert("更新に失敗しました");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDelete = async () => {
     if (!confirm(`「${person.name}」を削除しますか？`)) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/personnel/${person.id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!data.ok) { alert(`削除失敗: ${data.error}`); return; }
+      const response = await fetch(`/api/personnel/${person.id}`, { method: "DELETE" });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(`削除失敗: ${result.error}`);
+        return;
+      }
       router.push("/personnel");
-    } catch { alert("削除に失敗しました"); }
-    finally { setDeleting(false); }
+    } catch {
+      alert("削除に失敗しました");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 shadow-sm">
-      <div className="rounded-2xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-6">
-        <p className="text-sm font-medium text-[var(--color-text-dark)] mb-4">顔写真</p>
+    <form onSubmit={handleSubmit} className="space-y-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-3">
+        <div className="grid gap-2 md:grid-cols-3">
+          {SECTION_ITEMS.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => setActiveSection(section.id)}
+              className={`rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                activeSection === section.id
+                  ? "bg-[var(--color-primary)] text-white shadow-sm"
+                  : "bg-white text-[var(--color-text-dark)] hover:bg-white/80"
+              }`}
+            >
+              {section.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-6">
+        <p className="mb-4 text-sm font-medium text-[var(--color-text-dark)]">顔写真</p>
         <div className="flex items-center gap-5">
           <AvatarPreview name={form.name} photoUrl={form.photoUrl} />
           <div className="space-y-3">
@@ -207,171 +311,301 @@ export default function EditPersonForm({ person }: { person: Person }) {
                 onChange={(event) => void handlePhotoChange(event.target.files?.[0] ?? null)}
               />
             </label>
-            {form.photoUrl && (
+            {form.photoUrl ? (
               <button
                 type="button"
-                onClick={() => set("photoUrl", "")}
+                onClick={() => setValue("photoUrl", "")}
                 className="block text-sm text-gray-500 hover:underline"
               >
                 写真を削除
               </button>
-            )}
-            <p className="text-xs text-gray-400">顔写真はチャットや一覧にも反映されます。</p>
+            ) : null}
           </div>
         </div>
       </div>
-      <Field label="カタカナ名 *">
-        <input className={INPUT} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="グエン ヴァン アン" />
-      </Field>
-      <Field label="国籍">
-        <select className={INPUT} value={form.nationality} onChange={(e) => set("nationality", e.target.value)}>
-          {NATIONALITIES.map((n) => <option key={n}>{n}</option>)}
-        </select>
-      </Field>
-      <Field label="部署">
-        <input className={INPUT} value={form.department} onChange={(e) => set("department", e.target.value)} placeholder="製造部" />
-      </Field>
-      <Field label="在留資格">
-        <select className={INPUT} value={form.residenceStatus} onChange={(e) => set("residenceStatus", e.target.value)}>
-          {RESIDENCE_STATUSES.map((r) => <option key={r}>{r}</option>)}
-        </select>
-      </Field>
-      <Field label="主な連絡手段">
-        <select className={INPUT} value={form.channel} onChange={(e) => set("channel", e.target.value)}>
-          {CHANNELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </select>
-      </Field>
 
-      <hr className="border-gray-100" />
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">初期登録情報</p>
-      <Field label="英語名">
-        <input className={INPUT} value={form.englishName} onChange={(e) => set("englishName", e.target.value)} placeholder="NGUYEN VAN AN" />
-      </Field>
-      <Field label="生年月日">
-        <input className={INPUT} type="date" value={form.birthDate} onChange={(e) => set("birthDate", e.target.value)} />
-      </Field>
-      <Field label="電話番号">
-        <input className={INPUT} value={form.phoneNumber} onChange={(e) => set("phoneNumber", e.target.value)} />
-      </Field>
-      <Field label="郵便番号">
-        <input className={INPUT} value={form.postalCode} onChange={(e) => set("postalCode", e.target.value)} />
-      </Field>
-      <Field label="住所">
-        <textarea className={`${INPUT} min-h-28`} value={form.address} onChange={(e) => set("address", e.target.value)} />
-      </Field>
-      <hr className="border-gray-100" />
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">履歴書用情報</p>
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="性別">
-          <input className={INPUT} value={form.resumeGender} onChange={(e) => set("resumeGender", e.target.value)} placeholder="男性" />
-        </Field>
-        <Field label="国籍（履歴書用）">
-          <input className={INPUT} value={form.resumeCountry} onChange={(e) => set("resumeCountry", e.target.value)} placeholder="ベトナム" />
-        </Field>
-        <Field label="配偶者">
-          <input className={INPUT} value={form.resumeSpouseStatus} onChange={(e) => set("resumeSpouseStatus", e.target.value)} placeholder="有 / 無" />
-        </Field>
-        <Field label="子供数">
-          <input className={INPUT} value={form.resumeChildrenCount} onChange={(e) => set("resumeChildrenCount", e.target.value)} placeholder="0" />
-        </Field>
-        <Field label="固定電話">
-          <input className={INPUT} value={form.resumePhoneHome} onChange={(e) => set("resumePhoneHome", e.target.value)} placeholder="043-xxxx-xxxx" />
-        </Field>
-        <Field label="ビザの種類">
-          <input className={INPUT} value={form.resumeVisaType} onChange={(e) => set("resumeVisaType", e.target.value)} placeholder="特定技能1号" />
-        </Field>
-        <Field label="在留資格の有効期限">
-          <input className={INPUT} value={form.resumeVisaExpiryDate} onChange={(e) => set("resumeVisaExpiryDate", e.target.value)} placeholder="2027-03-31" />
-        </Field>
-        <Field label="就労ビザ">
-          <input className={INPUT} value={form.resumeWorkVisa} onChange={(e) => set("resumeWorkVisa", e.target.value)} placeholder="有" />
-        </Field>
-      </div>
-      <Field label="備考欄">
-        <textarea className={`${INPUT} min-h-24`} value={form.resumeRemarks} onChange={(e) => set("resumeRemarks", e.target.value)} placeholder="通勤時間や家族情報など" />
-      </Field>
-      <Field label="学歴・職歴（1行 = 年月 | 内容 | 補足）">
-        <textarea className={`${INPUT} min-h-28`} value={form.resumeEducations} onChange={(e) => set("resumeEducations", e.target.value)} placeholder={"2018/04 | ハノイ工業高校 | 入学\n2021/03 | ハノイ工業高校 | 卒業"} />
-      </Field>
-      <Field label="職歴（1行 = 年月 | 会社名 | 退社ラベル）">
-        <textarea className={`${INPUT} min-h-28`} value={form.resumeWorkExperiences} onChange={(e) => set("resumeWorkExperiences", e.target.value)} placeholder={"2021/04 | ABC Factory | 入社\n2024/02 | ABC Factory | 退社"} />
-      </Field>
-      <Field label="免許・資格（1行 = 年月 | 資格名）">
-        <textarea className={`${INPUT} min-h-24`} value={form.resumeCertifications} onChange={(e) => set("resumeCertifications", e.target.value)} placeholder={"2022/06 | 日本語能力試験 N3\n2024/01 | フォークリフト"} />
-      </Field>
-      <Field label="志望動機">
-        <textarea className={`${INPUT} min-h-24`} value={form.resumeMotivation} onChange={(e) => set("resumeMotivation", e.target.value)} />
-      </Field>
-      <Field label="自己紹介">
-        <textarea className={`${INPUT} min-h-24`} value={form.resumeSelfIntroduction} onChange={(e) => set("resumeSelfIntroduction", e.target.value)} />
-      </Field>
-      <Field label="来日目的">
-        <textarea className={`${INPUT} min-h-24`} value={form.resumeJapanPurpose} onChange={(e) => set("resumeJapanPurpose", e.target.value)} />
-      </Field>
-      <Field label="現在の仕事">
-        <textarea className={`${INPUT} min-h-24`} value={form.resumeCurrentJob} onChange={(e) => set("resumeCurrentJob", e.target.value)} />
-      </Field>
-      <Field label="退職理由">
-        <textarea className={`${INPUT} min-h-24`} value={form.resumeRetirementReason} onChange={(e) => set("resumeRetirementReason", e.target.value)} />
-      </Field>
-      <Field label="本人希望記入欄">
-        <textarea className={`${INPUT} min-h-24`} value={form.resumePreferenceNote} onChange={(e) => set("resumePreferenceNote", e.target.value)} />
-      </Field>
-      <hr className="border-gray-100" />
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">提出書類</p>
-      {form.documents.map((document) => (
-        <div key={document.kind} className="rounded-2xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4 space-y-3">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-[var(--color-text-dark)]">{document.label}</p>
-              <p className="mt-1 text-xs text-gray-500">
-                {document.fileName ? `現在のファイル: ${document.fileName}` : "まだ提出されていません"}
-              </p>
+      {activeSection === "basic" ? (
+        <section className="space-y-5">
+          <SectionTitle title="基本情報" description="候補者の基本プロフィールと紹介パートナー、連絡先を管理します。" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="英語名">
+              <input className={INPUT} value={form.englishName} onChange={(event) => setValue("englishName", event.target.value)} placeholder="NGUYEN VAN AN" />
+            </Field>
+            <Field label="カタカナ名 *">
+              <input className={INPUT} value={form.name} onChange={(event) => setValue("name", event.target.value)} placeholder="グエン ヴァン アン" />
+            </Field>
+            <Field label="紹介パートナー">
+              <select className={INPUT} value={form.partnerId} onChange={(event) => setValue("partnerId", event.target.value)}>
+                <option value="">未設定</option>
+                {partners.map((partner) => (
+                  <option key={partner.id} value={partner.id}>
+                    {partner.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="国籍">
+              <select className={INPUT} value={form.nationality} onChange={(event) => setValue("nationality", event.target.value)}>
+                {NATIONALITIES.map((nationality) => (
+                  <option key={nationality}>{nationality}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="携帯番号">
+              <input className={INPUT} value={form.phoneNumber} onChange={(event) => setValue("phoneNumber", event.target.value)} />
+            </Field>
+            <Field label="性別">
+              <select className={INPUT} value={form.gender} onChange={(event) => setValue("gender", event.target.value)}>
+                <option value="">未設定</option>
+                {GENDERS.map((gender) => (
+                  <option key={gender}>{gender}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="生年月日">
+              <input className={INPUT} type="date" value={form.birthDate} onChange={(event) => setValue("birthDate", event.target.value)} />
+            </Field>
+            <Field label="年齢">
+              <input className={`${INPUT} bg-gray-50`} value={age} readOnly placeholder="自動計算" />
+            </Field>
+            <Field label="住所" className="md:col-span-2">
+              <textarea className={`${INPUT} min-h-28`} value={form.address} onChange={(event) => setValue("address", event.target.value)} />
+            </Field>
+            <Field label="郵便番号">
+              <input className={INPUT} value={form.postalCode} onChange={(event) => setValue("postalCode", event.target.value)} />
+            </Field>
+            <Field label="配偶者">
+              <input className={INPUT} value={form.spouseStatus} onChange={(event) => setValue("spouseStatus", event.target.value)} placeholder="有 / 無" />
+            </Field>
+            <Field label="子供">
+              <input className={INPUT} value={form.childrenCount} onChange={(event) => setValue("childrenCount", event.target.value)} placeholder="0" />
+            </Field>
+            <Field label="志望動機" className="md:col-span-2">
+              <textarea className={`${INPUT} min-h-24`} value={form.motivation} onChange={(event) => setValue("motivation", event.target.value)} />
+            </Field>
+            <Field label="自己紹介" className="md:col-span-2">
+              <textarea className={`${INPUT} min-h-24`} value={form.selfIntroduction} onChange={(event) => setValue("selfIntroduction", event.target.value)} />
+            </Field>
+            <Field label="来日目的" className="md:col-span-2">
+              <textarea className={`${INPUT} min-h-24`} value={form.japanPurpose} onChange={(event) => setValue("japanPurpose", event.target.value)} />
+            </Field>
+            <Field label="現在の仕事" className="md:col-span-2">
+              <textarea className={`${INPUT} min-h-24`} value={form.currentJob} onChange={(event) => setValue("currentJob", event.target.value)} />
+            </Field>
+            <Field label="退職理由" className="md:col-span-2">
+              <textarea className={`${INPUT} min-h-24`} value={form.retirementReason} onChange={(event) => setValue("retirementReason", event.target.value)} />
+            </Field>
+            <Field label="本人希望記入欄" className="md:col-span-2">
+              <textarea className={`${INPUT} min-h-24`} value={form.preferenceNote} onChange={(event) => setValue("preferenceNote", event.target.value)} />
+            </Field>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-5">
+            <p className="text-sm font-semibold text-[var(--color-text-dark)]">連絡先 ID</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <Field label="主な連絡手段">
+                <select className={INPUT} value={form.channel} onChange={(event) => setValue("channel", event.target.value)}>
+                  {CHANNELS.map((channel) => (
+                    <option key={channel.value} value={channel.value}>
+                      {channel.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="在留資格">
+                <select className={INPUT} value={form.residenceStatus} onChange={(event) => setValue("residenceStatus", event.target.value)}>
+                  {RESIDENCE_STATUSES.map((status) => (
+                    <option key={status}>{status}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="LINE userId">
+                <input className={INPUT} value={form.lineUserId} onChange={(event) => setValue("lineUserId", event.target.value)} placeholder="Uxxxxxxxx" />
+              </Field>
+              <Field label="Messenger PSID">
+                <input className={INPUT} value={form.messengerPsid} onChange={(event) => setValue("messengerPsid", event.target.value)} placeholder="1234567890" />
+              </Field>
+              <Field label="メールアドレス">
+                <input className={INPUT} type="email" value={form.email} onChange={(event) => setValue("email", event.target.value)} placeholder="example@email.com" />
+              </Field>
+              <Field label="WhatsApp ID">
+                <input className={INPUT} value={form.whatsappId} onChange={(event) => setValue("whatsappId", event.target.value)} placeholder="+81xxxxxxxxxx" />
+              </Field>
             </div>
-            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary)] border border-[var(--color-secondary)]">
-              {document.autoJudgeStatus === "accepted" ? "確認済み" : "要確認"}
-            </span>
           </div>
-          <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]">
-            ファイルを差し替え
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              className="hidden"
-              onChange={(event) => void updateDocument(document.kind, event.target.files?.[0] ?? null)}
-            />
-          </label>
-        </div>
-      ))}
+        </section>
+      ) : null}
 
-      <hr className="border-gray-100" />
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">連絡先ID</p>
-      <Field label="LINE userId">
-        <input className={INPUT} value={form.lineUserId} onChange={(e) => set("lineUserId", e.target.value)} placeholder="Uxxxxxxxx" />
-      </Field>
-      <Field label="Messenger PSID">
-        <input className={INPUT} value={form.messengerPsid} onChange={(e) => set("messengerPsid", e.target.value)} placeholder="1234567890" />
-      </Field>
-      <Field label="メールアドレス">
-        <input className={INPUT} type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="example@email.com" />
-      </Field>
-      <Field label="WhatsApp ID（将来対応）">
-        <input className={INPUT} value={form.whatsappId} onChange={(e) => set("whatsappId", e.target.value)} placeholder="＋81xxxxxxxxxx" />
-      </Field>
+      {activeSection === "qualification" ? (
+        <section className="space-y-5">
+          <SectionTitle title="資格・学歴" description="在留資格、資格、学歴、職歴を候補者単位で整理します。" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="現在の在留資格">
+              <select className={INPUT} value={form.residenceStatus} onChange={(event) => setValue("residenceStatus", event.target.value)}>
+                {RESIDENCE_STATUSES.map((status) => (
+                  <option key={status}>{status}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="在留資格の有効期限">
+              <input className={INPUT} type="date" value={form.visaExpiryDate} onChange={(event) => setValue("visaExpiryDate", event.target.value)} />
+            </Field>
+            <Field label="日本語検定">
+              <input className={INPUT} value={form.japaneseLevel} onChange={(event) => setValue("japaneseLevel", event.target.value)} placeholder="JLPT N3" />
+            </Field>
+            <Field label="取得日">
+              <input className={INPUT} type="date" value={form.japaneseLevelDate} onChange={(event) => setValue("japaneseLevelDate", event.target.value)} />
+            </Field>
+            <Field label="免許">
+              <input className={INPUT} value={form.licenseName} onChange={(event) => setValue("licenseName", event.target.value)} placeholder="普通自動車第一種免許" />
+            </Field>
+            <Field label="免許の有効期限">
+              <input className={INPUT} type="date" value={form.licenseExpiryDate} onChange={(event) => setValue("licenseExpiryDate", event.target.value)} />
+            </Field>
+            <Field label="その他の資格">
+              <input className={INPUT} value={form.otherQualificationName} onChange={(event) => setValue("otherQualificationName", event.target.value)} placeholder="介護初任者研修" />
+            </Field>
+            <Field label="その他資格の有効期限">
+              <input className={INPUT} type="date" value={form.otherQualificationExpiryDate} onChange={(event) => setValue("otherQualificationExpiryDate", event.target.value)} />
+            </Field>
+            <Field label="実習経験の有無">
+              <input className={INPUT} value={form.traineeExperience} onChange={(event) => setValue("traineeExperience", event.target.value)} placeholder="有 / 無 / 3年経験あり" />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 rounded-2xl border border-gray-200 bg-[var(--color-light)] p-5 md:grid-cols-3">
+            <Field label="高校名" className="md:col-span-3">
+              <input className={INPUT} value={form.highSchoolName} onChange={(event) => setValue("highSchoolName", event.target.value)} />
+            </Field>
+            <Field label="高校入学年月日">
+              <input className={INPUT} type="date" value={form.highSchoolStartDate} onChange={(event) => setValue("highSchoolStartDate", event.target.value)} />
+            </Field>
+            <Field label="高校卒業年月日">
+              <input className={INPUT} type="date" value={form.highSchoolEndDate} onChange={(event) => setValue("highSchoolEndDate", event.target.value)} />
+            </Field>
+            <div />
+            <Field label="大学名" className="md:col-span-3">
+              <input className={INPUT} value={form.universityName} onChange={(event) => setValue("universityName", event.target.value)} />
+            </Field>
+            <Field label="大学入学年月日">
+              <input className={INPUT} type="date" value={form.universityStartDate} onChange={(event) => setValue("universityStartDate", event.target.value)} />
+            </Field>
+            <Field label="大学卒業年月日">
+              <input className={INPUT} type="date" value={form.universityEndDate} onChange={(event) => setValue("universityEndDate", event.target.value)} />
+            </Field>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--color-text-dark)]">職歴</p>
+                <p className="mt-1 text-xs text-gray-500">会社が複数ある場合は行を追加して管理できます。</p>
+              </div>
+              <button
+                type="button"
+                onClick={addWorkExperience}
+                className="rounded-lg border border-[var(--color-secondary)] bg-white px-4 py-2 text-sm text-[var(--color-primary)]"
+              >
+                + 行を追加
+              </button>
+            </div>
+            <div className="mt-4 space-y-4">
+              {form.workExperiences.map((entry, index) => (
+                <div key={`${index}-${entry.companyName}`} className="rounded-2xl border border-white bg-white p-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="会社名" className="md:col-span-2">
+                      <input className={INPUT} value={entry.companyName} onChange={(event) => updateWorkExperience(index, "companyName", event.target.value)} />
+                    </Field>
+                    <Field label="入社年月日">
+                      <input className={INPUT} type="date" value={entry.startDate} onChange={(event) => updateWorkExperience(index, "startDate", event.target.value)} />
+                    </Field>
+                    <Field label="退社年月日">
+                      <input className={INPUT} type="date" value={entry.endDate} onChange={(event) => updateWorkExperience(index, "endDate", event.target.value)} />
+                    </Field>
+                    <Field label="退社理由" className="md:col-span-2">
+                      <textarea className={`${INPUT} min-h-24`} value={entry.reason} onChange={(event) => updateWorkExperience(index, "reason", event.target.value)} />
+                    </Field>
+                  </div>
+                  {form.workExperiences.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => removeWorkExperience(index)}
+                      className="mt-3 text-sm text-red-500 hover:underline"
+                    >
+                      この行を削除
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {activeSection === "visa" ? (
+        <section className="space-y-5">
+          <SectionTitle title="各在留資格" description="在留資格ごとに必要な提出書類をまとめて管理します。" />
+          <div className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-5">
+            <p className="text-sm text-[var(--color-text-dark)]">
+              現在の在留資格: <span className="font-semibold">{form.residenceStatus}</span>
+            </p>
+            {form.residenceStatus === "特定技能1号" ? (
+              <p className="mt-2 text-xs text-gray-500">特定技能1号では、在留カードに加えて指定書と技能検定の合格証を管理します。</p>
+            ) : (
+              <p className="mt-2 text-xs text-gray-500">現在は在留カードを基本書類として管理します。</p>
+            )}
+          </div>
+
+          {visibleDocuments.map((document) => (
+            <div key={document.kind} className="rounded-2xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text-dark)]">{document.label}</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {document.fileName ? `現在のファイル: ${document.fileName}` : "まだ提出されていません"}
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary)] border border-[var(--color-secondary)]">
+                  {document.autoJudgeStatus === "accepted" ? "確認済み" : "要確認"}
+                </span>
+              </div>
+              <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]">
+                ファイルを差し替え
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  onChange={(event) => void updateDocument(document.kind, event.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       <div className="flex items-center justify-between pt-2">
         <div className="flex gap-3">
-          <button type="submit" disabled={submitting}
-            className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-lg bg-[var(--color-primary)] px-6 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+          >
             {submitting ? "保存中..." : "保存"}
           </button>
-          <button type="button" onClick={() => router.back()}
-            className="border border-gray-300 px-6 py-2 rounded-lg text-sm hover:bg-gray-50">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="rounded-lg border border-gray-300 px-6 py-2 text-sm hover:bg-gray-50"
+          >
             戻る
           </button>
         </div>
-        <button type="button" onClick={handleDelete} disabled={deleting}
-          className="text-red-500 text-sm hover:underline disabled:opacity-50">
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-sm text-red-500 hover:underline disabled:opacity-50"
+        >
           {deleting ? "削除中..." : "削除"}
         </button>
       </div>
@@ -379,7 +613,17 @@ export default function EditPersonForm({ person }: { person: Person }) {
   );
 }
 
-const INPUT = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]";
+function SectionTitle({ title, description }: { title: string; description: string }) {
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-[var(--color-text-dark)]">{title}</h2>
+      <p className="mt-1 text-sm text-gray-500">{description}</p>
+    </div>
+  );
+}
+
+const INPUT =
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]";
 
 function AvatarPreview({ name, photoUrl }: { name: string; photoUrl: string }) {
   if (photoUrl) {
@@ -411,37 +655,58 @@ function readFileAsDataUrl(file: File) {
   });
 }
 
-function buildInitialDocuments(documents: Person["documents"]): DocumentInput[] {
-  return [
-    {
-      kind: "residence-card",
-      label: "在留カード",
-      fileName: documents.find((document) => document.kind === "residence-card")?.fileName ?? "",
-      fileUrl: documents.find((document) => document.kind === "residence-card")?.fileUrl ?? "",
-      mimeType: documents.find((document) => document.kind === "residence-card")?.mimeType ?? "",
-      autoJudgeStatus: documents.find((document) => document.kind === "residence-card")?.autoJudgeStatus ?? "pending",
-      autoJudgeNote: documents.find((document) => document.kind === "residence-card")?.autoJudgeNote ?? "",
-    },
-    {
-      kind: "certificate",
-      label: "合格書",
-      fileName: documents.find((document) => document.kind === "certificate")?.fileName ?? "",
-      fileUrl: documents.find((document) => document.kind === "certificate")?.fileUrl ?? "",
-      mimeType: documents.find((document) => document.kind === "certificate")?.mimeType ?? "",
-      autoJudgeStatus: documents.find((document) => document.kind === "certificate")?.autoJudgeStatus ?? "pending",
-      autoJudgeNote: documents.find((document) => document.kind === "certificate")?.autoJudgeNote ?? "",
-    },
-  ];
+function buildInitialDocuments(documents: Person["documents"], residenceStatus: string): DocumentInput[] {
+  return getDocumentDefinitions(residenceStatus).map((definition) => {
+    const current = documents.find((document) => document.kind === definition.kind);
+    return {
+      kind: definition.kind,
+      label: definition.label,
+      fileName: current?.fileName ?? "",
+      fileUrl: current?.fileUrl ?? "",
+      mimeType: current?.mimeType ?? "",
+      autoJudgeStatus: current?.autoJudgeStatus ?? "pending",
+      autoJudgeNote: current?.autoJudgeNote ?? "",
+    };
+  });
 }
 
-function asResumeLines(value: unknown) {
-  return Array.isArray(value) ? value as { date?: string | null; label?: string | null; result?: string | null }[] : [];
+function mergeDocumentsForStatus(documents: DocumentInput[], residenceStatus: string) {
+  return getDocumentDefinitions(residenceStatus).map((definition) => {
+    const current = documents.find((document) => document.kind === definition.kind);
+    return current ?? {
+      kind: definition.kind,
+      label: definition.label,
+      fileName: "",
+      fileUrl: "",
+      mimeType: "",
+      autoJudgeStatus: "pending",
+      autoJudgeNote: "",
+    };
+  });
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function withInitialWorkRow(entries: WorkHistoryEntry[]) {
+  return entries.length > 0 ? entries : [{ companyName: "", startDate: "", endDate: "", reason: "" }];
+}
+
+function upsertDocument(documents: DocumentInput[], nextDocument: DocumentInput) {
+  const exists = documents.some((document) => document.kind === nextDocument.kind);
+  if (!exists) return [...documents, nextDocument];
+  return documents.map((document) => (document.kind === nextDocument.kind ? nextDocument : document));
+}
+
+function Field({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-[var(--color-text-dark)] mb-1">{label}</label>
+    <div className={className}>
+      <label className="mb-1 block text-sm font-medium text-[var(--color-text-dark)]">{label}</label>
       {children}
     </div>
   );

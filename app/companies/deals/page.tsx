@@ -10,7 +10,6 @@ export default async function CompanyDealsPage() {
   const deals = await prisma.deal.findMany({
     include: {
       company: { select: { name: true } },
-      partner: { select: { name: true } },
       owner: { select: { name: true } },
       candidates: {
         include: {
@@ -32,7 +31,6 @@ export default async function CompanyDealsPage() {
           id: deal.id,
           title: deal.title,
           companyName: deal.company.name,
-          partnerName: deal.partner?.name ?? null,
           ownerName: deal.owner?.name ?? "未割当",
           priority: deal.priority,
           status: deal.status,

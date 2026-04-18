@@ -13,7 +13,6 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       where: { id: Number(id) },
       include: {
         company: { select: { id: true, name: true } },
-        partner: { select: { id: true, name: true } },
         owner: { select: { id: true, name: true } },
         candidates: {
           include: {
@@ -24,6 +23,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 nationality: true,
                 residenceStatus: true,
                 photoUrl: true,
+                partner: { select: { id: true, name: true } },
               },
             },
           },
@@ -58,7 +58,6 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           id: deal.id,
           title: deal.title,
           company: deal.company,
-          partner: deal.partner,
           owner: deal.owner,
           priority: deal.priority,
           status: deal.status,

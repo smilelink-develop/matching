@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getDocumentDefinitions } from "@/lib/candidate-profile";
 
 type UploadedDocumentInput = {
   kind: string;
@@ -86,12 +87,17 @@ export async function POST(
     const documents: UploadedDocumentInput[] = Array.isArray(body.documents)
       ? body.documents
       : [];
-    const residenceCard = documents.find((doc) => doc.kind === "residence-card");
-    const certificate = documents.find((doc) => doc.kind === "certificate");
+    const requiredDocumentKinds = getDocumentDefinitions(String(body.residenceStatus ?? "")).map(
+      (document) => document.kind
+    );
+    const missingRequiredDocument = requiredDocumentKinds.some((kind) => {
+      const current = documents.find((document) => document.kind === kind);
+      return !current?.fileUrl;
+    });
 
-    if (!residenceCard?.fileUrl || !certificate?.fileUrl) {
+    if (missingRequiredDocument) {
       return Response.json(
-        { ok: false, error: "在留カードと合格書の提出が必要です" },
+        { ok: false, error: "必要書類の提出が必要です" },
         { status: 400 }
       );
     }
@@ -101,6 +107,8 @@ export async function POST(
       data: {
         name: body.name,
         photoUrl: body.photoUrl || null,
+        nationality: body.nationality || undefined,
+        residenceStatus: body.residenceStatus || undefined,
       },
     });
 
@@ -124,6 +132,67 @@ export async function POST(
         address: body.address,
         status: "submitted",
         submittedAt: new Date(),
+      },
+    });
+
+    await prisma.resumeProfile.upsert({
+      where: { personId: normalizedPersonId },
+      create: {
+        personId: normalizedPersonId,
+        gender: body.gender || null,
+        country: body.nationality || null,
+        spouseStatus: body.spouseStatus || null,
+        childrenCount: body.childrenCount || null,
+        visaType: body.residenceStatus || null,
+        visaExpiryDate: body.visaExpiryDate || null,
+        workExperiences: body.workExperiences ?? [],
+        motivation: body.motivation || null,
+        selfIntroduction: body.selfIntroduction || null,
+        japanPurpose: body.japanPurpose || null,
+        currentJob: body.currentJob || null,
+        retirementReason: body.retirementReason || null,
+        preferenceNote: body.preferenceNote || null,
+        japaneseLevel: body.japaneseLevel || null,
+        japaneseLevelDate: body.japaneseLevelDate || null,
+        licenseName: body.licenseName || null,
+        licenseExpiryDate: body.licenseExpiryDate || null,
+        otherQualificationName: body.otherQualificationName || null,
+        otherQualificationExpiryDate: body.otherQualificationExpiryDate || null,
+        traineeExperience: body.traineeExperience || null,
+        highSchoolName: body.highSchoolName || null,
+        highSchoolStartDate: body.highSchoolStartDate || null,
+        highSchoolEndDate: body.highSchoolEndDate || null,
+        universityName: body.universityName || null,
+        universityStartDate: body.universityStartDate || null,
+        universityEndDate: body.universityEndDate || null,
+      },
+      update: {
+        gender: body.gender || null,
+        country: body.nationality || null,
+        spouseStatus: body.spouseStatus || null,
+        childrenCount: body.childrenCount || null,
+        visaType: body.residenceStatus || null,
+        visaExpiryDate: body.visaExpiryDate || null,
+        workExperiences: body.workExperiences ?? [],
+        motivation: body.motivation || null,
+        selfIntroduction: body.selfIntroduction || null,
+        japanPurpose: body.japanPurpose || null,
+        currentJob: body.currentJob || null,
+        retirementReason: body.retirementReason || null,
+        preferenceNote: body.preferenceNote || null,
+        japaneseLevel: body.japaneseLevel || null,
+        japaneseLevelDate: body.japaneseLevelDate || null,
+        licenseName: body.licenseName || null,
+        licenseExpiryDate: body.licenseExpiryDate || null,
+        otherQualificationName: body.otherQualificationName || null,
+        otherQualificationExpiryDate: body.otherQualificationExpiryDate || null,
+        traineeExperience: body.traineeExperience || null,
+        highSchoolName: body.highSchoolName || null,
+        highSchoolStartDate: body.highSchoolStartDate || null,
+        highSchoolEndDate: body.highSchoolEndDate || null,
+        universityName: body.universityName || null,
+        universityStartDate: body.universityStartDate || null,
+        universityEndDate: body.universityEndDate || null,
       },
     });
 

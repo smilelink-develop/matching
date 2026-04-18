@@ -9,7 +9,6 @@ type Deal = {
   id: number;
   title: string;
   companyName: string;
-  partnerName: string | null;
   ownerName: string;
   priority: string;
   status: string;

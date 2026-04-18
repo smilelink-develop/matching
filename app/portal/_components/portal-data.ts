@@ -15,6 +15,7 @@ export async function getPortalPerson(personId: string) {
       messengerPsid: true,
       email: true,
       whatsappId: true,
+      resumeProfile: true,
     },
   });
 

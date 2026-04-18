@@ -9,11 +9,8 @@ type ResumeProfileInput = {
   country?: string | null;
   spouseStatus?: string | null;
   childrenCount?: string | null;
-  phoneHome?: string | null;
   visaType?: string | null;
   visaExpiryDate?: string | null;
-  workVisa?: string | null;
-  remarks?: string | null;
   educations?: unknown;
   workExperiences?: unknown;
   certifications?: unknown;
@@ -23,6 +20,19 @@ type ResumeProfileInput = {
   currentJob?: string | null;
   retirementReason?: string | null;
   preferenceNote?: string | null;
+  japaneseLevel?: string | null;
+  japaneseLevelDate?: string | null;
+  licenseName?: string | null;
+  licenseExpiryDate?: string | null;
+  otherQualificationName?: string | null;
+  otherQualificationExpiryDate?: string | null;
+  traineeExperience?: string | null;
+  highSchoolName?: string | null;
+  highSchoolStartDate?: string | null;
+  highSchoolEndDate?: string | null;
+  universityName?: string | null;
+  universityStartDate?: string | null;
+  universityEndDate?: string | null;
 };
 
 type ResumeDocumentInput = {
@@ -80,23 +90,55 @@ function asResumeLines(value: unknown) {
   return Array.isArray(value) ? (value as ResumeLine[]) : [];
 }
 
+function asWorkLines(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map((line) => {
+    const current = typeof line === "object" && line !== null ? (line as Record<string, unknown>) : {};
+    return {
+      date: valueOrBlank(String(current.startDate ?? current.date ?? "")),
+      label: valueOrBlank(String(current.companyName ?? current.label ?? "")),
+      result: valueOrBlank(String(current.reason ?? current.result ?? "")),
+    };
+  });
+}
+
 export function buildResumePlaceholders(input: ResumeDocumentInput) {
   const person = input.person;
   const onboarding = person.onboarding;
   const profile = person.resumeProfile;
   const educationLines = asResumeLines(profile?.educations);
-  const workLines = asResumeLines(profile?.workExperiences);
+  const workLines = asWorkLines(profile?.workExperiences);
   const certLines = asResumeLines(profile?.certifications);
-  const education1 = mapLine(educationLines, 0);
-  const education2 = mapLine(educationLines, 1);
-  const education3 = mapLine(educationLines, 2);
+  const education1 = {
+    date: valueOrBlank(profile?.highSchoolStartDate),
+    label: valueOrBlank(profile?.highSchoolName),
+    result: valueOrBlank(profile?.highSchoolEndDate),
+  };
+  const education2 = {
+    date: valueOrBlank(profile?.universityStartDate),
+    label: valueOrBlank(profile?.universityName),
+    result: valueOrBlank(profile?.universityEndDate),
+  };
+  const education3 = mapLine(educationLines, 0);
   const work1 = mapLine(workLines, 0);
   const work2 = mapLine(workLines, 1);
   const work3 = mapLine(workLines, 2);
-  const cert1 = mapLine(certLines, 0);
-  const cert2 = mapLine(certLines, 1);
-  const cert3 = mapLine(certLines, 2);
-  const cert4 = mapLine(certLines, 3);
+  const cert1 = {
+    date: valueOrBlank(profile?.licenseExpiryDate),
+    label: valueOrBlank(profile?.licenseName),
+    result: "",
+  };
+  const cert2 = {
+    date: valueOrBlank(profile?.japaneseLevelDate),
+    label: valueOrBlank(profile?.japaneseLevel),
+    result: "",
+  };
+  const cert3 = {
+    date: valueOrBlank(profile?.otherQualificationExpiryDate),
+    label: valueOrBlank(profile?.otherQualificationName),
+    result: "",
+  };
+  const cert4 = mapLine(certLines, 0);
 
   return {
     作成日: new Intl.DateTimeFormat("ja-JP").format(new Date()),
@@ -109,7 +151,7 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     年齢: calcAge(onboarding?.birthDate),
     現住所: valueOrBlank(onboarding?.address),
     携帯電話: valueOrBlank(onboarding?.phoneNumber),
-    電話: valueOrBlank(profile?.phoneHome),
+    電話: "",
     メール: valueOrBlank(person.email),
     ビザの種類: valueOrBlank(profile?.visaType) || valueOrBlank(person.residenceStatus),
     在留資格: valueOrBlank(person.residenceStatus),
@@ -117,8 +159,8 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     配偶者: valueOrBlank(profile?.spouseStatus),
     子供数: valueOrBlank(profile?.childrenCount),
     子供: valueOrBlank(profile?.childrenCount),
-    就労ビザ: valueOrBlank(profile?.workVisa),
-    備考欄: valueOrBlank(profile?.remarks),
+    就労ビザ: "",
+    備考欄: valueOrBlank(profile?.traineeExperience),
     入学1: education1.date,
     高校名: education1.label,
     卒業1: education1.result,

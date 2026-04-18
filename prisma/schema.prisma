@@ -14,6 +14,7 @@ model Person {
   nationality     String
   department      String?
   residenceStatus String
+  partnerId       Int?
   channel         String
   lineUserId      String?
   messengerPsid   String?
@@ -30,6 +31,7 @@ model Person {
   resumeProfile ResumeProfile?
   resumeDocuments ResumeDocument[]
   dealCandidates DealCandidate[]
+  partner      Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
 }
 
 model Company {
@@ -56,6 +58,7 @@ model Partner {
   updatedAt   DateTime @updatedAt
 
   deals       Deal[]
+  persons     Person[]
 }
 
 model StaffAccount {
@@ -233,6 +236,19 @@ model ResumeProfile {
   currentJob      String?
   retirementReason String?
   preferenceNote  String?
+  japaneseLevel   String?
+  japaneseLevelDate String?
+  licenseName     String?
+  licenseExpiryDate String?
+  otherQualificationName String?
+  otherQualificationExpiryDate String?
+  traineeExperience String?
+  highSchoolName  String?
+  highSchoolStartDate String?
+  highSchoolEndDate String?
+  universityName  String?
+  universityStartDate String?
+  universityEndDate String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

@@ -178,22 +178,15 @@ async function main() {
         country: "ベトナム",
         spouseStatus: "無",
         childrenCount: "0",
-        phoneHome: "043-123-4567",
         visaType: "技能実習",
         visaExpiryDate: "2027-03-31",
-        workVisa: "有",
-        remarks: "夜勤対応可能",
-        educations: [
-          { date: "2015/04", label: "ハノイ工業高校", result: "入学" },
-          { date: "2018/03", label: "ハノイ工業高校", result: "卒業" },
-        ],
         workExperiences: [
-          { date: "2018/05", label: "ABC Factory", result: "入社" },
-          { date: "2024/01", label: "ABC Factory", result: "退社" },
-        ],
-        certifications: [
-          { date: "2022/06", label: "日本語能力試験 N3" },
-          { date: "2023/09", label: "フォークリフト" },
+          {
+            companyName: "ABC Factory",
+            startDate: "2018-05-01",
+            endDate: "2024-01-31",
+            reason: "より条件の良い環境で働くため",
+          },
         ],
         motivation: "日本で製造技術を学び、長く安定して働きたいです。",
         selfIntroduction: "真面目で周囲と協力しながら仕事を進めることが得意です。",
@@ -201,6 +194,14 @@ async function main() {
         currentJob: "工場で金属加工の仕事をしています。",
         retirementReason: "より条件の良い環境でスキルアップしたいため。",
         preferenceNote: "寮付き、残業は月20時間程度まで希望。",
+        japaneseLevel: "JLPT N3",
+        japaneseLevelDate: "2022-06-01",
+        licenseName: "フォークリフト",
+        licenseExpiryDate: "2028-09-30",
+        traineeExperience: "技能実習3年",
+        highSchoolName: "ハノイ工業高校",
+        highSchoolStartDate: "2015-04-01",
+        highSchoolEndDate: "2018-03-31",
       },
     ],
   });
@@ -359,6 +360,19 @@ async function main() {
   const companies = await prisma.company.findMany({ orderBy: { id: "asc" } });
   const partners = await prisma.partner.findMany({ orderBy: { id: "asc" } });
 
+  await prisma.person.update({
+    where: { id: persons[0].id },
+    data: { partnerId: partners[0].id },
+  });
+  await prisma.person.update({
+    where: { id: persons[1].id },
+    data: { partnerId: partners[1].id },
+  });
+  await prisma.person.update({
+    where: { id: persons[2].id },
+    data: { partnerId: partners[0].id },
+  });
+
   await prisma.resumeTemplate.createMany({
     data: accounts.map((account, index) => ({
       accountId: account.id,
@@ -392,7 +406,6 @@ async function main() {
       {
         title: "青海テック / 製造スタッフ紹介",
         companyId: companies[0].id,
-        partnerId: partners[0].id,
         ownerId: accounts[1]?.id ?? admin?.id ?? null,
         priority: "urgent",
         status: "至急募集",
@@ -403,7 +416,6 @@ async function main() {
       {
         title: "みらいケア / 介護人材紹介",
         companyId: companies[1].id,
-        partnerId: partners[1].id,
         ownerId: accounts[2]?.id ?? admin?.id ?? null,
         priority: "normal",
         status: "面接中",
@@ -414,7 +426,6 @@ async function main() {
       {
         title: "青海テック / 組立ライン増員",
         companyId: companies[0].id,
-        partnerId: partners[0].id,
         ownerId: accounts[3]?.id ?? admin?.id ?? null,
         priority: "high",
         status: "募集中",

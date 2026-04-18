@@ -1,27 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-
-const NATIONALITIES = ["ベトナム", "インドネシア", "ミャンマー", "フィリピン", "タイ", "その他"];
-const RESIDENCE_STATUSES = ["技能実習", "特定技能1号", "特定技能2号", "技術・人文知識・国際業務"];
-const CHANNELS = [
-  { value: "LINE", label: "LINE" },
-  { value: "Messenger", label: "Messenger" },
-  { value: "mail", label: "メール（表示のみ）" },
-  { value: "WhatsApp", label: "WhatsApp（表示のみ）" },
-];
+import { useEffect, useState } from "react";
+import { CHANNELS, NATIONALITIES, RESIDENCE_STATUSES } from "@/lib/candidate-profile";
 
 export default function NewPersonnelPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [partners, setPartners] = useState<{ id: number; name: string }[]>([]);
   const [form, setForm] = useState({
     name: "",
+    englishName: "",
+    partnerId: "",
     nationality: "ベトナム",
-    department: "",
     residenceStatus: "技能実習",
     channel: "LINE",
   });
+
+  useEffect(() => {
+    void fetch("/api/partners")
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.ok) setPartners(result.partners ?? []);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,21 +53,27 @@ export default function NewPersonnelPage() {
         <div>
           <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">候補者を追加</h1>
           <p className="text-sm text-gray-500 mt-2">
-            候補者の基本情報と主な連絡手段を登録します。
+            候補者の基本情報を登録し、あとから詳細情報を追加します。
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-8 space-y-5 shadow-sm">
+        <Field label="英語名">
+          <input className={INPUT} value={form.englishName} onChange={(e) => set("englishName", e.target.value)} placeholder="NGUYEN VAN AN" />
+        </Field>
         <Field label="カタカナ名 *">
           <input className={INPUT} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="グエン ヴァン アン" />
+        </Field>
+        <Field label="紹介パートナー">
+          <select className={INPUT} value={form.partnerId} onChange={(e) => set("partnerId", e.target.value)}>
+            <option value="">未設定</option>
+            {partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name}</option>)}
+          </select>
         </Field>
         <Field label="国籍">
           <select className={INPUT} value={form.nationality} onChange={(e) => set("nationality", e.target.value)}>
             {NATIONALITIES.map((n) => <option key={n}>{n}</option>)}
           </select>
-        </Field>
-        <Field label="部署">
-          <input className={INPUT} value={form.department} onChange={(e) => set("department", e.target.value)} placeholder="製造部" />
         </Field>
         <Field label="在留資格">
           <select className={INPUT} value={form.residenceStatus} onChange={(e) => set("residenceStatus", e.target.value)}>

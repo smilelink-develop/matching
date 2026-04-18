@@ -16,6 +16,7 @@ type CandidateCard = {
     nationality: string;
     residenceStatus: string;
     photoUrl: string | null;
+    partner: { id: number; name: string } | null;
   };
 };
 
@@ -23,7 +24,6 @@ type DealDetail = {
   id: number;
   title: string;
   company: { id: number; name: string };
-  partner: { id: number; name: string } | null;
   owner: { id: number; name: string } | null;
   priority: string;
   status: string;
@@ -118,9 +118,9 @@ export default function DealDetailClient({
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <InfoCard label="企業" value={deal.company.name} />
         <InfoCard label="担当者" value={deal.owner?.name ?? "未設定"} />
-        <InfoCard label="パートナー" value={deal.partner?.name ?? "未設定"} />
         <InfoCard label="単価" value={deal.unitPrice ?? "未設定"} />
         <InfoCard label="期限" value={deal.deadline ? new Date(deal.deadline).toLocaleDateString("ja-JP") : "未設定"} />
+        <InfoCard label="案件ステータス" value={deal.status} />
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -221,6 +221,9 @@ export default function DealDetailClient({
                         <p className="text-sm font-semibold text-[var(--color-text-dark)]">{candidate.person.name}</p>
                         <p className="mt-1 text-xs text-gray-500">
                           {candidate.person.nationality} / {candidate.person.residenceStatus}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-400">
+                          紹介パートナー: {candidate.person.partner?.name ?? "未設定"}
                         </p>
                       </div>
                     </div>

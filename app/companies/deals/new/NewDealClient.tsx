@@ -7,11 +7,9 @@ type Option = { id: number; name: string };
 
 export default function NewDealClient({
   companies,
-  partners,
   accounts,
 }: {
   companies: Option[];
-  partners: Option[];
   accounts: Option[];
 }) {
   const router = useRouter();
@@ -19,7 +17,6 @@ export default function NewDealClient({
   const [form, setForm] = useState({
     title: "",
     companyId: companies[0]?.id ? String(companies[0].id) : "",
-    partnerId: "",
     ownerId: accounts[0]?.id ? String(accounts[0].id) : "",
     priority: "normal",
     status: "募集中",
@@ -62,14 +59,6 @@ export default function NewDealClient({
         <select className={INPUT} value={form.companyId} onChange={(e) => setForm((current) => ({ ...current, companyId: e.target.value }))}>
           {companies.map((company) => (
             <option key={company.id} value={company.id}>{company.name}</option>
-          ))}
-        </select>
-      </Field>
-      <Field label="パートナー">
-        <select className={INPUT} value={form.partnerId} onChange={(e) => setForm((current) => ({ ...current, partnerId: e.target.value }))}>
-          <option value="">未設定</option>
-          {partners.map((partner) => (
-            <option key={partner.id} value={partner.id}>{partner.name}</option>
           ))}
         </select>
       </Field>

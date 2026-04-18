@@ -7,7 +7,6 @@ export async function GET() {
     const deals = await prisma.deal.findMany({
       include: {
         company: { select: { name: true } },
-        partner: { select: { name: true } },
         owner: { select: { name: true } },
         candidates: {
           include: {
@@ -34,7 +33,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const title = String(body.title ?? "").trim();
     const companyId = Number(body.companyId);
-    const partnerId = body.partnerId ? Number(body.partnerId) : null;
     const ownerId = body.ownerId ? Number(body.ownerId) : null;
 
     if (!title || !Number.isFinite(companyId)) {
@@ -45,7 +43,6 @@ export async function POST(req: Request) {
       data: {
         title,
         companyId,
-        partnerId: Number.isFinite(partnerId ?? NaN) ? partnerId : null,
         ownerId: Number.isFinite(ownerId ?? NaN) ? ownerId : null,
         priority: String(body.priority ?? "normal"),
         status: String(body.status ?? "募集中"),
@@ -55,7 +52,6 @@ export async function POST(req: Request) {
       },
       include: {
         company: { select: { name: true } },
-        partner: { select: { name: true } },
         owner: { select: { name: true } },
         candidates: {
           include: {
