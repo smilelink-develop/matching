@@ -10,7 +10,7 @@ export default function RevenuePage() {
         "月次・担当別の進捗を確認する",
         "目標との差分を把握しやすくする",
       ]}
-      primaryHref="/deals"
+      primaryHref="/companies/deals"
       primaryLabel="案件管理を開く"
       secondaryHref="/placements"
       secondaryLabel="入社進捗を開く"

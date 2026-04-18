@@ -13,7 +13,7 @@ export default async function PartnersPage() {
   return (
     <div className="space-y-6 p-8">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">パートナー情報</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">パートナーリスト</h1>
         <p className="mt-1 text-sm text-gray-500">
           海外紹介パートナーの情報も全アカウント共通です。担当者が変わっても同じ台帳を見られます。
         </p>

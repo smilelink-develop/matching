@@ -49,25 +49,6 @@ function ChatIcon({ active }: { active: boolean }) {
   );
 }
 
-function CalendarIcon({ active }: { active: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`h-5 w-5 ${active ? "text-white" : "text-white/70"}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4" />
-      <path d="M8 2v4" />
-      <path d="M3 10h18" />
-    </svg>
-  );
-}
-
 function BroadcastIcon({ active }: { active: boolean }) {
   return (
     <svg
@@ -106,17 +87,16 @@ function SettingsIcon({ active }: { active: boolean }) {
 
 const NAV: NavItem[] = [
   {
-    label: "候補者管理",
+    label: "候補者",
     href: "/personnel",
     icon: PersonnelIcon,
     children: [
       { label: "候補者一覧", href: "/personnel" },
       { label: "候補者を追加", href: "/personnel/new" },
-      { label: "連絡先紐づけ", href: "/personnel/link" },
     ],
   },
   {
-    label: "企業情報",
+    label: "企業",
     href: "/companies",
     icon: PersonnelIcon,
     children: [
@@ -126,33 +106,40 @@ const NAV: NavItem[] = [
       { label: "案件追加", href: "/companies/deals/new" },
     ],
   },
-  { label: "パートナー情報", href: "/partners", icon: PersonnelIcon },
-  { label: "候補者チャット", href: "/chat", icon: ChatIcon },
-  { label: "日程調整", href: "/calendar", icon: CalendarIcon },
+  {
+    label: "パートナー",
+    href: "/partners",
+    icon: PersonnelIcon,
+    children: [
+      { label: "パートナーリスト", href: "/partners" },
+      { label: "連絡先紐づけ", href: "/partners/link" },
+      { label: "一斉連絡", href: "/broadcast" },
+      { label: "連絡テンプレート", href: "/broadcast/templates" },
+      { label: "連絡グループ", href: "/broadcast/groups" },
+    ],
+  },
   {
     label: "紹介業務",
-    href: "/broadcast",
+    href: "/resumes",
     icon: BroadcastIcon,
     children: [
-      { label: "パートナー一斉連絡", href: "/broadcast" },
-      { label: "連絡テンプレート", href: "/broadcast/templates" },
-      { label: "入力依頼フォーム", href: "/broadcast/onboarding-forms" },
-      { label: "連携グループ", href: "/broadcast/groups" },
       { label: "履歴書作成", href: "/resumes" },
+      { label: "求人票作成", href: "/job-postings" },
       { label: "推薦リスト", href: "/recommendations" },
     ],
   },
-  { label: "求人票管理", href: "/job-postings", icon: PersonnelIcon },
   {
-    label: "進捗・売上",
-    href: "/deals",
+    label: "内定後",
+    href: "/revenue",
     icon: BroadcastIcon,
     children: [
+      { label: "売上ダッシュボード", href: "/revenue" },
       { label: "案件管理", href: "/companies/deals" },
       { label: "入社進捗", href: "/placements" },
-      { label: "売上ダッシュボード", href: "/revenue" },
+      { label: "請求", href: "/invoices" },
     ],
   },
+  { label: "チャット", href: "/chat", icon: ChatIcon },
   { label: "設定", href: "/settings", icon: SettingsIcon },
 ];
 

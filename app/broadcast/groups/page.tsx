@@ -14,7 +14,7 @@ export default async function GroupsPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">グループ管理</h1>
+      <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">連絡グループ</h1>
       <GroupsClient
         groups={groups.map((g) => ({
           id: g.id, name: g.name,

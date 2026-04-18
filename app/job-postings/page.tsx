@@ -17,7 +17,7 @@ export default function JobPostingsPage() {
   return (
     <div className="space-y-6 p-8">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">求人票管理</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">求人票作成</h1>
         <p className="mt-1 text-sm text-gray-500">
           企業から受け取った求人票ファイルを取り込み、必要項目を一覧化して、自社標準の求人表へ整理する前提で画面を整えています。
         </p>
