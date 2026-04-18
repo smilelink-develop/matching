@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { reconcileMessagePersonLinks } from "@/lib/message-linking";
+import { ensurePersonDriveFolder, uploadDataUrlToDrive } from "@/lib/google-docs";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,20 +22,68 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const personId = Number(id);
     const body = await req.json();
     const documents = Array.isArray(body.documents) ? body.documents : [];
+    const currentPerson = await prisma.person.findUnique({
+      where: { id: personId },
+      select: { id: true, name: true, driveFolderUrl: true },
+    });
+
+    if (!currentPerson) {
+      return Response.json({ ok: false, error: "候補者が見つかりません" }, { status: 404 });
+    }
+
+    const folder = await ensurePersonDriveFolder({
+      existingFolderUrl: currentPerson.driveFolderUrl,
+      personName: body.name || currentPerson.name,
+    });
+
+    const photoUpload =
+      typeof body.photoUrl === "string" && body.photoUrl.startsWith("data:")
+        ? await uploadDataUrlToDrive({
+            dataUrl: body.photoUrl,
+            fileName: `${body.name || currentPerson.name}-photo`,
+            folderUrl: folder.folderUrl,
+          })
+        : null;
+
+    type DocumentPayload = {
+      kind: string;
+      fileName: string;
+      fileUrl: string;
+      mimeType?: string | null;
+      autoJudgeStatus?: string | null;
+      autoJudgeNote?: string | null;
+    };
+
+    const uploadedDocuments: DocumentPayload[] = await Promise.all(
+      (documents as DocumentPayload[]).map(async (document: DocumentPayload) => {
+        if (!document?.kind || !document?.fileName || !document?.fileUrl) return document;
+        if (typeof document.fileUrl === "string" && document.fileUrl.startsWith("data:")) {
+          const uploaded = await uploadDataUrlToDrive({
+            dataUrl: document.fileUrl,
+            fileName: document.fileName,
+            folderUrl: folder.folderUrl,
+          });
+          return {
+            ...document,
+            fileUrl: uploaded.fileUrl,
+            mimeType: uploaded.mimeType,
+          };
+        }
+        return document;
+      })
+    );
 
     const person = await prisma.person.update({
       where: { id: personId },
       data: {
         name: body.name,
-        photoUrl: body.photoUrl || null,
+        photoUrl: photoUpload?.fileUrl || body.photoUrl || null,
+        driveFolderUrl: folder.folderUrl,
         nationality: body.nationality,
         residenceStatus: body.residenceStatus,
         partnerId: body.partnerId ? Number(body.partnerId) : null,
         channel: body.channel,
-        lineUserId: body.lineUserId || null,
-        messengerPsid: body.messengerPsid || null,
         email: body.email || null,
-        whatsappId: body.whatsappId || null,
       },
     });
 
@@ -122,7 +171,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       },
     });
 
-    for (const document of documents) {
+    for (const document of uploadedDocuments) {
       if (!document?.kind || !document?.fileUrl || !document?.fileName) continue;
 
       await prisma.portalDocument.upsert({

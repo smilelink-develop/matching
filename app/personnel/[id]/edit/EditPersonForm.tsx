@@ -23,10 +23,7 @@ type Person = {
   residenceStatus: string;
   partnerId: number | null;
   channel: string;
-  lineUserId: string | null;
-  messengerPsid: string | null;
   email: string | null;
-  whatsappId: string | null;
   onboarding: {
     englishName: string | null;
     birthDate: string | null;
@@ -139,10 +136,7 @@ export default function EditPersonForm({
     universityStartDate: person.resumeProfile?.universityStartDate ?? "",
     universityEndDate: person.resumeProfile?.universityEndDate ?? "",
     workExperiences: withInitialWorkRow(normalizeWorkHistories(person.resumeProfile?.workExperiences)),
-    lineUserId: person.lineUserId ?? "",
-    messengerPsid: person.messengerPsid ?? "",
     email: person.email ?? "",
-    whatsappId: person.whatsappId ?? "",
     documents: buildInitialDocuments(person.documents, person.residenceStatus),
   });
 
@@ -401,7 +395,7 @@ export default function EditPersonForm({
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-5">
-            <p className="text-sm font-semibold text-[var(--color-text-dark)]">連絡先 ID</p>
+            <p className="text-sm font-semibold text-[var(--color-text-dark)]">連絡手段</p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="主な連絡手段">
                 <select className={INPUT} value={form.channel} onChange={(event) => setValue("channel", event.target.value)}>
@@ -419,17 +413,8 @@ export default function EditPersonForm({
                   ))}
                 </select>
               </Field>
-              <Field label="LINE userId">
-                <input className={INPUT} value={form.lineUserId} onChange={(event) => setValue("lineUserId", event.target.value)} placeholder="Uxxxxxxxx" />
-              </Field>
-              <Field label="Messenger PSID">
-                <input className={INPUT} value={form.messengerPsid} onChange={(event) => setValue("messengerPsid", event.target.value)} placeholder="1234567890" />
-              </Field>
-              <Field label="メールアドレス">
+              <Field label="メールアドレス" className="md:col-span-2">
                 <input className={INPUT} type="email" value={form.email} onChange={(event) => setValue("email", event.target.value)} placeholder="example@email.com" />
-              </Field>
-              <Field label="WhatsApp ID">
-                <input className={INPUT} value={form.whatsappId} onChange={(event) => setValue("whatsappId", event.target.value)} placeholder="+81xxxxxxxxxx" />
               </Field>
             </div>
           </div>

@@ -57,6 +57,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         deal={{
           id: deal.id,
           title: deal.title,
+          field: deal.field,
           company: deal.company,
           owner: deal.owner,
           priority: deal.priority,

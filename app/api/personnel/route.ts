@@ -18,10 +18,7 @@ export async function POST(req: Request) {
         residenceStatus: body.residenceStatus,
         partnerId: body.partnerId ? Number(body.partnerId) : null,
         channel: body.channel,
-        lineUserId: body.lineUserId || null,
-        messengerPsid: body.messengerPsid || null,
         email: body.email || null,
-        whatsappId: body.whatsappId || null,
         onboarding: body.englishName
           ? {
               create: {

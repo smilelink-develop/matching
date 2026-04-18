@@ -31,6 +31,7 @@ export async function POST(req: Request) {
         name,
         country: String(body.country ?? "").trim() || null,
         channel: String(body.channel ?? "").trim() || null,
+        linkStatus: String(body.linkStatus ?? "未").trim() || "未",
         contactName: String(body.contactName ?? "").trim() || null,
         notes: String(body.notes ?? "").trim() || null,
       },

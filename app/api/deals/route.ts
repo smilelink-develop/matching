@@ -44,6 +44,7 @@ export async function POST(req: Request) {
         title,
         companyId,
         ownerId: Number.isFinite(ownerId ?? NaN) ? ownerId : null,
+        field: String(body.field ?? "").trim() || null,
         priority: String(body.priority ?? "normal"),
         status: String(body.status ?? "募集中"),
         unitPrice: String(body.unitPrice ?? "").trim() || null,

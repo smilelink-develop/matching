@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getDocumentDefinitions } from "@/lib/candidate-profile";
+import { ensurePersonDriveFolder, uploadDataUrlToDrive } from "@/lib/google-docs";
 
 type UploadedDocumentInput = {
   kind: string;
@@ -87,11 +88,55 @@ export async function POST(
     const documents: UploadedDocumentInput[] = Array.isArray(body.documents)
       ? body.documents
       : [];
+    const person = await prisma.person.findUnique({
+      where: { id: normalizedPersonId },
+      select: { id: true, name: true, driveFolderUrl: true },
+    });
+
+    if (!person) {
+      return Response.json(
+        { ok: false, error: "候補者が見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    const folder = await ensurePersonDriveFolder({
+      existingFolderUrl: person.driveFolderUrl,
+      personName: body.name || person.name,
+    });
+
+    const photoUpload =
+      typeof body.photoUrl === "string" && body.photoUrl.startsWith("data:")
+        ? await uploadDataUrlToDrive({
+            dataUrl: body.photoUrl,
+            fileName: `${body.name || person.name}-photo`,
+            folderUrl: folder.folderUrl,
+          })
+        : null;
+
+    const uploadedDocuments = await Promise.all(
+      documents.map(async (document) => {
+        if (!document?.kind || !document?.fileName || !document?.fileUrl) return document;
+        if (typeof document.fileUrl === "string" && document.fileUrl.startsWith("data:")) {
+          const uploaded = await uploadDataUrlToDrive({
+            dataUrl: document.fileUrl,
+            fileName: document.fileName,
+            folderUrl: folder.folderUrl,
+          });
+          return {
+            ...document,
+            fileUrl: uploaded.fileUrl,
+            mimeType: uploaded.mimeType,
+          };
+        }
+        return document;
+      })
+    );
     const requiredDocumentKinds = getDocumentDefinitions(String(body.residenceStatus ?? "")).map(
       (document) => document.kind
     );
     const missingRequiredDocument = requiredDocumentKinds.some((kind) => {
-      const current = documents.find((document) => document.kind === kind);
+      const current = uploadedDocuments.find((document) => document.kind === kind);
       return !current?.fileUrl;
     });
 
@@ -106,7 +151,8 @@ export async function POST(
       where: { id: normalizedPersonId },
       data: {
         name: body.name,
-        photoUrl: body.photoUrl || null,
+        photoUrl: photoUpload?.fileUrl || body.photoUrl || null,
+        driveFolderUrl: folder.folderUrl,
         nationality: body.nationality || undefined,
         residenceStatus: body.residenceStatus || undefined,
       },
@@ -198,7 +244,7 @@ export async function POST(
 
     const savedDocuments = [];
 
-    for (const document of documents) {
+    for (const document of uploadedDocuments) {
       if (!document?.kind || !document?.fileName || !document?.fileUrl) continue;
 
       const evaluation = evaluateDocument(

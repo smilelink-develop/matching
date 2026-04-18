@@ -49,6 +49,47 @@ async function getGoogleClients() {
   };
 }
 
+function parseDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) {
+    throw new Error("アップロード用データが不正です");
+  }
+  return {
+    mimeType: match[1],
+    buffer: Buffer.from(match[2], "base64"),
+  };
+}
+
+async function getOrCreateFolder({
+  drive,
+  parentFolderUrl,
+  folderName,
+}: {
+  drive: Awaited<ReturnType<typeof getGoogleClients>>["drive"];
+  parentFolderUrl: string;
+  folderName: string;
+}) {
+  const parentId = parseGoogleDriveFolderId(parentFolderUrl);
+  const created = await drive.files.create({
+    supportsAllDrives: true,
+    requestBody: {
+      name: folderName,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: parentId ? [parentId] : undefined,
+    },
+    fields: "id,webViewLink",
+  });
+
+  if (!created.data.id) {
+    throw new Error("Google Drive フォルダの作成に失敗しました");
+  }
+
+  return {
+    folderId: created.data.id,
+    folderUrl: created.data.webViewLink ?? `https://drive.google.com/drive/folders/${created.data.id}`,
+  };
+}
+
 export async function createResumeDocumentFromTemplate({
   templateUrl,
   folderUrl,
@@ -127,5 +168,71 @@ export async function createResumeDocumentFromTemplate({
   return {
     documentId,
     documentUrl: copied.data.webViewLink ?? `https://docs.google.com/document/d/${documentId}/edit`,
+  };
+}
+
+export async function ensurePersonDriveFolder({
+  existingFolderUrl,
+  personName,
+  rootFolderUrl,
+}: {
+  existingFolderUrl?: string | null;
+  personName: string;
+  rootFolderUrl?: string | null;
+}) {
+  if (existingFolderUrl?.trim()) {
+    return {
+      folderId: parseGoogleDriveFolderId(existingFolderUrl),
+      folderUrl: existingFolderUrl,
+    };
+  }
+
+  const parentFolderUrl = rootFolderUrl?.trim() || process.env.GOOGLE_CANDIDATE_FILES_FOLDER_URL?.trim();
+  if (!parentFolderUrl) {
+    throw new Error("GOOGLE_CANDIDATE_FILES_FOLDER_URL が未設定です");
+  }
+
+  const { drive } = await getGoogleClients();
+  return getOrCreateFolder({
+    drive,
+    parentFolderUrl,
+    folderName: `${personName} 候補者フォルダ`,
+  });
+}
+
+export async function uploadDataUrlToDrive({
+  dataUrl,
+  fileName,
+  folderUrl,
+}: {
+  dataUrl: string;
+  fileName: string;
+  folderUrl: string;
+}) {
+  const { drive } = await getGoogleClients();
+  const { mimeType, buffer } = parseDataUrl(dataUrl);
+  const folderId = parseGoogleDriveFolderId(folderUrl);
+
+  const created = await drive.files.create({
+    supportsAllDrives: true,
+    requestBody: {
+      name: fileName,
+      parents: folderId ? [folderId] : undefined,
+    },
+    media: {
+      mimeType,
+      body: Buffer.from(buffer),
+    },
+    fields: "id,webViewLink",
+  });
+
+  if (!created.data.id) {
+    throw new Error("Google Drive へのファイル保存に失敗しました");
+  }
+
+  return {
+    fileId: created.data.id,
+    fileUrl: created.data.webViewLink ?? `https://drive.google.com/file/d/${created.data.id}/view`,
+    mimeType,
   };
 }

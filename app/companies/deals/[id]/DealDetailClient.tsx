@@ -23,6 +23,7 @@ type CandidateCard = {
 type DealDetail = {
   id: number;
   title: string;
+  field: string | null;
   company: { id: number; name: string };
   owner: { id: number; name: string } | null;
   priority: string;
@@ -115,12 +116,13 @@ export default function DealDetailClient({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <InfoCard label="企業" value={deal.company.name} />
         <InfoCard label="担当者" value={deal.owner?.name ?? "未設定"} />
-        <InfoCard label="単価" value={deal.unitPrice ?? "未設定"} />
+        <InfoCard label="単価" value={formatUnitPrice(deal.unitPrice)} />
         <InfoCard label="期限" value={deal.deadline ? new Date(deal.deadline).toLocaleDateString("ja-JP") : "未設定"} />
         <InfoCard label="案件ステータス" value={deal.status} />
+        <InfoCard label="分野" value={deal.field ?? "未設定"} />
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -272,3 +274,8 @@ function priorityLabel(priority: string) {
 
 const INPUT =
   "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";
+
+function formatUnitPrice(value: string | null) {
+  if (!value) return "未設定";
+  return value.includes("万円") ? value : `${value}万円`;
+}

@@ -11,6 +11,7 @@ model Person {
   id              Int      @id @default(autoincrement())
   name            String
   photoUrl        String?
+  driveFolderUrl  String?
   nationality     String
   department      String?
   residenceStatus String
@@ -23,15 +24,14 @@ model Person {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  messages     Message[]
-  groupMembers GroupMember[]
-  onboarding   PersonOnboarding?
-  documents    PortalDocument[]
-  portalTasks  PortalTask[]
-  resumeProfile ResumeProfile?
+  messages        Message[]
+  onboarding      PersonOnboarding?
+  documents       PortalDocument[]
+  portalTasks     PortalTask[]
+  resumeProfile   ResumeProfile?
   resumeDocuments ResumeDocument[]
   dealCandidates DealCandidate[]
-  partner      Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
 }
 
 model Company {
@@ -52,6 +52,7 @@ model Partner {
   name        String
   country     String?
   channel     String?
+  linkStatus  String   @default("未")
   contactName String?
   notes       String?
   createdAt   DateTime @default(now())
@@ -59,6 +60,7 @@ model Partner {
 
   deals       Deal[]
   persons     Person[]
+  groupMembers GroupMember[]
 }
 
 model StaffAccount {
@@ -308,10 +310,10 @@ model GroupMember {
   id       Int    @id @default(autoincrement())
   group    Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId  Int
-  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
-  personId Int
+  partner  Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId Int
 
-  @@unique([groupId, personId])
+  @@unique([groupId, partnerId])
 }
 
 model Deal {
@@ -323,6 +325,7 @@ model Deal {
   partner      Partner?     @relation(fields: [partnerId], references: [id], onDelete: SetNull)
   ownerId      Int?
   owner        StaffAccount? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  field        String?
   priority     String       @default("normal")
   status       String       @default("募集中")
   unitPrice    String?

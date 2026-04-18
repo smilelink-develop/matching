@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Person = { id: number; name: string };
 type Group = { id: number; name: string; members: Person[] };
 
 export default function GroupsClient({ groups: initial, persons }: { groups: Group[]; persons: Person[] }) {
-  const router = useRouter();
   const [groups, setGroups] = useState(initial);
   const [newName, setNewName] = useState("");
   const [selectedPersonIds, setSelectedPersonIds] = useState<number[]>([]);
-  const [editGroup, setEditGroup] = useState<Group | null>(null);
   const [saving, setSaving] = useState(false);
 
   const togglePerson = (id: number) =>
@@ -55,7 +52,7 @@ export default function GroupsClient({ groups: initial, persons }: { groups: Gro
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-2">
-            メンバーを選択 ({selectedPersonIds.length}名)
+            パートナーを選択 ({selectedPersonIds.length}件)
           </label>
           <div className="max-h-52 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-50">
             {persons.map((p) => (

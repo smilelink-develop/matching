@@ -279,7 +279,7 @@ async function main() {
   await prisma.group.createMany({
     data: [
       { name: "ベトナムパートナー" },
-      { name: "面談対象候補者" },
+      { name: "介護紹介パートナー" },
     ],
   });
 
@@ -287,10 +287,8 @@ async function main() {
 
   await prisma.groupMember.createMany({
     data: [
-      { groupId: groups[0].id, personId: persons[0].id },
-      { groupId: groups[0].id, personId: persons[2].id },
-      { groupId: groups[1].id, personId: persons[3].id },
-      { groupId: groups[1].id, personId: persons[5].id },
+      { groupId: groups[0].id, partnerId: partners[0].id },
+      { groupId: groups[1].id, partnerId: partners[1].id },
     ],
   });
 
@@ -344,6 +342,7 @@ async function main() {
         name: "Hanoi Career Bridge",
         country: "ベトナム",
         channel: "LINE",
+        linkStatus: "完了",
         contactName: "Tran Thi Lan",
         notes: "製造職の候補者送客が得意",
       },
@@ -351,6 +350,7 @@ async function main() {
         name: "Jakarta Global Link",
         country: "インドネシア",
         channel: "Messenger",
+        linkStatus: "未",
         contactName: "Budi Santoso",
         notes: "介護・外食の候補者に強い",
       },

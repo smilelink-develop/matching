@@ -30,6 +30,7 @@ export default async function CompanyDealsPage() {
         deals={deals.map((deal) => ({
           id: deal.id,
           title: deal.title,
+          field: deal.field,
           companyName: deal.company.name,
           ownerName: deal.owner?.name ?? "未割当",
           priority: deal.priority,

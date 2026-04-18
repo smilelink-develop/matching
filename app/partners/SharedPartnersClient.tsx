@@ -7,6 +7,7 @@ type Partner = {
   name: string;
   country: string | null;
   channel: string | null;
+  linkStatus: string;
   contactName: string | null;
   notes: string | null;
 };
@@ -21,6 +22,7 @@ export default function SharedPartnersClient({
     name: "",
     country: "",
     channel: "",
+    linkStatus: "未",
     contactName: "",
     notes: "",
   });
@@ -49,6 +51,7 @@ export default function SharedPartnersClient({
         name: "",
         country: "",
         channel: "",
+        linkStatus: "未",
         contactName: "",
         notes: "",
       });
@@ -71,6 +74,12 @@ export default function SharedPartnersClient({
           </Field>
           <Field label="主な連絡手段">
             <input className={INPUT} value={form.channel} onChange={(e) => setForm((current) => ({ ...current, channel: e.target.value }))} placeholder="LINE / Messenger / WhatsApp" />
+          </Field>
+          <Field label="連絡先紐づけ">
+            <select className={INPUT} value={form.linkStatus} onChange={(e) => setForm((current) => ({ ...current, linkStatus: e.target.value }))}>
+              <option value="未">未</option>
+              <option value="完了">完了</option>
+            </select>
           </Field>
           <Field label="担当者名">
             <input className={INPUT} value={form.contactName} onChange={(e) => setForm((current) => ({ ...current, contactName: e.target.value }))} />
@@ -97,6 +106,11 @@ export default function SharedPartnersClient({
               <p className="text-sm font-semibold text-[var(--color-text-dark)]">{partner.name}</p>
               <p className="mt-1 text-xs text-gray-500">
                 {(partner.country || "国未設定")} / {(partner.channel || "連絡手段未設定")}
+              </p>
+              <p className="mt-2 text-xs">
+                <span className={`rounded-full px-2 py-0.5 ${partner.linkStatus === "完了" ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#FEF3C7] text-[#92400E]"}`}>
+                  連絡先紐づけ {partner.linkStatus}
+                </span>
               </p>
               {partner.contactName ? (
                 <p className="mt-2 text-sm text-gray-600">担当: {partner.contactName}</p>

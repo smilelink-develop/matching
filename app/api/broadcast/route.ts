@@ -13,11 +13,14 @@ export async function POST(req: Request) {
     if (mode === "group" && groupId) {
       const group = await prisma.group.findUnique({
         where: { id: groupId },
-        include: { members: { include: { person: true } } },
+        include: { members: { include: { partner: true } } },
       });
+      // パートナーには現状 LINE/Messenger ID を格納していないため、ID未登録として扱う
       targets = (group?.members ?? []).map((m) => ({
-        id: m.person.id, name: m.person.name,
-        lineUserId: m.person.lineUserId, messengerPsid: m.person.messengerPsid,
+        id: m.partner.id,
+        name: m.partner.name,
+        lineUserId: null,
+        messengerPsid: null,
       }));
     } else {
       const where: Record<string, unknown> = {};

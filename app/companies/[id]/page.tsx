@@ -77,7 +77,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                   <span className={statusClass(deal.status)}>{deal.status}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
-                  <Pill>{deal.unitPrice ?? "単価未設定"}</Pill>
+                  <Pill>{formatUnitPrice(deal.unitPrice)}</Pill>
+                  <Pill>{deal.field ?? "分野未設定"}</Pill>
                   <Pill>{deal.deadline ? `期限 ${new Date(deal.deadline).toLocaleDateString("ja-JP")}` : "期限未設定"}</Pill>
                   <Pill>{deal.candidates.length}名</Pill>
                 </div>
@@ -113,4 +114,9 @@ function statusClass(status: string) {
   if (status === "募集中") return "rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-medium text-[#92400E]";
   if (status === "面接中") return "rounded-full bg-[#DBEAFE] px-2.5 py-1 text-[11px] font-medium text-[#1D4ED8]";
   return "rounded-full bg-[#DCFCE7] px-2.5 py-1 text-[11px] font-medium text-[#166534]";
+}
+
+function formatUnitPrice(value: string | null) {
+  if (!value) return "単価未設定";
+  return value.includes("万円") ? value : `${value}万円`;
 }

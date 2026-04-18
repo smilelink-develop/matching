@@ -8,6 +8,7 @@ const STATUS_COLUMNS = ["至急募集", "募集中", "面接中", "成約"] as c
 type Deal = {
   id: number;
   title: string;
+  field: string | null;
   companyName: string;
   ownerName: string;
   priority: string;
@@ -98,7 +99,8 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-gray-500">
                       <Pill>{deal.ownerName}</Pill>
-                      <Pill>{deal.unitPrice ?? "単価未設定"}</Pill>
+                      <Pill>{deal.field ?? "分野未設定"}</Pill>
+                      <Pill>{formatUnitPrice(deal.unitPrice)}</Pill>
                       <Pill>{deal.candidatesCount}名</Pill>
                     </div>
                     <p className="mt-3 text-xs text-gray-400">
@@ -148,4 +150,9 @@ function priorityClass(priority: string) {
   if (priority === "urgent") return "rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[11px] font-medium text-[#B91C1C]";
   if (priority === "high") return "rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[11px] font-medium text-[#92400E]";
   return "rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--color-primary)]";
+}
+
+function formatUnitPrice(value: string | null) {
+  if (!value) return "単価未設定";
+  return value.includes("万円") ? value : `${value}万円`;
 }

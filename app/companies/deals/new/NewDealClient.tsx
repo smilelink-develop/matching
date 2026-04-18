@@ -18,6 +18,7 @@ export default function NewDealClient({
     title: "",
     companyId: companies[0]?.id ? String(companies[0].id) : "",
     ownerId: accounts[0]?.id ? String(accounts[0].id) : "",
+    field: "",
     priority: "normal",
     status: "募集中",
     unitPrice: "",
@@ -63,6 +64,9 @@ export default function NewDealClient({
         </select>
       </Field>
       <div className="grid gap-4 md:grid-cols-2">
+        <Field label="分野">
+          <input className={INPUT} value={form.field} onChange={(e) => setForm((current) => ({ ...current, field: e.target.value }))} placeholder="製造 / 介護 / 外食" />
+        </Field>
         <Field label="担当者">
           <select className={INPUT} value={form.ownerId} onChange={(e) => setForm((current) => ({ ...current, ownerId: e.target.value }))}>
             <option value="">未設定</option>
@@ -87,7 +91,10 @@ export default function NewDealClient({
           </select>
         </Field>
         <Field label="単価">
-          <input className={INPUT} value={form.unitPrice} onChange={(e) => setForm((current) => ({ ...current, unitPrice: e.target.value }))} placeholder="45万円 / 人" />
+          <div className="relative">
+            <input className={`${INPUT} pr-12`} value={form.unitPrice} onChange={(e) => setForm((current) => ({ ...current, unitPrice: e.target.value }))} placeholder="45" />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">万円</span>
+          </div>
         </Field>
         <Field label="期限">
           <input className={INPUT} type="date" value={form.deadline} onChange={(e) => setForm((current) => ({ ...current, deadline: e.target.value }))} />

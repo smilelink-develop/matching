@@ -24,6 +24,7 @@ export default async function PartnersPage() {
           name: partner.name,
           country: partner.country,
           channel: partner.channel,
+          linkStatus: partner.linkStatus,
           contactName: partner.contactName,
           notes: partner.notes,
         }))}

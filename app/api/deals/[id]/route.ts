@@ -9,7 +9,6 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       where: { id: Number(id) },
       include: {
         company: true,
-        partner: true,
         owner: { select: { id: true, name: true } },
         candidates: {
           include: {
