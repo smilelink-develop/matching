@@ -1,0 +1,142 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+type Option = { id: number; name: string };
+
+export default function NewDealClient({
+  companies,
+  partners,
+  accounts,
+}: {
+  companies: Option[];
+  partners: Option[];
+  accounts: Option[];
+}) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    companyId: companies[0]?.id ? String(companies[0].id) : "",
+    partnerId: "",
+    ownerId: accounts[0]?.id ? String(accounts[0].id) : "",
+    priority: "normal",
+    status: "募集中",
+    unitPrice: "",
+    deadline: "",
+    notes: "",
+  });
+
+  const submit = async () => {
+    if (!form.title.trim() || !form.companyId) {
+      alert("案件名と企業を入力してください");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch("/api/deals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(result.error || "案件作成に失敗しました");
+        return;
+      }
+      router.push(`/companies/deals/${result.deal.id}`);
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <Field label="案件名 *">
+        <input className={INPUT} value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} />
+      </Field>
+      <Field label="企業">
+        <select className={INPUT} value={form.companyId} onChange={(e) => setForm((current) => ({ ...current, companyId: e.target.value }))}>
+          {companies.map((company) => (
+            <option key={company.id} value={company.id}>{company.name}</option>
+          ))}
+        </select>
+      </Field>
+      <Field label="パートナー">
+        <select className={INPUT} value={form.partnerId} onChange={(e) => setForm((current) => ({ ...current, partnerId: e.target.value }))}>
+          <option value="">未設定</option>
+          {partners.map((partner) => (
+            <option key={partner.id} value={partner.id}>{partner.name}</option>
+          ))}
+        </select>
+      </Field>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="担当者">
+          <select className={INPUT} value={form.ownerId} onChange={(e) => setForm((current) => ({ ...current, ownerId: e.target.value }))}>
+            <option value="">未設定</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>{account.name}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="優先度">
+          <select className={INPUT} value={form.priority} onChange={(e) => setForm((current) => ({ ...current, priority: e.target.value }))}>
+            <option value="normal">通常</option>
+            <option value="high">高</option>
+            <option value="urgent">急ぎ</option>
+          </select>
+        </Field>
+        <Field label="案件ステップ">
+          <select className={INPUT} value={form.status} onChange={(e) => setForm((current) => ({ ...current, status: e.target.value }))}>
+            <option value="至急募集">至急募集</option>
+            <option value="募集中">募集中</option>
+            <option value="面接中">面接中</option>
+            <option value="成約">成約</option>
+          </select>
+        </Field>
+        <Field label="単価">
+          <input className={INPUT} value={form.unitPrice} onChange={(e) => setForm((current) => ({ ...current, unitPrice: e.target.value }))} placeholder="45万円 / 人" />
+        </Field>
+        <Field label="期限">
+          <input className={INPUT} type="date" value={form.deadline} onChange={(e) => setForm((current) => ({ ...current, deadline: e.target.value }))} />
+        </Field>
+      </div>
+      <Field label="メモ">
+        <textarea className={`${INPUT} min-h-28`} value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} />
+      </Field>
+
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={saving}
+          className="rounded-lg bg-[var(--color-primary)] px-6 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+        >
+          {saving ? "作成中..." : "保存"}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/companies/deals")}
+          className="rounded-lg border border-gray-300 px-6 py-2 text-sm hover:bg-gray-50"
+        >
+          戻る
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-dark)]">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+const INPUT =
+  "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";

@@ -115,7 +115,17 @@ const NAV: NavItem[] = [
       { label: "連絡先紐づけ", href: "/personnel/link" },
     ],
   },
-  { label: "企業情報", href: "/companies", icon: PersonnelIcon },
+  {
+    label: "企業情報",
+    href: "/companies",
+    icon: PersonnelIcon,
+    children: [
+      { label: "企業一覧", href: "/companies" },
+      { label: "企業追加", href: "/companies/new" },
+      { label: "案件管理", href: "/companies/deals" },
+      { label: "案件追加", href: "/companies/deals/new" },
+    ],
+  },
   { label: "パートナー情報", href: "/partners", icon: PersonnelIcon },
   { label: "候補者チャット", href: "/chat", icon: ChatIcon },
   { label: "日程調整", href: "/calendar", icon: CalendarIcon },
@@ -138,7 +148,7 @@ const NAV: NavItem[] = [
     href: "/deals",
     icon: BroadcastIcon,
     children: [
-      { label: "案件管理", href: "/deals" },
+      { label: "案件管理", href: "/companies/deals" },
       { label: "入社進捗", href: "/placements" },
       { label: "売上ダッシュボード", href: "/revenue" },
     ],

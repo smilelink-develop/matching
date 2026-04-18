@@ -1,0 +1,30 @@
+import { prisma } from "@/lib/prisma";
+import { requireCurrentAccount } from "@/lib/auth";
+import NewDealClient from "./NewDealClient";
+
+export const dynamic = "force-dynamic";
+
+export default async function NewDealPage() {
+  await requireCurrentAccount();
+  const [companies, partners, accounts] = await Promise.all([
+    prisma.company.findMany({ orderBy: { name: "asc" } }),
+    prisma.partner.findMany({ orderBy: { name: "asc" } }),
+    prisma.staffAccount.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
+
+  return (
+    <div className="px-8 py-10">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">案件を追加</h1>
+          <p className="mt-2 text-sm text-gray-500">企業ごとに案件を作成し、担当者や単価、期限を設定します。</p>
+        </div>
+        <NewDealClient
+          companies={companies.map((company) => ({ id: company.id, name: company.name }))}
+          partners={partners.map((partner) => ({ id: partner.id, name: partner.name }))}
+          accounts={accounts}
+        />
+      </div>
+    </div>
+  );
+}

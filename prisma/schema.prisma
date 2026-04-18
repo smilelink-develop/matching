@@ -308,7 +308,9 @@ model Deal {
   ownerId      Int?
   owner        StaffAccount? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   priority     String       @default("normal")
-  status       String       @default("active")
+  status       String       @default("募集中")
+  unitPrice    String?
+  deadline     DateTime?
   notes        String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
