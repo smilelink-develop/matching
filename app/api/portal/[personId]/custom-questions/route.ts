@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { ensurePersonDriveFolder, uploadDataUrlToDrive } from "@/lib/google-docs";
+import {
+  buildPersonFolderName,
+  ensurePersonDriveFolder,
+  formatPersonIdPrefix,
+  uploadDataUrlToDrive,
+} from "@/lib/google-docs";
 
 type Params = Promise<{ personId: string }>;
 
@@ -42,11 +47,22 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
     const person = await prisma.person.findUnique({
       where: { id: personIdNum },
-      select: { id: true, name: true, driveFolderUrl: true },
+      select: {
+        id: true,
+        name: true,
+        driveFolderUrl: true,
+        onboarding: { select: { englishName: true } },
+      },
     });
     if (!person) {
       return Response.json({ ok: false, error: "候補者が見つかりません" }, { status: 404 });
     }
+    const folderName = buildPersonFolderName({
+      id: person.id,
+      englishName: person.onboarding?.englishName ?? null,
+      name: person.name,
+    });
+    const idPrefix = formatPersonIdPrefix(person.id);
 
     // ファイル添付があるときのみ Drive フォルダを確保（無い場合は一切触らない）
     let folderUrl: string | null = person.driveFolderUrl ?? null;
@@ -56,7 +72,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
     if (hasFileUpload) {
       const folder = await ensurePersonDriveFolder({
         existingFolderUrl: person.driveFolderUrl,
-        personName: person.name,
+        personName: folderName,
       });
       folderUrl = folder.folderUrl;
       if (!person.driveFolderUrl) {
@@ -70,7 +86,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
         if (typeof item.fileDataUrl === "string" && item.fileDataUrl.startsWith("data:") && folderUrl) {
           const uploaded = await uploadDataUrlToDrive({
             dataUrl: item.fileDataUrl,
-            fileName: item.fileName || `${person.name}-custom-${item.id}`,
+            fileName: `${idPrefix}_${item.fileName || `custom-${item.id}`}`,
             folderUrl,
           });
           await prisma.personCustomQuestion.update({

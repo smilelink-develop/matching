@@ -122,7 +122,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
               personName={person.name}
               initialPhotoUrl={person.photoUrl}
             />
-            <div className="grid grid-cols-2 gap-3 md:w-[320px]">
+            <div className="flex items-center gap-2">
               <ExtractPanel
                 personId={person.id}
                 personName={person.name}

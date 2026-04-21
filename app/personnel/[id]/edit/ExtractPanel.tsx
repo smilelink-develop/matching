@@ -97,19 +97,14 @@ export default function ExtractPanel({
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <section className="flex h-full flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+    <>
       <button
         type="button"
         onClick={() => setModalOpen(true)}
         title="AI で書類から自動入力"
-        className="group flex flex-col items-center gap-2"
+        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#A78BFA] via-[#F472B6] to-[#F59E0B] text-white shadow-md transition-transform hover:scale-110"
       >
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#A78BFA] via-[#F472B6] to-[#F59E0B] text-white shadow-md transition-transform group-hover:scale-110">
-          <SparkIcon />
-        </span>
-        <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-dark)]">
-          書類から自動作成
-        </span>
+        <SparkIcon />
       </button>
 
       {modalOpen ? (
@@ -121,10 +116,15 @@ export default function ExtractPanel({
           onApplied={() => {
             setModalOpen(false);
             router.refresh();
+            // フォーム state が古い値で上書きするのを防ぐため、
+            // サーバーからのデータを確実に反映させるためにハードリロード
+            if (typeof window !== "undefined") {
+              window.location.reload();
+            }
           }}
         />
       ) : null}
-    </section>
+    </>
   );
 }
 
@@ -607,7 +607,7 @@ function formatBytes(bytes: number) {
 
 function SparkIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z" fill="currentColor" stroke="none" />
       <path d="M19 13l.8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8L19 13z" fill="currentColor" stroke="none" />
       <path d="M5 16l.6 1.6L7.2 18l-1.6.4L5 20l-.6-1.6L2.8 18l1.6-.4L5 16z" fill="currentColor" stroke="none" />

@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 import { buildResumePlaceholders } from "@/lib/resume-placeholders";
-import { createResumeDocumentFromTemplate, ensurePersonDriveFolder } from "@/lib/google-docs";
+import {
+  buildPersonFolderName,
+  createResumeDocumentFromTemplate,
+  ensurePersonDriveFolder,
+  formatPersonIdPrefix,
+} from "@/lib/google-docs";
 
 export const runtime = "nodejs";
 
@@ -42,9 +47,15 @@ export async function POST(req: Request) {
       return Response.json({ ok: false, error: "候補者が見つかりません" }, { status: 404 });
     }
 
+    const folderName = buildPersonFolderName({
+      id: person.id,
+      englishName: person.onboarding?.englishName ?? null,
+      name: person.name,
+    });
+    const idPrefix = formatPersonIdPrefix(person.id);
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: person.driveFolderUrl,
-      personName: person.name,
+      personName: folderName,
       rootFolderUrl: template.driveFolderUrl,
     });
 
@@ -55,10 +66,11 @@ export async function POST(req: Request) {
       });
     }
 
+    const prefixedTitle = title.startsWith(`${idPrefix}_`) ? title : `${idPrefix}_${title}`;
     const generated = await createResumeDocumentFromTemplate({
       templateUrl: template.templateUrl,
       folderUrl: folder.folderUrl,
-      title,
+      title: prefixedTitle,
       replacements: buildResumePlaceholders({ person }),
     });
 
@@ -67,7 +79,7 @@ export async function POST(req: Request) {
         personId,
         templateId: template.id,
         accountId: account.id,
-        title,
+        title: prefixedTitle,
         documentId: generated.documentId,
         documentUrl: generated.documentUrl || documentUrl || null,
         driveFolderUrl: folder.folderUrl,

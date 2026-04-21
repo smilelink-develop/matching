@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getDocumentDefinitions } from "@/lib/candidate-profile";
-import { ensurePersonDriveFolder, uploadDataUrlToDrive } from "@/lib/google-docs";
+import {
+  buildPersonFolderName,
+  ensurePersonDriveFolder,
+  formatPersonIdPrefix,
+  uploadDataUrlToDrive,
+} from "@/lib/google-docs";
 
 type UploadedDocumentInput = {
   kind: string;
@@ -90,7 +95,12 @@ export async function POST(
       : [];
     const person = await prisma.person.findUnique({
       where: { id: normalizedPersonId },
-      select: { id: true, name: true, driveFolderUrl: true },
+      select: {
+        id: true,
+        name: true,
+        driveFolderUrl: true,
+        onboarding: { select: { englishName: true } },
+      },
     });
 
     if (!person) {
@@ -100,16 +110,23 @@ export async function POST(
       );
     }
 
+    const folderName = buildPersonFolderName({
+      id: person.id,
+      englishName: body.englishName ?? person.onboarding?.englishName ?? null,
+      name: body.name || person.name,
+    });
+    const idPrefix = formatPersonIdPrefix(person.id);
+
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: person.driveFolderUrl,
-      personName: body.name || person.name,
+      personName: folderName,
     });
 
     const photoUpload =
       typeof body.photoUrl === "string" && body.photoUrl.startsWith("data:")
         ? await uploadDataUrlToDrive({
             dataUrl: body.photoUrl,
-            fileName: `${body.name || person.name}-photo`,
+            fileName: `${idPrefix}_photo`,
             folderUrl: folder.folderUrl,
           })
         : null;
@@ -120,7 +137,7 @@ export async function POST(
         if (typeof document.fileUrl === "string" && document.fileUrl.startsWith("data:")) {
           const uploaded = await uploadDataUrlToDrive({
             dataUrl: document.fileUrl,
-            fileName: document.fileName,
+            fileName: `${idPrefix}_${document.fileName}`,
             folderUrl: folder.folderUrl,
           });
           return {

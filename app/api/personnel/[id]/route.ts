@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { reconcileMessagePersonLinks } from "@/lib/message-linking";
-import { ensurePersonDriveFolder, uploadDataUrlToDrive } from "@/lib/google-docs";
+import {
+  buildPersonFolderName,
+  ensurePersonDriveFolder,
+  formatPersonIdPrefix,
+  uploadDataUrlToDrive,
+} from "@/lib/google-docs";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,23 +29,31 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const documents = Array.isArray(body.documents) ? body.documents : [];
     const currentPerson = await prisma.person.findUnique({
       where: { id: personId },
-      select: { id: true, name: true, driveFolderUrl: true },
+      select: { id: true, name: true, driveFolderUrl: true, onboarding: { select: { englishName: true } } },
     });
 
     if (!currentPerson) {
       return Response.json({ ok: false, error: "候補者が見つかりません" }, { status: 404 });
     }
 
+    const englishName = body.englishName ?? currentPerson.onboarding?.englishName ?? null;
+    const folderName = buildPersonFolderName({
+      id: currentPerson.id,
+      englishName,
+      name: body.name || currentPerson.name,
+    });
+    const idPrefix = formatPersonIdPrefix(currentPerson.id);
+
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: currentPerson.driveFolderUrl,
-      personName: body.name || currentPerson.name,
+      personName: folderName,
     });
 
     const photoUpload =
       typeof body.photoUrl === "string" && body.photoUrl.startsWith("data:")
         ? await uploadDataUrlToDrive({
             dataUrl: body.photoUrl,
-            fileName: `${body.name || currentPerson.name}-photo`,
+            fileName: `${idPrefix}_photo`,
             folderUrl: folder.folderUrl,
           })
         : null;
@@ -60,7 +73,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         if (typeof document.fileUrl === "string" && document.fileUrl.startsWith("data:")) {
           const uploaded = await uploadDataUrlToDrive({
             dataUrl: document.fileUrl,
-            fileName: document.fileName,
+            fileName: `${idPrefix}_${document.fileName}`,
             folderUrl: folder.folderUrl,
           });
           return {

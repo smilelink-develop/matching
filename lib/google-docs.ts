@@ -171,6 +171,18 @@ export async function createResumeDocumentFromTemplate({
   };
 }
 
+export function formatPersonIdPrefix(id: number) {
+  return String(id).padStart(4, "0");
+}
+
+export function buildPersonFolderName(person: { id: number; englishName?: string | null; name: string }) {
+  const prefix = formatPersonIdPrefix(person.id);
+  const label = (person.englishName?.trim() || person.name.trim() || "候補者")
+    .replace(/[\\/:*?"<>|]/g, "")
+    .trim();
+  return `${prefix}_${label}`;
+}
+
 export async function ensurePersonDriveFolder({
   existingFolderUrl,
   personName,
@@ -196,7 +208,7 @@ export async function ensurePersonDriveFolder({
   return getOrCreateFolder({
     drive,
     parentFolderUrl,
-    folderName: `${personName} 候補者フォルダ`,
+    folderName: personName,
   });
 }
 

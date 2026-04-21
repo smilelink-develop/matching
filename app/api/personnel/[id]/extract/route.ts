@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 import { extractCandidateFromFiles, type SourceFile } from "@/lib/ai-extract";
-import { ensurePersonDriveFolder, uploadDataUrlToDrive } from "@/lib/google-docs";
+import {
+  buildPersonFolderName,
+  ensurePersonDriveFolder,
+  formatPersonIdPrefix,
+  uploadDataUrlToDrive,
+} from "@/lib/google-docs";
 
 type Params = Promise<{ id: string }>;
 
@@ -37,11 +42,22 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
     const person = await prisma.person.findUnique({
       where: { id: personId },
-      select: { id: true, name: true, driveFolderUrl: true },
+      select: {
+        id: true,
+        name: true,
+        driveFolderUrl: true,
+        onboarding: { select: { englishName: true } },
+      },
     });
     if (!person) {
       return Response.json({ ok: false, error: "候補者が見つかりません" }, { status: 404 });
     }
+    const folderName = buildPersonFolderName({
+      id: person.id,
+      englishName: person.onboarding?.englishName ?? null,
+      name: person.name,
+    });
+    const idPrefix = formatPersonIdPrefix(person.id);
 
     // AI に渡すために base64 を抜き出す
     const sourceFiles: SourceFile[] = [];
@@ -80,7 +96,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
     try {
       const folder = await ensurePersonDriveFolder({
         existingFolderUrl: person.driveFolderUrl,
-        personName: person.name,
+        personName: folderName,
       });
       folderUrl = folder.folderUrl;
       if (!person.driveFolderUrl) {
@@ -103,7 +119,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
       try {
         const uploaded = await uploadDataUrlToDrive({
           dataUrl: file.dataUrl,
-          fileName: file.fileName,
+          fileName: `${idPrefix}_${file.fileName}`,
           folderUrl: folderUrl!,
         });
         uploadedFiles.push({

@@ -35,23 +35,6 @@ export default function DriveActionsPanel({
     router.refresh();
   };
 
-  const clearUrl = async () => {
-    if (!driveFolderUrl) return;
-    if (!confirm("保管場所のリンクを削除しますか?")) return;
-    const response = await fetch(`/api/personnel/${personId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ driveFolderUrl: null }),
-    });
-    const result = await response.json();
-    if (!result.ok) {
-      alert(result.error || "削除に失敗しました");
-      return;
-    }
-    setDriveFolderUrl(null);
-    router.refresh();
-  };
-
   return (
     <>
       {driveFolderUrl ? (
@@ -60,57 +43,36 @@ export default function DriveActionsPanel({
           target="_blank"
           rel="noreferrer"
           title="保管場所を開く"
-          className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm hover:bg-[var(--color-light)]"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#FBBF24] via-[#F59E0B] to-[#D97706] text-white shadow-md transition-transform hover:scale-110"
         >
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#FBBF24] via-[#F59E0B] to-[#D97706] text-white shadow-md">
-            <FolderIcon />
-          </span>
-          <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-dark)]">保管場所</span>
+          <FolderIcon />
         </a>
       ) : (
         <button
           type="button"
           onClick={() => void editUrl()}
           title="保管場所 未設定 (クリックで設定)"
-          className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-300 bg-white p-3 hover:border-[var(--color-secondary)]"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white text-gray-400 transition-transform hover:scale-110 hover:text-[var(--color-primary)]"
         >
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-400">
-            <FolderIcon />
-          </span>
-          <span className="whitespace-nowrap text-[11px] font-semibold text-gray-400">保管場所</span>
+          <FolderIcon />
         </button>
       )}
 
-      <div className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-        <button
-          type="button"
-          onClick={() => void editUrl()}
-          title="保管場所 URL を編集"
-          className="group flex flex-col items-center gap-2"
-        >
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#34D399] via-[#10B981] to-[#059669] text-white shadow-md transition-transform group-hover:scale-110">
-            <EditIcon />
-          </span>
-          <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-dark)]">URL 編集</span>
-        </button>
-        {driveFolderUrl ? (
-          <button
-            type="button"
-            onClick={() => void clearUrl()}
-            title="保管場所 URL を削除"
-            className="text-[10px] text-gray-400 hover:text-red-500"
-          >
-            リンク削除
-          </button>
-        ) : null}
-      </div>
+      <button
+        type="button"
+        onClick={() => void editUrl()}
+        title="保管場所 URL を編集"
+        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#34D399] via-[#10B981] to-[#059669] text-white shadow-md transition-transform hover:scale-110"
+      >
+        <EditIcon />
+      </button>
     </>
   );
 }
 
 function FolderIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l1.4 1.8c.2.25.5.4.82.4H18.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" />
     </svg>
   );
@@ -118,7 +80,7 @@ function FolderIcon() {
 
 function EditIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
     </svg>

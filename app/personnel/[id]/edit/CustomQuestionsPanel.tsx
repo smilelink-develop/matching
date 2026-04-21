@@ -113,32 +113,25 @@ export function CustomQuestionsBuilderButton() {
   const { openBuilder, questions } = useCtx();
   const activeCount = questions.filter((q) => q.active).length;
   return (
-    <section className="relative flex h-full flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+    <button
+      type="button"
+      onClick={openBuilder}
+      title={`個別質問フォームを作成して送信${activeCount > 0 ? ` (${activeCount}件)` : ""}`}
+      className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] text-white shadow-md transition-transform hover:scale-110"
+    >
+      <ChatIcon />
       {activeCount > 0 ? (
-        <span className="absolute right-2 top-2 rounded-full bg-[var(--color-primary)] px-1.5 py-0.5 text-[9px] font-semibold text-white">
+        <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-[9px] font-semibold text-white">
           {activeCount}
         </span>
       ) : null}
-      <button
-        type="button"
-        onClick={openBuilder}
-        title="個別質問フォームを作成して送信"
-        className="group flex flex-col items-center gap-2"
-      >
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] text-white shadow-md transition-transform group-hover:scale-110">
-          <ChatIcon />
-        </span>
-        <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--color-text-dark)]">
-          入力フォーム作成
-        </span>
-      </button>
-    </section>
+    </button>
   );
 }
 
 function ChatIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="currentColor" fillOpacity="0.2" />
       <path d="M8 11h8" />
       <path d="M8 15h5" />
