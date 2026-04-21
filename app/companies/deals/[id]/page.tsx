@@ -2,13 +2,15 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAccount } from "@/lib/auth";
 import DealDetailClient from "./DealDetailClient";
+import DealTabs from "./DealTabs";
+import JobPostingsPanel from "./JobPostingsPanel";
 
 export const dynamic = "force-dynamic";
 
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireCurrentAccount();
   const { id } = await params;
-  const [deal, persons] = await Promise.all([
+  const [deal, persons, jobPostings] = await Promise.all([
     prisma.deal.findUnique({
       where: { id: Number(id) },
       include: {
@@ -41,6 +43,11 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         photoUrl: true,
       },
     }),
+    prisma.jobPosting.findMany({
+      where: { dealId: Number(id) },
+      include: { template: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   if (!deal) notFound();
@@ -50,35 +57,57 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       <div>
         <p className="text-xs font-semibold tracking-[0.16em] text-[var(--color-primary)]">DEAL BOARD</p>
         <h1 className="mt-2 text-2xl font-bold text-[var(--color-text-dark)]">{deal.title}</h1>
-        <p className="mt-1 text-sm text-gray-500">案件詳細と、候補者の進捗を Trello のようなボードで管理します。</p>
+        <p className="mt-1 text-sm text-gray-500">案件詳細、進捗、求人票の条件を管理します。</p>
       </div>
 
-      <DealDetailClient
-        deal={{
-          id: deal.id,
-          title: deal.title,
-          field: deal.field,
-          company: deal.company,
-          owner: deal.owner,
-          priority: deal.priority,
-          status: deal.status,
-          unitPrice: deal.unitPrice,
-          deadline: deal.deadline?.toISOString() ?? null,
-          acceptedAt: deal.acceptedAt?.toISOString() ?? null,
-          requiredCount: deal.requiredCount,
-          recommendedCount: deal.recommendedCount,
-          interviewCount: deal.interviewCount,
-          offerCount: deal.offerCount,
-          contractCount: deal.contractCount,
-          notes: deal.notes,
-          candidates: deal.candidates.map((candidate) => ({
-            id: candidate.id,
-            note: candidate.note,
-            stage: candidate.stage,
-            person: candidate.person,
-          })),
-        }}
-        persons={persons}
+      <DealTabs
+        progressContent={
+          <DealDetailClient
+            deal={{
+              id: deal.id,
+              title: deal.title,
+              field: deal.field,
+              company: deal.company,
+              owner: deal.owner,
+              priority: deal.priority,
+              status: deal.status,
+              unitPrice: deal.unitPrice,
+              deadline: deal.deadline?.toISOString() ?? null,
+              acceptedAt: deal.acceptedAt?.toISOString() ?? null,
+              requiredCount: deal.requiredCount,
+              recommendedCount: deal.recommendedCount,
+              interviewCount: deal.interviewCount,
+              offerCount: deal.offerCount,
+              contractCount: deal.contractCount,
+              notes: deal.notes,
+              candidates: deal.candidates.map((candidate) => ({
+                id: candidate.id,
+                note: candidate.note,
+                stage: candidate.stage,
+                person: candidate.person,
+              })),
+            }}
+            persons={persons}
+          />
+        }
+        conditionContent={
+          <JobPostingsPanel
+            dealId={deal.id}
+            initialPostings={jobPostings.map((posting) => ({
+              id: posting.id,
+              title: posting.title,
+              status: posting.status,
+              documentUrl: posting.documentUrl,
+              driveFolderUrl: posting.driveFolderUrl,
+              templateName: posting.template?.name ?? null,
+              jobDescription: posting.jobDescription,
+              workLocation: posting.workLocation,
+              headcount: posting.headcount,
+              monthlyGross: posting.monthlyGross,
+              createdAt: posting.createdAt.toISOString(),
+            }))}
+          />
+        }
       />
     </div>
   );

@@ -1,19 +1,36 @@
-import SectionPlaceholder from "@/app/components/SectionPlaceholder";
+import { prisma } from "@/lib/prisma";
+import { requireCurrentAccount } from "@/lib/auth";
+import RecommendationsClient from "./RecommendationsClient";
 
-export default function RecommendationsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function RecommendationsPage() {
+  await requireCurrentAccount();
+  const deals = await prisma.deal.findMany({
+    orderBy: { updatedAt: "desc" },
+    include: {
+      company: { select: { name: true } },
+      _count: { select: { candidates: true } },
+    },
+  });
+
   return (
-    <SectionPlaceholder
-      title="推薦リスト"
-      description="面談後に複数名の合格候補者を選び、企業へ渡す推薦リストを整理するためのセクションです。最終的にはスプレッドシート連携も視野に入れています。"
-      points={[
-        "面談合格者を選択する",
-        "企業に見せる必要情報だけを抜き出す",
-        "社内共有用と企業共有用の2種類の出し分けをする",
-      ]}
-      primaryHref="/deals"
-      primaryLabel="案件管理を開く"
-      secondaryHref="/personnel"
-      secondaryLabel="候補者一覧を開く"
-    />
+    <div className="space-y-6 p-8">
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">推薦リスト作成</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          案件を選択すると、その案件に紐づく候補者の推薦リストを CSV でダウンロードできます。
+        </p>
+      </div>
+
+      <RecommendationsClient
+        deals={deals.map((deal) => ({
+          id: deal.id,
+          title: deal.title,
+          companyName: deal.company.name,
+          candidateCount: deal._count.candidates,
+        }))}
+      />
+    </div>
   );
 }

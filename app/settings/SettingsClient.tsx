@@ -22,6 +22,7 @@ export default function SettingsClient({
   currentAccount,
   accounts,
   resumeTemplates: initialResumeTemplates,
+  jobPostingTemplates: initialJobPostingTemplates,
 }: {
   initialSettings: {
     calendarEmbedUrl: string;
@@ -36,6 +37,7 @@ export default function SettingsClient({
   };
   accounts: AccountSummary[];
   resumeTemplates: ResumeTemplate[];
+  jobPostingTemplates: ResumeTemplate[];
 }) {
   const isAdmin = currentAccount.role === "admin";
   const [calendarEmbedUrl, setCalendarEmbedUrl] = useState(initialSettings.calendarEmbedUrl);
@@ -50,6 +52,10 @@ export default function SettingsClient({
   const [resumeTemplates, setResumeTemplates] = useState<ResumeTemplate[]>(initialResumeTemplates);
   const [newTemplate, setNewTemplate] = useState({ name: "", templateUrl: "", driveFolderUrl: "" });
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [jobPostingTemplatesOpen, setJobPostingTemplatesOpen] = useState(false);
+  const [jobPostingTemplates, setJobPostingTemplates] = useState<ResumeTemplate[]>(initialJobPostingTemplates);
+  const [newJobPostingTemplate, setNewJobPostingTemplate] = useState({ name: "", templateUrl: "", driveFolderUrl: "" });
+  const [savingJobPostingTemplate, setSavingJobPostingTemplate] = useState(false);
   const [passcodes, setPasscodes] = useState<Record<number, string>>({});
   const [switchingId, setSwitchingId] = useState<number | null>(null);
   const [savingPasscodeId, setSavingPasscodeId] = useState<number | null>(null);
@@ -169,6 +175,56 @@ export default function SettingsClient({
       alert(data.error || "更新に失敗しました");
       setResumeTemplates(previous);
     }
+  };
+
+  const addJobPostingTemplate = async () => {
+    if (!newJobPostingTemplate.name.trim() || !newJobPostingTemplate.templateUrl.trim() || !newJobPostingTemplate.driveFolderUrl.trim()) {
+      alert("テンプレート名・Docs URL・保存先 Drive URL を入力してください");
+      return;
+    }
+    setSavingJobPostingTemplate(true);
+    try {
+      const res = await fetch("/api/job-posting-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newJobPostingTemplate),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        alert(data.error || "保存に失敗しました");
+        return;
+      }
+      setJobPostingTemplates((current) => [data.template, ...current]);
+      setNewJobPostingTemplate({ name: "", templateUrl: "", driveFolderUrl: "" });
+    } finally {
+      setSavingJobPostingTemplate(false);
+    }
+  };
+
+  const updateJobPostingTemplate = async (id: number, patch: Partial<ResumeTemplate>) => {
+    const previous = jobPostingTemplates;
+    setJobPostingTemplates((current) => current.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    const res = await fetch(`/api/job-posting-templates/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.error || "更新に失敗しました");
+      setJobPostingTemplates(previous);
+    }
+  };
+
+  const deleteJobPostingTemplate = async (id: number, name: string) => {
+    if (!confirm(`「${name}」を削除しますか?`)) return;
+    const res = await fetch(`/api/job-posting-templates/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.error || "削除に失敗しました");
+      return;
+    }
+    setJobPostingTemplates((current) => current.filter((t) => t.id !== id));
   };
 
   const deleteResumeTemplate = async (id: number, name: string) => {
@@ -350,6 +406,93 @@ export default function SettingsClient({
               </Field>
               <ActionButton onClick={addResumeTemplate} disabled={savingTemplate}>
                 {savingTemplate ? "保存中..." : "テンプレートを追加"}
+              </ActionButton>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="求人票テンプレート"
+        description="求人票作成用の Google Docs テンプレートと保存先 Drive フォルダを登録します。全アカウントで共有されます。"
+        open={jobPostingTemplatesOpen}
+        onToggle={() => setJobPostingTemplatesOpen((current) => !current)}
+      >
+        <div className="space-y-4">
+          <div className="space-y-3">
+            {jobPostingTemplates.map((template) => (
+              <div key={template.id} className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
+                <div className="grid gap-3">
+                  <Field label="テンプレート名">
+                    <input
+                      className={INPUT}
+                      value={template.name}
+                      onChange={(e) => setJobPostingTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, name: e.target.value } : t))}
+                      onBlur={(e) => void updateJobPostingTemplate(template.id, { name: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Google Docs テンプレートURL">
+                    <input
+                      className={INPUT}
+                      value={template.templateUrl}
+                      onChange={(e) => setJobPostingTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, templateUrl: e.target.value } : t))}
+                      onBlur={(e) => void updateJobPostingTemplate(template.id, { templateUrl: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="保存先 Drive フォルダURL">
+                    <input
+                      className={INPUT}
+                      value={template.driveFolderUrl}
+                      onChange={(e) => setJobPostingTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, driveFolderUrl: e.target.value } : t))}
+                      onBlur={(e) => void updateJobPostingTemplate(template.id, { driveFolderUrl: e.target.value })}
+                    />
+                  </Field>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void deleteJobPostingTemplate(template.id, template.name)}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    削除
+                  </button>
+                </div>
+              </div>
+            ))}
+            {jobPostingTemplates.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-6 text-center text-xs text-gray-400">
+                まだテンプレートがありません
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-4">
+            <p className="text-sm font-semibold text-[var(--color-text-dark)]">新しいテンプレートを追加</p>
+            <div className="mt-3 grid gap-3">
+              <Field label="テンプレート名">
+                <input
+                  className={INPUT}
+                  value={newJobPostingTemplate.name}
+                  onChange={(e) => setNewJobPostingTemplate((c) => ({ ...c, name: e.target.value }))}
+                  placeholder="特定技能 標準求人票"
+                />
+              </Field>
+              <Field label="Google Docs テンプレートURL">
+                <input
+                  className={INPUT}
+                  value={newJobPostingTemplate.templateUrl}
+                  onChange={(e) => setNewJobPostingTemplate((c) => ({ ...c, templateUrl: e.target.value }))}
+                />
+              </Field>
+              <Field label="保存先 Drive フォルダURL">
+                <input
+                  className={INPUT}
+                  value={newJobPostingTemplate.driveFolderUrl}
+                  onChange={(e) => setNewJobPostingTemplate((c) => ({ ...c, driveFolderUrl: e.target.value }))}
+                />
+              </Field>
+              <ActionButton onClick={addJobPostingTemplate} disabled={savingJobPostingTemplate}>
+                {savingJobPostingTemplate ? "保存中..." : "テンプレートを追加"}
               </ActionButton>
             </div>
           </div>

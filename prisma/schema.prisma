@@ -368,6 +368,77 @@ model Deal {
 
   candidates   DealCandidate[]
   invoices     Invoice[]
+  jobPostings  JobPosting[]
+}
+
+model JobPostingTemplate {
+  id              Int      @id @default(autoincrement())
+  name            String
+  templateUrl     String
+  driveFolderUrl  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  documents       JobPosting[]
+}
+
+model JobPosting {
+  id                  Int      @id @default(autoincrement())
+  dealId              Int
+  deal                Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  templateId          Int?
+  template            JobPostingTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  title               String
+  documentId          String?
+  documentUrl         String?
+  driveFolderUrl      String?
+  status              String   @default("draft")
+  // 仕事内容
+  jobDescription      String?
+  workLocation        String?
+  nearestStation      String?
+  headcount           String?
+  gender              String?
+  nationality         String?
+  // 勤務
+  workTime1Start      String?
+  workTime1End        String?
+  workTime2Start      String?
+  workTime2End        String?
+  overtime            String?
+  avgMonthlyOvertime  String?
+  fixedOvertimeHours  String?
+  fixedOvertimePay    String?
+  // 給与
+  monthlyGross        String?
+  basicSalary         String?
+  salaryCalcMethod    String?
+  perfectAttendance   String?
+  housingAllowance    String?
+  nightShiftAllowance String?
+  commuteAllowance    String?
+  // 控除
+  socialInsurance     String?
+  employmentInsurance String?
+  healthInsurance     String?
+  pensionInsurance    String?
+  incomeTax           String?
+  residentTax         String?
+  // 生活
+  mealProvision       String?
+  mealAmount          String?
+  dormProvision       String?
+  dormAmount          String?
+  utilitiesProvision  String?
+  utilitiesAmount     String?
+  // その他
+  holidays            String?
+  otherBenefits       String?
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([dealId])
 }
 
 model PersonPlacement {

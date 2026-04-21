@@ -522,38 +522,31 @@ function CounterCell({
   onChange: (next: number) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
-      <p className="text-xs text-gray-500">{label}</p>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <input
-          type="number"
-          min={0}
-          value={value}
-          onChange={(event) => onChange(Number(event.target.value) || 0)}
-          className="w-16 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-center text-lg font-semibold text-[var(--color-text-dark)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
-        />
-        <div className="flex flex-col gap-1">
-          <button
-            type="button"
-            aria-label={`${label} を増やす`}
-            onClick={() => onChange(value + 1)}
-            className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-[var(--color-primary)] hover:text-white"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="18 15 12 9 6 15" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            aria-label={`${label} を減らす`}
-            onClick={() => onChange(Math.max(0, value - 1))}
-            className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-[var(--color-primary)] hover:text-white"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-        </div>
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+      <p className="text-sm font-semibold text-[var(--color-text-dark)]">{label}</p>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={`${label} を減らす`}
+          onClick={() => onChange(Math.max(0, value - 1))}
+          className="flex h-5 w-5 items-center justify-center rounded border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-[var(--color-primary)]"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+        <span className="min-w-[1.5rem] text-center text-xs tabular-nums text-gray-500">{value}</span>
+        <button
+          type="button"
+          aria-label={`${label} を増やす`}
+          onClick={() => onChange(value + 1)}
+          className="flex h-5 w-5 items-center justify-center rounded border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-[var(--color-primary)]"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
       </div>
     </div>
   );

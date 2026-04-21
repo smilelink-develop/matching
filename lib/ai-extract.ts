@@ -46,6 +46,46 @@ export type SourceFile = {
   base64: string;
 };
 
+export type ExtractedJobPosting = {
+  title?: string;
+  jobDescription?: string;
+  workLocation?: string;
+  nearestStation?: string;
+  headcount?: string;
+  gender?: string;
+  nationality?: string;
+  workTime1Start?: string;
+  workTime1End?: string;
+  workTime2Start?: string;
+  workTime2End?: string;
+  overtime?: string;
+  avgMonthlyOvertime?: string;
+  fixedOvertimeHours?: string;
+  fixedOvertimePay?: string;
+  monthlyGross?: string;
+  basicSalary?: string;
+  salaryCalcMethod?: string;
+  perfectAttendance?: string;
+  housingAllowance?: string;
+  nightShiftAllowance?: string;
+  commuteAllowance?: string;
+  socialInsurance?: string;
+  employmentInsurance?: string;
+  healthInsurance?: string;
+  pensionInsurance?: string;
+  incomeTax?: string;
+  residentTax?: string;
+  mealProvision?: string;
+  mealAmount?: string;
+  dormProvision?: string;
+  dormAmount?: string;
+  utilitiesProvision?: string;
+  utilitiesAmount?: string;
+  holidays?: string;
+  otherBenefits?: string;
+  notes?: string;
+};
+
 const EXTRACTION_SCHEMA_DESCRIPTION = `次のJSONスキーマに沿って、読み取れた情報のみを出力してください。読み取れない項目は省略(null/undefined/空文字列を含めない)。日付は YYYY-MM-DD 形式で正規化してください。workExperiences は配列で、古い順。
 
 fields:
@@ -133,6 +173,107 @@ export async function extractCandidateFromFiles(files: SourceFile[]): Promise<Ex
 
   const text = response.text?.trim() ?? "";
   return parseJsonPayload(text);
+}
+
+const JOB_POSTING_SCHEMA = `次のJSONスキーマで求人票情報を抽出してください。読み取れない項目は含めない。金額は数字のみ(例: "180000")、期間は文字列のまま(例: "1年")で良い。
+
+fields:
+- title: 求人票のタイトル(職種+会社名など)
+- jobDescription: 仕事内容
+- workLocation: 勤務地(都道府県+市区町村以下)
+- nearestStation: 最寄り駅
+- headcount: 募集人数(数字の文字列)
+- gender: 男/女/不問
+- nationality: 希望国籍(不問の場合は"不問")
+- workTime1Start / workTime1End: シフト1 開始/終了 "HH:MM"
+- workTime2Start / workTime2End: シフト2(二交代制などある場合)
+- overtime: 残業有無("有"/"無")
+- avgMonthlyOvertime: 月間平均残業時間(数字の文字列, 時間)
+- fixedOvertimeHours: 固定残業時間
+- fixedOvertimePay: 固定残業代(円)
+- monthlyGross: 月総支給額(円)
+- basicSalary: 基本給(円)
+- salaryCalcMethod: 給与計算方法(月給/時給)
+- perfectAttendance: 皆勤手当(円)
+- housingAllowance: 住宅手当(円)
+- nightShiftAllowance: 深夜手当(円)
+- commuteAllowance: 通勤手当(円 or "全額支給")
+- socialInsurance: 社会保険料の記載(有/無/概算)
+- employmentInsurance: 雇用保険料
+- healthInsurance: 健康保険料
+- pensionInsurance: 厚生年金保険料
+- incomeTax: 所得税
+- residentTax: 住民税
+- mealProvision: 食費支給の有無(有/無)
+- mealAmount: 食費金額(円/月)
+- dormProvision: 寮の有無(有/無)
+- dormAmount: 寮費金額(円/月)
+- utilitiesProvision: 光熱費支給の有無(有/無)
+- utilitiesAmount: 光熱費金額(円/月)
+- holidays: 休日(週休2日制など)
+- otherBenefits: その他手当・福利厚生
+- notes: 特記事項`;
+
+const JOB_POSTING_SYSTEM_PROMPT = `あなたは日本の求人票から項目を抽出するアシスタントです。
+外国人向け求人票(特定技能・技能実習・技術人文知識国際業務など)の PDF/画像から、
+構造化された JSON を 1 つだけ返してください。コードブロックや説明は不要。
+
+${JOB_POSTING_SCHEMA}`;
+
+export async function extractJobPostingFromFiles(files: SourceFile[]): Promise<ExtractedJobPosting> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY が未設定です");
+  }
+
+  const supportedFiles = files.filter((file) => isSupported(file.mimeType));
+  if (supportedFiles.length === 0) {
+    throw new Error("対応形式の画像/PDFが含まれていません");
+  }
+
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+  const client = new GoogleGenAI({ apiKey });
+
+  const parts: {
+    text?: string;
+    inlineData?: { mimeType: string; data: string };
+  }[] = [
+    { text: JOB_POSTING_SYSTEM_PROMPT },
+    ...supportedFiles.map((file) => ({
+      inlineData: { mimeType: file.mimeType, data: file.base64 },
+    })),
+    { text: "添付した求人票から情報を抽出して、指定のスキーマに沿う JSON を一つだけ返してください。" },
+  ];
+
+  const response = await client.models.generateContent({
+    model,
+    contents: [{ role: "user", parts }],
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0.1,
+    },
+  });
+
+  const text = response.text?.trim() ?? "";
+  return parseJsonPayloadAs<ExtractedJobPosting>(text);
+}
+
+function parseJsonPayloadAs<T>(raw: string): T {
+  if (!raw) return {} as T;
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]) as T;
+      } catch {
+        return {} as T;
+      }
+    }
+    return {} as T;
+  }
 }
 
 function parseJsonPayload(raw: string): ExtractedCandidate {

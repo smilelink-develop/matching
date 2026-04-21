@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const account = await requireCurrentAccount();
-  const [settings, coreSettings, accounts, resumeTemplates] = await Promise.all([
+  const [settings, coreSettings, accounts, resumeTemplates, jobPostingTemplates] = await Promise.all([
     getAccountSettings(account.id),
     getCoreSettings(),
     account.role === "admin"
@@ -22,6 +22,7 @@ export default async function SettingsPage() {
         })
       : Promise.resolve([]),
     prisma.resumeTemplate.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.jobPostingTemplate.findMany({ orderBy: { createdAt: "desc" } }),
   ]);
 
   return (
@@ -40,6 +41,12 @@ export default async function SettingsPage() {
         }}
         accounts={accounts}
         resumeTemplates={resumeTemplates.map((template) => ({
+          id: template.id,
+          name: template.name,
+          templateUrl: template.templateUrl,
+          driveFolderUrl: template.driveFolderUrl,
+        }))}
+        jobPostingTemplates={jobPostingTemplates.map((template) => ({
           id: template.id,
           name: template.name,
           templateUrl: template.templateUrl,
