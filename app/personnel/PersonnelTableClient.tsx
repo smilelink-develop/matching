@@ -99,7 +99,7 @@ export default function PersonnelTableClient({ persons }: { persons: PersonRow[]
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-end">
         <button
           type="button"
           onClick={() => {
@@ -110,7 +110,7 @@ export default function PersonnelTableClient({ persons }: { persons: PersonRow[]
         >
           表示項目を編集
         </button>
-        <p className="text-xs text-gray-500">最大 {MAX_PERSONNEL_COLUMNS} 項目まで表示できます</p>
+        <p className="mt-1 text-xs text-gray-500">最大 {MAX_PERSONNEL_COLUMNS} 項目まで表示できます</p>
       </div>
 
       {editingColumns ? (
