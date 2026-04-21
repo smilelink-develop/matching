@@ -62,8 +62,13 @@ export async function POST(req: Request, { params }: { params: Params }) {
       resumeUpdate.workExperiences = extracted.workExperiences;
     }
 
+    let personCount = 0;
+    let onboardingCount = 0;
+    let resumeCount = 0;
+
     if (Object.keys(personUpdate).length > 0) {
       await prisma.person.update({ where: { id: personId }, data: personUpdate });
+      personCount = Object.keys(personUpdate).length;
     }
 
     if (Object.keys(onboardingUpdate).length > 0) {
@@ -72,6 +77,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
         create: { personId, ...onboardingUpdate },
         update: onboardingUpdate,
       });
+      onboardingCount = Object.keys(onboardingUpdate).length;
     }
 
     if (Object.keys(resumeUpdate).length > 0) {
@@ -80,9 +86,13 @@ export async function POST(req: Request, { params }: { params: Params }) {
         create: { personId, ...resumeUpdate },
         update: resumeUpdate,
       });
+      resumeCount = Object.keys(resumeUpdate).length;
     }
 
-    return Response.json({ ok: true });
+    return Response.json({
+      ok: true,
+      updated: { person: personCount, onboarding: onboardingCount, resume: resumeCount },
+    });
   } catch (error) {
     return Response.json(
       { ok: false, error: error instanceof Error ? error.message : "error" },

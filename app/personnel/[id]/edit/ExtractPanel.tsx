@@ -11,7 +11,7 @@ type IncomingFile = {
   dataUrl: string;
 };
 
-type ExtractedCandidate = {
+export type ExtractedCandidate = {
   name?: string;
   englishName?: string;
   nationality?: string;
@@ -46,7 +46,9 @@ type ExtractedCandidate = {
   workExperiences?: { companyName?: string; startDate?: string; endDate?: string; reason?: string }[];
 };
 
-const FIELD_LABELS: { key: keyof ExtractedCandidate; label: string }[] = [
+type FieldKey = Exclude<keyof ExtractedCandidate, "workExperiences">;
+
+const FIELD_LABELS: { key: FieldKey; label: string }[] = [
   { key: "name", label: "カナ名" },
   { key: "englishName", label: "英語名" },
   { key: "nationality", label: "国籍" },
@@ -80,37 +82,39 @@ const FIELD_LABELS: { key: keyof ExtractedCandidate; label: string }[] = [
   { key: "preferenceNote", label: "本人希望記入欄" },
 ];
 
+export type ExistingProfile = Partial<Record<FieldKey, string | null>>;
+
 export default function ExtractPanel({
   personId,
   personName,
+  existingProfile,
 }: {
   personId: number;
   personName: string;
+  existingProfile: ExistingProfile;
 }) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <section className="flex h-full flex-col justify-between rounded-3xl border border-[var(--color-secondary)] bg-[linear-gradient(135deg,#F5F3FF_0%,#FDF4FF_100%)] p-6 shadow-sm">
-      <div>
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--color-primary)]">AI AUTO FILL</p>
-        <h2 className="mt-1 text-lg font-semibold text-[var(--color-text-dark)]">書類から自動作成</h2>
-        <p className="mt-1 text-xs text-gray-500">
-          在留カード写真 / パスポート写真 / 履歴書 PDF などを<strong>複数まとめて</strong>投げ込むと、AI が候補者情報を抽出して自動入力します。
-        </p>
-      </div>
+    <section className="flex h-full flex-col items-center justify-center rounded-3xl border border-[var(--color-secondary)] bg-[linear-gradient(135deg,#F5F3FF_0%,#FDF4FF_100%)] p-6 shadow-sm">
       <button
         type="button"
         onClick={() => setModalOpen(true)}
-        className="mt-4 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+        title="AI で書類から自動入力"
+        className="group flex flex-col items-center gap-3"
       >
-        書類をアップロード（複数可）
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#A78BFA] via-[#F472B6] to-[#F59E0B] text-white shadow-lg transition-transform group-hover:scale-110">
+          <SparkIcon />
+        </span>
+        <span className="text-sm font-semibold text-[var(--color-text-dark)]">書類から自動作成</span>
       </button>
 
       {modalOpen ? (
         <ExtractModal
           personId={personId}
           personName={personName}
+          existingProfile={existingProfile}
           onClose={() => setModalOpen(false)}
           onApplied={() => {
             setModalOpen(false);
@@ -122,14 +126,18 @@ export default function ExtractPanel({
   );
 }
 
+type Decision = "existing" | "extracted";
+
 function ExtractModal({
   personId,
   personName,
+  existingProfile,
   onClose,
   onApplied,
 }: {
   personId: number;
   personName: string;
+  existingProfile: ExistingProfile;
   onClose: () => void;
   onApplied: () => void;
 }) {
@@ -141,6 +149,7 @@ function ExtractModal({
   const [driveWarning, setDriveWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
+  const [decisions, setDecisions] = useState<Partial<Record<FieldKey, Decision>>>({});
 
   const addFiles = async (fileList: FileList | null) => {
     if (!fileList) return;
@@ -185,10 +194,22 @@ function ExtractModal({
         setStage("select");
         return;
       }
-      setExtracted(result.extracted ?? {});
+      const payload: ExtractedCandidate = result.extracted ?? {};
+      setExtracted(payload);
       setDriveFolderUrl(result.driveFolderUrl ?? null);
       setUploaded(result.uploadedFiles ?? []);
       setDriveWarning(result.driveWarning ?? null);
+
+      // 初期値: 衝突するフィールドは AI 提案(extracted) を優先。既存のみは existing。それ以外は extracted
+      const initialDecisions: Partial<Record<FieldKey, Decision>> = {};
+      for (const field of FIELD_LABELS) {
+        const hasExtracted = nonEmptyString(payload[field.key]);
+        const hasExisting = nonEmptyString(existingProfile[field.key]);
+        if (hasExtracted && hasExisting) initialDecisions[field.key] = "extracted";
+        else if (hasExtracted) initialDecisions[field.key] = "extracted";
+        else if (hasExisting) initialDecisions[field.key] = "existing";
+      }
+      setDecisions(initialDecisions);
       setStage("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラー");
@@ -196,42 +217,82 @@ function ExtractModal({
     }
   };
 
-  const updateField = (key: keyof ExtractedCandidate, value: string) => {
+  const updateExtractedValue = (key: FieldKey, value: string) => {
     setExtracted((prev) => ({ ...prev, [key]: value }));
   };
 
+  const setDecision = (key: FieldKey, decision: Decision) => {
+    setDecisions((prev) => ({ ...prev, [key]: decision }));
+  };
+
   const apply = async () => {
+    // decisions に従い、実際に反映する値を組み立てる
+    const payload: ExtractedCandidate = {};
+    for (const field of FIELD_LABELS) {
+      const decision = decisions[field.key];
+      if (decision === "extracted") {
+        const value = extracted[field.key];
+        if (typeof value === "string" && value.trim()) {
+          (payload as Record<FieldKey, string>)[field.key] = value;
+        }
+      }
+      // existing 選択の場合は何も送らない (既存値を保持)
+    }
+    if (Array.isArray(extracted.workExperiences) && extracted.workExperiences.length > 0) {
+      payload.workExperiences = extracted.workExperiences;
+    }
+
     setApplying(true);
     try {
       const response = await fetch(`/api/personnel/${personId}/apply-extracted`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ extracted }),
+        body: JSON.stringify({ extracted: payload }),
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
         alert(result.error || "反映に失敗しました");
         return;
       }
-      alert("候補者情報に反映しました");
+      const u = result.updated ?? {};
+      const total = (u.person ?? 0) + (u.onboarding ?? 0) + (u.resume ?? 0);
+      if (total === 0) {
+        alert("反映する項目がありません。選択した値がすべて既存のままです。");
+      } else {
+        alert(`候補者情報に ${total} 項目を反映しました`);
+      }
       onApplied();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "反映に失敗しました");
     } finally {
       setApplying(false);
     }
   };
 
-  const populatedFields = useMemo(
-    () => FIELD_LABELS.filter((field) => nonEmptyString(extracted[field.key])),
-    [extracted]
-  );
-  const emptyFields = useMemo(
-    () => FIELD_LABELS.filter((field) => !nonEmptyString(extracted[field.key])),
-    [extracted]
-  );
+  const fieldStates = useMemo(() => {
+    return FIELD_LABELS.map((field) => {
+      const extractedValue = normalize(extracted[field.key]);
+      const existingValue = normalize(existingProfile[field.key]);
+      let status: "same" | "conflict" | "new" | "existingOnly" | "none" = "none";
+      if (extractedValue && existingValue) {
+        status = extractedValue === existingValue ? "same" : "conflict";
+      } else if (extractedValue) {
+        status = "new";
+      } else if (existingValue) {
+        status = "existingOnly";
+      }
+      return { ...field, extractedValue, existingValue, status };
+    });
+  }, [extracted, existingProfile]);
+
+  const conflictCount = fieldStates.filter((f) => f.status === "conflict").length;
+  const newCount = fieldStates.filter((f) => f.status === "new").length;
+  const sameCount = fieldStates.filter((f) => f.status === "same").length;
+  const populated = fieldStates.filter((f) => f.extractedValue);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
           <div>
             <h3 className="text-base font-semibold text-[var(--color-text-dark)]">書類から自動入力</h3>
@@ -314,7 +375,8 @@ function ExtractModal({
           {stage === "review" ? (
             <div className="space-y-5">
               <div className="rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-sm text-[#166534]">
-                抽出が完了しました。内容を確認・修正してから反映してください。
+                抽出が完了しました。新規 {newCount} / 同一 {sameCount} / 衝突 {conflictCount} 件。
+                衝突しているフィールドはどちらを採用するか選んでから反映してください。
               </div>
 
               {driveWarning ? (
@@ -332,23 +394,27 @@ function ExtractModal({
                 </p>
               ) : null}
 
-              <div>
-                <p className="mb-2 text-sm font-semibold text-[var(--color-text-dark)]">
-                  抽出された項目 ({populatedFields.length})
-                </p>
-                <div className="space-y-2">
-                  {populatedFields.map((field) => (
-                    <div key={field.key} className="grid gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2">
-                      <span className="text-xs font-medium text-gray-500">{field.label}</span>
-                      <input
-                        value={toInputValue(extracted[field.key])}
-                        onChange={(e) => updateField(field.key, e.target.value)}
-                        className="rounded-lg border border-gray-200 bg-[var(--color-light)] px-2 py-1.5 text-sm focus:border-[var(--color-primary)] focus:bg-white focus:outline-none"
+              {populated.length > 0 ? (
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-[var(--color-text-dark)]">
+                    抽出された項目 ({populated.length})
+                  </p>
+                  <div className="space-y-2">
+                    {populated.map((field) => (
+                      <FieldComparisonRow
+                        key={field.key}
+                        label={field.label}
+                        existingValue={field.existingValue}
+                        extractedValue={toInputValue(extracted[field.key])}
+                        status={field.status}
+                        decision={decisions[field.key] ?? (field.extractedValue ? "extracted" : "existing")}
+                        onDecisionChange={(d) => setDecision(field.key, d)}
+                        onExtractedChange={(v) => updateExtractedValue(field.key, v)}
                       />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
               {Array.isArray(extracted.workExperiences) && extracted.workExperiences.length > 0 ? (
                 <div>
@@ -364,22 +430,6 @@ function ExtractModal({
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : null}
-
-              {emptyFields.length > 0 ? (
-                <div>
-                  <p className="mb-2 text-sm font-semibold text-[var(--color-text-dark)]">抽出されなかった項目</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {emptyFields.map((field) => (
-                      <span key={field.key} className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-500">
-                        {field.label}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500">
-                    これらは候補者詳細画面上部の「入力フォーム作成」で本人に直接聞くこともできます。
-                  </p>
                 </div>
               ) : null}
             </div>
@@ -421,11 +471,106 @@ function ExtractModal({
                 disabled={applying}
                 className="rounded-lg bg-[var(--color-primary)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
               >
-                {applying ? "反映中..." : "候補者情報に反映"}
+                {applying ? "反映中..." : "選択した値で反映"}
               </button>
             </>
           ) : null}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function FieldComparisonRow({
+  label,
+  existingValue,
+  extractedValue,
+  status,
+  decision,
+  onDecisionChange,
+  onExtractedChange,
+}: {
+  label: string;
+  existingValue: string;
+  extractedValue: string;
+  status: "same" | "conflict" | "new" | "existingOnly" | "none";
+  decision: Decision;
+  onDecisionChange: (d: Decision) => void;
+  onExtractedChange: (v: string) => void;
+}) {
+  const hasExtracted = extractedValue.trim().length > 0;
+  const hasExisting = existingValue.trim().length > 0;
+
+  const statusLabel =
+    status === "conflict"
+      ? { text: "値が異なる", className: "bg-[#FEF3C7] text-[#92400E]" }
+      : status === "new"
+        ? { text: "新規", className: "bg-[#DBEAFE] text-[#1D4ED8]" }
+        : status === "same"
+          ? { text: "変化なし", className: "bg-[#DCFCE7] text-[#166534]" }
+          : null;
+
+  return (
+    <div
+      className={`rounded-xl border px-3 py-3 ${
+        status === "conflict"
+          ? "border-[#FDE68A] bg-[#FFFBEB]"
+          : "border-gray-200 bg-white"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-gray-600">{label}</span>
+        {statusLabel ? (
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusLabel.className}`}>{statusLabel.text}</span>
+        ) : null}
+      </div>
+
+      <div className="mt-2 grid gap-2 md:grid-cols-2">
+        <label
+          className={`cursor-pointer rounded-lg border-2 px-3 py-2 transition ${
+            decision === "existing" && hasExisting
+              ? "border-[var(--color-primary)] bg-[var(--color-light)]"
+              : "border-gray-200 bg-white"
+          } ${!hasExisting ? "opacity-50" : ""}`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-medium text-gray-500">既存</span>
+            <input
+              type="radio"
+              checked={decision === "existing"}
+              onChange={() => onDecisionChange("existing")}
+              disabled={!hasExisting}
+              className="accent-[var(--color-primary)]"
+            />
+          </div>
+          <p className="mt-1 break-words text-sm text-[var(--color-text-dark)]">
+            {hasExisting ? existingValue : <span className="text-gray-400">未入力</span>}
+          </p>
+        </label>
+
+        <label
+          className={`cursor-pointer rounded-lg border-2 px-3 py-2 transition ${
+            decision === "extracted" && hasExtracted
+              ? "border-[var(--color-primary)] bg-[var(--color-light)]"
+              : "border-gray-200 bg-white"
+          } ${!hasExtracted ? "opacity-50" : ""}`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-medium text-gray-500">AI 抽出</span>
+            <input
+              type="radio"
+              checked={decision === "extracted"}
+              onChange={() => onDecisionChange("extracted")}
+              disabled={!hasExtracted}
+              className="accent-[var(--color-primary)]"
+            />
+          </div>
+          <input
+            value={extractedValue}
+            onChange={(e) => onExtractedChange(e.target.value)}
+            className="mt-1 w-full rounded border border-transparent bg-transparent px-0 py-0 text-sm text-[var(--color-text-dark)] focus:border-[var(--color-primary)] focus:bg-white focus:outline-none"
+          />
+        </label>
       </div>
     </div>
   );
@@ -444,6 +589,10 @@ function nonEmptyString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function normalize(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function toInputValue(value: unknown) {
   return typeof value === "string" ? value : "";
 }
@@ -452,4 +601,14 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function SparkIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z" fill="currentColor" stroke="none" />
+      <path d="M19 13l.8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8L19 13z" fill="currentColor" stroke="none" />
+      <path d="M5 16l.6 1.6L7.2 18l-1.6.4L5 20l-.6-1.6L2.8 18l1.6-.4L5 16z" fill="currentColor" stroke="none" />
+    </svg>
+  );
 }

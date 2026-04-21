@@ -113,23 +113,34 @@ export function CustomQuestionsBuilderButton() {
   const { openBuilder, questions } = useCtx();
   const activeCount = questions.filter((q) => q.active).length;
   return (
-    <section className="flex h-full flex-col justify-between rounded-3xl border border-[var(--color-secondary)] bg-[linear-gradient(135deg,#EDE9FE_0%,#F5F3FF_100%)] p-6 shadow-sm">
-      <div>
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--color-primary)]">CUSTOM QUESTIONS</p>
-        <h2 className="mt-1 text-lg font-semibold text-[var(--color-text-dark)]">入力フォーム作成</h2>
-        <p className="mt-1 text-xs text-gray-500">
-          足りない情報を本人に聞くためのフォームを作成し、候補者ポータルへ送信します。
-          現在 {activeCount} 件の個別質問があります。
-        </p>
-      </div>
+    <section className="relative flex h-full flex-col items-center justify-center rounded-3xl border border-[var(--color-secondary)] bg-[linear-gradient(135deg,#EDE9FE_0%,#F5F3FF_100%)] p-6 shadow-sm">
+      {activeCount > 0 ? (
+        <span className="absolute right-4 top-4 rounded-full bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-semibold text-white">
+          {activeCount}
+        </span>
+      ) : null}
       <button
         type="button"
         onClick={openBuilder}
-        className="mt-4 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+        title="個別質問フォームを作成して送信"
+        className="group flex flex-col items-center gap-3"
       >
-        質問を編集して送信
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] text-white shadow-lg transition-transform group-hover:scale-110">
+          <ChatIcon />
+        </span>
+        <span className="text-sm font-semibold text-[var(--color-text-dark)]">入力フォーム作成</span>
       </button>
     </section>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="currentColor" fillOpacity="0.2" />
+      <path d="M8 11h8" />
+      <path d="M8 15h5" />
+    </svg>
   );
 }
 

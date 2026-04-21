@@ -8,6 +8,7 @@ import {
 } from "./CustomQuestionsPanel";
 import ExtractPanel from "./ExtractPanel";
 import PlacementPanel from "./PlacementPanel";
+import DriveActionsPanel from "./DriveActionsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -114,9 +115,48 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             visaExpiryDate: person.resumeProfile?.visaExpiryDate ?? null,
           }}
         >
-          <div className="grid gap-6 md:grid-cols-2">
-            <ExtractPanel personId={person.id} personName={person.name} />
-            <CustomQuestionsBuilderButton />
+          <div className="flex justify-end">
+            <div className="grid grid-cols-2 gap-3 md:w-[320px]">
+              <ExtractPanel
+                personId={person.id}
+                personName={person.name}
+                existingProfile={{
+                  name: person.name,
+                  englishName: person.onboarding?.englishName ?? null,
+                  nationality: person.nationality,
+                  residenceStatus: person.residenceStatus,
+                  visaExpiryDate: person.resumeProfile?.visaExpiryDate ?? null,
+                  birthDate: person.onboarding?.birthDate ?? null,
+                  gender: person.resumeProfile?.gender ?? null,
+                  phoneNumber: person.onboarding?.phoneNumber ?? null,
+                  postalCode: person.onboarding?.postalCode ?? null,
+                  address: person.onboarding?.address ?? null,
+                  spouseStatus: person.resumeProfile?.spouseStatus ?? null,
+                  childrenCount: person.resumeProfile?.childrenCount ?? null,
+                  japaneseLevel: person.resumeProfile?.japaneseLevel ?? null,
+                  japaneseLevelDate: person.resumeProfile?.japaneseLevelDate ?? null,
+                  licenseName: person.resumeProfile?.licenseName ?? null,
+                  licenseExpiryDate: person.resumeProfile?.licenseExpiryDate ?? null,
+                  otherQualificationName: person.resumeProfile?.otherQualificationName ?? null,
+                  otherQualificationExpiryDate: person.resumeProfile?.otherQualificationExpiryDate ?? null,
+                  traineeExperience: person.resumeProfile?.traineeExperience ?? null,
+                  highSchoolName: person.resumeProfile?.highSchoolName ?? null,
+                  highSchoolStartDate: person.resumeProfile?.highSchoolStartDate ?? null,
+                  highSchoolEndDate: person.resumeProfile?.highSchoolEndDate ?? null,
+                  universityName: person.resumeProfile?.universityName ?? null,
+                  universityStartDate: person.resumeProfile?.universityStartDate ?? null,
+                  universityEndDate: person.resumeProfile?.universityEndDate ?? null,
+                  motivation: person.resumeProfile?.motivation ?? null,
+                  selfIntroduction: person.resumeProfile?.selfIntroduction ?? null,
+                  japanPurpose: person.resumeProfile?.japanPurpose ?? null,
+                  currentJob: person.resumeProfile?.currentJob ?? null,
+                  retirementReason: person.resumeProfile?.retirementReason ?? null,
+                  preferenceNote: person.resumeProfile?.preferenceNote ?? null,
+                }}
+              />
+              <CustomQuestionsBuilderButton />
+              <DriveActionsPanel personId={person.id} initialDriveFolderUrl={person.driveFolderUrl ?? null} />
+            </div>
           </div>
 
           <EditPersonForm
