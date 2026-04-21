@@ -10,7 +10,9 @@
     "build": "rm -rf generated/prisma && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "reset-data": "tsx scripts/reset-data.ts",
+    "import-xlsx": "tsx scripts/import-xlsx.ts"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
@@ -21,7 +23,8 @@
     "next": "16.2.2",
     "pg": "^8.16.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
