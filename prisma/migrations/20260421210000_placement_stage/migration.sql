@@ -1,0 +1,1 @@
+ALTER TABLE "PersonPlacement" ADD COLUMN IF NOT EXISTS "stage" TEXT;

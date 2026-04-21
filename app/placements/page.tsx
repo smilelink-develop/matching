@@ -1,19 +1,63 @@
-import SectionPlaceholder from "@/app/components/SectionPlaceholder";
+import { prisma } from "@/lib/prisma";
+import { requireCurrentAccount } from "@/lib/auth";
+import PlacementsBoard, { inferPlacementStage, type PlacementCardData } from "./PlacementsBoard";
 
-export default function PlacementsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function PlacementsPage() {
+  await requireCurrentAccount();
+  const placements = await prisma.personPlacement.findMany({
+    include: {
+      person: {
+        select: {
+          id: true,
+          name: true,
+          photoUrl: true,
+          nationality: true,
+          residenceStatus: true,
+        },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  const cards: PlacementCardData[] = placements.map((placement) => {
+    const computed = inferPlacementStage({
+      stage: placement.stage,
+      offerAt: placement.offerAt,
+      offerAcceptedAt: placement.offerAcceptedAt,
+      applicationAt: placement.applicationAt,
+      applicationResultAt: placement.applicationResultAt,
+      entryAt: placement.entryAt,
+      joinAt: placement.joinAt,
+    });
+    return {
+      id: placement.id,
+      personId: placement.person.id,
+      personName: placement.person.name,
+      photoUrl: placement.person.photoUrl,
+      nationality: placement.person.nationality,
+      residenceStatus: placement.person.residenceStatus,
+      stage: computed,
+      offerAt: placement.offerAt?.toISOString() ?? null,
+      offerAcceptedAt: placement.offerAcceptedAt?.toISOString() ?? null,
+      applicationAt: placement.applicationAt?.toISOString() ?? null,
+      applicationResultAt: placement.applicationResultAt?.toISOString() ?? null,
+      entryAt: placement.entryAt?.toISOString() ?? null,
+      joinAt: placement.joinAt?.toISOString() ?? null,
+    };
+  });
+
   return (
-    <SectionPlaceholder
-      title="入社進捗"
-      description="紹介決定後の書類、入社準備、受け入れ状況を候補者ごとに追跡するためのセクションです。"
-      points={[
-        "内定後に必要な書類提出を再確認する",
-        "入社までの手続き進捗を候補者単位で追う",
-        "未対応事項を担当者が見落とさないように残す",
-      ]}
-      primaryHref="/personnel"
-      primaryLabel="候補者一覧を開く"
-      secondaryHref="/deals"
-      secondaryLabel="案件管理を開く"
-    />
+    <div className="space-y-6 p-8">
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">入社進捗</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          内定から入社までの進捗を候補者ごとにチップ表示します。ドラッグ&ドロップでステージを動かせます。
+        </p>
+      </div>
+
+      <PlacementsBoard initialCards={cards} />
+    </div>
   );
 }

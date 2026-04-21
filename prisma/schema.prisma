@@ -374,6 +374,7 @@ model PersonPlacement {
   id                    Int      @id @default(autoincrement())
   personId              Int      @unique
   person                Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  stage                 String?
   acceptedAt            DateTime?
   preInterviewAt        DateTime?
   companyInterviewAt    DateTime?

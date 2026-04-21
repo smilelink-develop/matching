@@ -20,6 +20,7 @@ const DATE_FIELDS = [
 ] as const;
 
 const TEXT_FIELDS = [
+  "stage",
   "applicationType",
   "applicantName",
   "returnHomeFlag",
