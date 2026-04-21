@@ -9,6 +9,7 @@ import {
 import ExtractPanel from "./ExtractPanel";
 import PlacementPanel from "./PlacementPanel";
 import DriveActionsPanel from "./DriveActionsPanel";
+import PhotoPanel from "./PhotoPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -115,7 +116,12 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             visaExpiryDate: person.resumeProfile?.visaExpiryDate ?? null,
           }}
         >
-          <div className="flex justify-end">
+          <div className="flex items-stretch justify-between gap-4">
+            <PhotoPanel
+              personId={person.id}
+              personName={person.name}
+              initialPhotoUrl={person.photoUrl}
+            />
             <div className="grid grid-cols-2 gap-3 md:w-[320px]">
               <ExtractPanel
                 personId={person.id}

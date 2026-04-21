@@ -296,32 +296,6 @@ export default function EditPersonForm({
         </div>
       </div>
 
-      {activeSection === "basic" ? (
-        <div className="inline-flex items-center gap-4 rounded-2xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-4">
-          <AvatarPreview name={form.name} photoUrl={form.photoUrl} />
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-[var(--color-text-dark)]">顔写真</p>
-            <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-primary-hover)]">
-              {uploadingPhoto ? "読み込み中..." : "アップロード"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => void handlePhotoChange(event.target.files?.[0] ?? null)}
-              />
-            </label>
-            {form.photoUrl ? (
-              <button
-                type="button"
-                onClick={() => setValue("photoUrl", "")}
-                className="block text-[11px] text-gray-500 hover:underline"
-              >
-                写真を削除
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
 
       {activeSection === "basic" ? (
         <section className="space-y-5">

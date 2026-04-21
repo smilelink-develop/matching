@@ -1,0 +1,115 @@
+"use client";
+
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+export default function PhotoPanel({
+  personId,
+  personName,
+  initialPhotoUrl,
+}: {
+  personId: number;
+  personName: string;
+  initialPhotoUrl: string | null;
+}) {
+  const router = useRouter();
+  const [photoUrl, setPhotoUrl] = useState(initialPhotoUrl);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルを選択してください");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      alert("画像は 3MB 以下にしてください");
+      return;
+    }
+    setUploading(true);
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      const response = await fetch(`/api/personnel/${personId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl: dataUrl }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(result.error || "写真の保存に失敗しました");
+        return;
+      }
+      setPhotoUrl(result.person?.photoUrl ?? dataUrl);
+      router.refresh();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removePhoto = async () => {
+    if (!photoUrl) return;
+    if (!confirm("顔写真を削除しますか?")) return;
+    const response = await fetch(`/api/personnel/${personId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photoUrl: null }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      alert(result.error || "削除に失敗しました");
+      return;
+    }
+    setPhotoUrl(null);
+    router.refresh();
+  };
+
+  return (
+    <section className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      {photoUrl ? (
+        <Image
+          src={photoUrl}
+          alt={personName}
+          width={80}
+          height={80}
+          unoptimized
+          className="h-20 w-20 shrink-0 rounded-2xl border border-gray-200 object-cover shadow-sm"
+        />
+      ) : (
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-2xl font-bold text-white shadow-sm">
+          {(personName.trim()[0] ?? "人").toUpperCase()}
+        </div>
+      )}
+      <div className="min-w-0 space-y-1.5">
+        <p className="truncate text-sm font-semibold text-[var(--color-text-dark)]">{personName}</p>
+        <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-primary-hover)]">
+          {uploading ? "読み込み中..." : "写真をアップロード"}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => void handleUpload(event.target.files?.[0] ?? null)}
+          />
+        </label>
+        {photoUrl ? (
+          <button
+            type="button"
+            onClick={() => void removePhoto()}
+            className="block text-[11px] text-gray-500 hover:underline"
+          >
+            写真を削除
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
