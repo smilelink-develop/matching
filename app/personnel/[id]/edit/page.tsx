@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EditPersonForm from "./EditPersonForm";
 import CustomQuestionsPanel from "./CustomQuestionsPanel";
+import ExtractPanel from "./ExtractPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,8 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             候補者情報を「基本情報」「資格・学歴」「各在留資格」に分けて管理します。
           </p>
         </div>
+
+        <ExtractPanel personId={person.id} personName={person.name} />
 
         <CustomQuestionsPanel
           personId={person.id}
