@@ -101,9 +101,7 @@ const NAV: NavItem[] = [
     icon: PersonnelIcon,
     children: [
       { label: "企業一覧", href: "/companies" },
-      { label: "企業追加", href: "/companies/new" },
       { label: "案件管理", href: "/companies/deals" },
-      { label: "案件追加", href: "/companies/deals/new" },
     ],
   },
   {

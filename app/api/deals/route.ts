@@ -49,6 +49,7 @@ export async function POST(req: Request) {
         status: String(body.status ?? "募集中"),
         unitPrice: String(body.unitPrice ?? "").trim() || null,
         deadline: body.deadline ? new Date(String(body.deadline)) : null,
+        acceptedAt: body.acceptedAt ? new Date(String(body.acceptedAt)) : null,
         notes: String(body.notes ?? "").trim() || null,
       },
       include: {

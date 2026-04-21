@@ -7,14 +7,16 @@ import {
   CustomQuestionsList,
 } from "./CustomQuestionsPanel";
 import ExtractPanel from "./ExtractPanel";
+import PlacementPanel from "./PlacementPanel";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditPersonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [person, partners, customQuestions] = await Promise.all([
+  const personId = Number(id);
+  const [person, partners, customQuestions, placement, invoices, deals] = await Promise.all([
     prisma.person.findUnique({
-      where: { id: Number(id) },
+      where: { id: personId },
       include: {
         onboarding: true,
         documents: true,
@@ -26,11 +28,48 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
       select: { id: true, name: true },
     }),
     prisma.personCustomQuestion.findMany({
-      where: { personId: Number(id) },
+      where: { personId },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    }),
+    prisma.personPlacement.findUnique({ where: { personId } }),
+    prisma.invoice.findMany({
+      where: { personId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        partner: { select: { id: true, name: true } },
+        deal: { select: { id: true, title: true, company: { select: { name: true } } } },
+      },
+    }),
+    prisma.deal.findMany({
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, title: true, company: { select: { name: true } } },
     }),
   ]);
   if (!person) notFound();
+
+  const toDate = (d: Date | null | undefined) => (d ? d.toISOString() : null);
+
+  const placementData = {
+    acceptedAt: toDate(placement?.acceptedAt),
+    preInterviewAt: toDate(placement?.preInterviewAt),
+    companyInterviewAt: toDate(placement?.companyInterviewAt),
+    offerAt: toDate(placement?.offerAt),
+    offerAcceptedAt: toDate(placement?.offerAcceptedAt),
+    applicationPlannedAt: toDate(placement?.applicationPlannedAt),
+    applicationAt: toDate(placement?.applicationAt),
+    applicationResultAt: toDate(placement?.applicationResultAt),
+    applicationType: placement?.applicationType ?? null,
+    applicantName: placement?.applicantName ?? null,
+    returnHomeFlag: placement?.returnHomeFlag ?? null,
+    returnHomeAt: toDate(placement?.returnHomeAt),
+    entryPlannedAt: toDate(placement?.entryPlannedAt),
+    entryAt: toDate(placement?.entryAt),
+    joinPlannedAt: toDate(placement?.joinPlannedAt),
+    joinAt: toDate(placement?.joinAt),
+    sixMonthStatus: placement?.sixMonthStatus ?? null,
+    consultation: placement?.consultation ?? null,
+    currentAction: placement?.currentAction ?? null,
+  };
 
   return (
     <div className="px-8 py-10">
@@ -38,7 +77,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         <div>
           <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">候補者詳細</h1>
           <p className="text-sm text-gray-500 mt-2">
-            候補者情報を「基本情報」「資格・学歴」「各在留資格」「個別質問」に分けて管理します。
+            候補者情報を「基本情報」「各在留資格」「内定後」に分けて管理します。
           </p>
         </div>
 
@@ -84,6 +123,35 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             person={person}
             partners={partners}
             customTabContent={<CustomQuestionsList />}
+            placementTabContent={
+              <PlacementPanel
+                personId={person.id}
+                personName={person.name}
+                initialPlacement={placementData}
+                initialInvoices={invoices.map((invoice) => ({
+                  id: invoice.id,
+                  dealId: invoice.dealId,
+                  unitPrice: invoice.unitPrice,
+                  invoiceDate: toDate(invoice.invoiceDate),
+                  invoiceAmount: invoice.invoiceAmount,
+                  invoiceNumber: invoice.invoiceNumber,
+                  invoiceStatus: invoice.invoiceStatus,
+                  invoiceUrl: invoice.invoiceUrl,
+                  channel: invoice.channel,
+                  partnerId: invoice.partnerId,
+                  partnerName: invoice.partner?.name ?? null,
+                  costAmount: invoice.costAmount,
+                  paInvoiceUrl: invoice.paInvoiceUrl,
+                  paPaid: invoice.paPaid,
+                  paPaidAt: toDate(invoice.paPaidAt),
+                  notes: invoice.notes,
+                  dealTitle: invoice.deal?.title ?? null,
+                  companyName: invoice.deal?.company?.name ?? null,
+                }))}
+                partners={partners}
+                deals={deals.map((d) => ({ id: d.id, title: d.title, companyName: d.company.name }))}
+              />
+            }
           />
         </CustomQuestionsProvider>
       </div>

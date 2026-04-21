@@ -24,6 +24,7 @@ export default function NewDealClient({
     status: "募集中",
     unitPrice: "",
     deadline: "",
+    acceptedAt: new Date().toISOString().slice(0, 10),
     notes: "",
   });
 
@@ -103,6 +104,9 @@ export default function NewDealClient({
         </Field>
         <Field label="期限">
           <input className={INPUT} type="date" value={form.deadline} onChange={(e) => setForm((current) => ({ ...current, deadline: e.target.value }))} />
+        </Field>
+        <Field label="案件受付日">
+          <input className={INPUT} type="date" value={form.acceptedAt} onChange={(e) => setForm((current) => ({ ...current, acceptedAt: e.target.value }))} />
         </Field>
       </div>
       <Field label="メモ">

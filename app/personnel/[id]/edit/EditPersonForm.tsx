@@ -84,19 +84,20 @@ type DocumentInput = {
 
 const SECTION_ITEMS = [
   { id: "basic", label: "基本情報" },
-  { id: "qualification", label: "資格・学歴" },
   { id: "visa", label: "各在留資格" },
-  { id: "custom", label: "個別質問" },
+  { id: "placement", label: "内定後" },
 ] as const;
 
 export default function EditPersonForm({
   person,
   partners,
   customTabContent,
+  placementTabContent,
 }: {
   person: Person;
   partners: PartnerOption[];
   customTabContent?: React.ReactNode;
+  placementTabContent?: React.ReactNode;
 }) {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<(typeof SECTION_ITEMS)[number]["id"]>("basic");
@@ -424,9 +425,10 @@ export default function EditPersonForm({
         </section>
       ) : null}
 
-      {activeSection === "qualification" ? (
+      {activeSection === "visa" ? (
         <section className="space-y-5">
-          <SectionTitle title="資格・学歴" description="在留資格、資格、学歴、職歴を候補者単位で整理します。" />
+          <SectionTitle title="各在留資格" description="資格・学歴・職歴、および在留資格ごとの必要書類と、候補者への個別質問をまとめて管理します。" />
+
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="現在の在留資格">
               <select className={INPUT} value={form.residenceStatus} onChange={(event) => setValue("residenceStatus", event.target.value)}>
@@ -527,12 +529,7 @@ export default function EditPersonForm({
               ))}
             </div>
           </div>
-        </section>
-      ) : null}
 
-      {activeSection === "visa" ? (
-        <section className="space-y-5">
-          <SectionTitle title="各在留資格" description="在留資格ごとに必要な提出書類をまとめて管理します。" />
           <div className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-5">
             <p className="text-sm text-[var(--color-text-dark)]">
               現在の在留資格: <span className="font-semibold">{form.residenceStatus}</span>
@@ -568,15 +565,21 @@ export default function EditPersonForm({
               </label>
             </div>
           ))}
+
+          {customTabContent ? (
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              {customTabContent}
+            </div>
+          ) : null}
         </section>
       ) : null}
 
-      {activeSection === "custom" ? (
+      {activeSection === "placement" ? (
         <section className="space-y-5">
-          <SectionTitle title="個別質問" description="候補者ごとの追加質問とその回答を管理します。右上の「質問を編集」から質問の追加や編集、候補者ポータルへの送信ができます。" />
-          {customTabContent ?? (
+          <SectionTitle title="内定後" description="内定後の進捗と請求を管理します。" />
+          {placementTabContent ?? (
             <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
-              個別質問の表示が未設定です
+              内定後の情報表示が未設定です
             </p>
           )}
         </section>
@@ -584,7 +587,7 @@ export default function EditPersonForm({
 
       <div className="flex items-center justify-between pt-2">
         <div className="flex gap-3">
-          {activeSection !== "custom" ? (
+          {activeSection === "basic" || activeSection === "visa" ? (
             <button
               type="submit"
               disabled={submitting}

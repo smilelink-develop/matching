@@ -32,6 +32,8 @@ model Person {
   resumeDocuments ResumeDocument[]
   dealCandidates DealCandidate[]
   customQuestions PersonCustomQuestion[]
+  placement      PersonPlacement?
+  invoices       Invoice[]
   partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
 }
 
@@ -84,6 +86,7 @@ model Partner {
   deals       Deal[]
   persons     Person[]
   groupMembers GroupMember[]
+  invoices    Invoice[]
 }
 
 model StaffAccount {
@@ -353,11 +356,72 @@ model Deal {
   status       String       @default("募集中")
   unitPrice    String?
   deadline     DateTime?
+  acceptedAt   DateTime?
+  requiredCount    Int      @default(0)
+  recommendedCount Int      @default(0)
+  interviewCount   Int      @default(0)
+  offerCount       Int      @default(0)
+  contractCount    Int      @default(0)
   notes        String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
   candidates   DealCandidate[]
+  invoices     Invoice[]
+}
+
+model PersonPlacement {
+  id                    Int      @id @default(autoincrement())
+  personId              Int      @unique
+  person                Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  acceptedAt            DateTime?
+  preInterviewAt        DateTime?
+  companyInterviewAt    DateTime?
+  offerAt               DateTime?
+  offerAcceptedAt       DateTime?
+  applicationPlannedAt  DateTime?
+  applicationAt         DateTime?
+  applicationResultAt   DateTime?
+  applicationType       String?
+  applicantName         String?
+  returnHomeFlag        String?
+  returnHomeAt          DateTime?
+  entryPlannedAt        DateTime?
+  entryAt               DateTime?
+  joinPlannedAt         DateTime?
+  joinAt                DateTime?
+  sixMonthStatus        String?
+  consultation          String?
+  currentAction         String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Invoice {
+  id              Int      @id @default(autoincrement())
+  personId        Int
+  person          Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  dealId          Int?
+  deal            Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  unitPrice       String?
+  invoiceDate     DateTime?
+  invoiceAmount   String?
+  invoiceNumber   String?
+  invoiceStatus   String   @default("未送付")
+  invoiceUrl      String?
+  channel         String   @default("自社") // "自社" or "PA"
+  partnerId       Int?
+  partner         Partner? @relation(fields: [partnerId], references: [id], onDelete: SetNull, map: "Invoice_partnerId_fkey")
+  costAmount      String?
+  paInvoiceUrl    String?
+  paPaid          Boolean  @default(false)
+  paPaidAt        DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([personId])
+  @@index([dealId])
 }
 
 model DealCandidate {

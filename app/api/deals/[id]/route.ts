@@ -54,6 +54,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ownerId?: number | null;
       unitPrice?: string | null;
       deadline?: Date | null;
+      acceptedAt?: Date | null;
+      requiredCount?: number;
+      recommendedCount?: number;
+      interviewCount?: number;
+      offerCount?: number;
+      contractCount?: number;
       notes?: string | null;
     } = {};
 
@@ -64,6 +70,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.ownerId !== undefined) updateData.ownerId = body.ownerId ? Number(body.ownerId) : null;
     if (body.unitPrice !== undefined) updateData.unitPrice = String(body.unitPrice ?? "").trim() || null;
     if (body.deadline !== undefined) updateData.deadline = body.deadline ? new Date(String(body.deadline)) : null;
+    if (body.acceptedAt !== undefined) updateData.acceptedAt = body.acceptedAt ? new Date(String(body.acceptedAt)) : null;
+    if (body.requiredCount !== undefined) updateData.requiredCount = Math.max(0, Number(body.requiredCount));
+    if (body.recommendedCount !== undefined) updateData.recommendedCount = Math.max(0, Number(body.recommendedCount));
+    if (body.interviewCount !== undefined) updateData.interviewCount = Math.max(0, Number(body.interviewCount));
+    if (body.offerCount !== undefined) updateData.offerCount = Math.max(0, Number(body.offerCount));
+    if (body.contractCount !== undefined) updateData.contractCount = Math.max(0, Number(body.contractCount));
     if (body.notes !== undefined) updateData.notes = String(body.notes ?? "").trim() || null;
 
     const deal = await prisma.deal.update({

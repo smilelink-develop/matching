@@ -38,6 +38,12 @@ type DealDetail = {
   status: string;
   unitPrice: string | null;
   deadline: string | null;
+  acceptedAt: string | null;
+  requiredCount: number;
+  recommendedCount: number;
+  interviewCount: number;
+  offerCount: number;
+  contractCount: number;
   notes: string | null;
   candidates: CandidateCard[];
 };
@@ -72,6 +78,7 @@ export default function DealDetailClient({
     status: deal.status,
     unitPrice: deal.unitPrice ?? "",
     deadline: deal.deadline ? deal.deadline.slice(0, 10) : "",
+    acceptedAt: deal.acceptedAt ? deal.acceptedAt.slice(0, 10) : "",
     notes: deal.notes ?? "",
   });
 
@@ -83,9 +90,29 @@ export default function DealDetailClient({
       status: currentDeal.status,
       unitPrice: currentDeal.unitPrice ?? "",
       deadline: currentDeal.deadline ? currentDeal.deadline.slice(0, 10) : "",
+      acceptedAt: currentDeal.acceptedAt ? currentDeal.acceptedAt.slice(0, 10) : "",
       notes: currentDeal.notes ?? "",
     });
     setEditing(true);
+  };
+
+  const updateCounter = async (
+    key: "requiredCount" | "recommendedCount" | "interviewCount" | "offerCount" | "contractCount",
+    next: number,
+  ) => {
+    const clamped = Math.max(0, Math.floor(next));
+    const previous = currentDeal[key];
+    setCurrentDeal((prev) => ({ ...prev, [key]: clamped }));
+    const response = await fetch(`/api/deals/${currentDeal.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: clamped }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      setCurrentDeal((prev) => ({ ...prev, [key]: previous }));
+      alert(result.error || "カウンターの更新に失敗しました");
+    }
   };
 
   const saveEdit = async () => {
@@ -113,6 +140,7 @@ export default function DealDetailClient({
         status: editForm.status,
         unitPrice: editForm.unitPrice || null,
         deadline: editForm.deadline ? new Date(editForm.deadline).toISOString() : null,
+        acceptedAt: editForm.acceptedAt ? new Date(editForm.acceptedAt).toISOString() : null,
         notes: editForm.notes || null,
       }));
       setEditing(false);
@@ -197,8 +225,8 @@ export default function DealDetailClient({
                 <InfoRow label="企業" value={currentDeal.company.name} />
                 <InfoRow label="担当者" value={currentDeal.owner?.name ?? "未設定"} />
                 <InfoRow label="単価" value={formatUnitPrice(currentDeal.unitPrice)} />
+                <InfoRow label="案件受付日" value={currentDeal.acceptedAt ? new Date(currentDeal.acceptedAt).toLocaleDateString("ja-JP") : "未設定"} />
                 <InfoRow label="期限" value={currentDeal.deadline ? new Date(currentDeal.deadline).toLocaleDateString("ja-JP") : "未設定"} />
-                <InfoRow label="案件ステータス" value={currentDeal.status} />
                 <InfoRow label="分野" value={currentDeal.field ?? "未設定"} />
               </div>
             ) : null}
@@ -260,6 +288,9 @@ export default function DealDetailClient({
             <EditField label="期限">
               <input className={EDIT_INPUT} type="date" value={editForm.deadline} onChange={(e) => setEditForm((c) => ({ ...c, deadline: e.target.value }))} />
             </EditField>
+            <EditField label="案件受付日">
+              <input className={EDIT_INPUT} type="date" value={editForm.acceptedAt} onChange={(e) => setEditForm((c) => ({ ...c, acceptedAt: e.target.value }))} />
+            </EditField>
             <EditField label="メモ" className="md:col-span-2">
               <textarea className={`${EDIT_INPUT} min-h-24`} value={editForm.notes} onChange={(e) => setEditForm((c) => ({ ...c, notes: e.target.value }))} />
             </EditField>
@@ -282,6 +313,40 @@ export default function DealDetailClient({
             </div>
           </div>
         )}
+      </section>
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-[var(--color-text-dark)]">人数カウンター</h2>
+          <p className="text-xs text-gray-500">上下矢印で即時更新されます</p>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <CounterCell
+            label="募集"
+            value={currentDeal.requiredCount}
+            onChange={(next) => void updateCounter("requiredCount", next)}
+          />
+          <CounterCell
+            label="推薦"
+            value={currentDeal.recommendedCount}
+            onChange={(next) => void updateCounter("recommendedCount", next)}
+          />
+          <CounterCell
+            label="面接"
+            value={currentDeal.interviewCount}
+            onChange={(next) => void updateCounter("interviewCount", next)}
+          />
+          <CounterCell
+            label="内定"
+            value={currentDeal.offerCount}
+            onChange={(next) => void updateCounter("offerCount", next)}
+          />
+          <CounterCell
+            label="成約"
+            value={currentDeal.contractCount}
+            onChange={(next) => void updateCounter("contractCount", next)}
+          />
+        </div>
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -445,4 +510,51 @@ const EDIT_INPUT = INPUT;
 function formatUnitPrice(value: string | null) {
   if (!value) return "未設定";
   return value.includes("万円") ? value : `${value}万円`;
+}
+
+function CounterCell({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
+      <p className="text-xs text-gray-500">{label}</p>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <input
+          type="number"
+          min={0}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value) || 0)}
+          className="w-16 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-center text-lg font-semibold text-[var(--color-text-dark)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+        />
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            aria-label={`${label} を増やす`}
+            onClick={() => onChange(value + 1)}
+            className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-[var(--color-primary)] hover:text-white"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            aria-label={`${label} を減らす`}
+            onClick={() => onChange(Math.max(0, value - 1))}
+            className="flex h-6 w-6 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-[var(--color-primary)] hover:text-white"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

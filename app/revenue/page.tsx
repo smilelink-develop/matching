@@ -1,19 +1,70 @@
-import SectionPlaceholder from "@/app/components/SectionPlaceholder";
+import { prisma } from "@/lib/prisma";
+import { requireCurrentAccount } from "@/lib/auth";
+import RevenueDashboard from "./RevenueDashboard";
 
-export default function RevenuePage() {
+export const dynamic = "force-dynamic";
+
+export default async function RevenuePage() {
+  await requireCurrentAccount();
+  const [deals, invoices] = await Promise.all([
+    prisma.deal.findMany({
+      select: {
+        id: true,
+        title: true,
+        acceptedAt: true,
+        createdAt: true,
+        requiredCount: true,
+        recommendedCount: true,
+        interviewCount: true,
+        offerCount: true,
+        contractCount: true,
+        company: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.invoice.findMany({
+      select: {
+        id: true,
+        invoiceDate: true,
+        invoiceAmount: true,
+        costAmount: true,
+        channel: true,
+        invoiceStatus: true,
+        createdAt: true,
+        dealId: true,
+        deal: { select: { title: true, company: { select: { name: true } } } },
+        person: { select: { id: true, name: true } },
+      },
+      orderBy: { invoiceDate: "desc" },
+    }),
+  ]);
+
   return (
-    <SectionPlaceholder
-      title="売上ダッシュボード"
-      description="進行中案件、成約見込み、入社確定後の売上を見える化するためのセクションです。"
-      points={[
-        "案件ごとの進捗と売上見込みを一覧化する",
-        "月次・担当別の進捗を確認する",
-        "目標との差分を把握しやすくする",
-      ]}
-      primaryHref="/companies/deals"
-      primaryLabel="案件管理を開く"
-      secondaryHref="/placements"
-      secondaryLabel="入社進捗を開く"
+    <RevenueDashboard
+      initialDeals={deals.map((deal) => ({
+        id: deal.id,
+        title: deal.title,
+        companyName: deal.company.name,
+        acceptedAt: deal.acceptedAt?.toISOString() ?? null,
+        createdAt: deal.createdAt.toISOString(),
+        requiredCount: deal.requiredCount,
+        recommendedCount: deal.recommendedCount,
+        interviewCount: deal.interviewCount,
+        offerCount: deal.offerCount,
+        contractCount: deal.contractCount,
+      }))}
+      initialInvoices={invoices.map((invoice) => ({
+        id: invoice.id,
+        invoiceDate: invoice.invoiceDate?.toISOString() ?? null,
+        createdAt: invoice.createdAt.toISOString(),
+        invoiceAmount: invoice.invoiceAmount,
+        costAmount: invoice.costAmount,
+        channel: invoice.channel,
+        invoiceStatus: invoice.invoiceStatus,
+        dealTitle: invoice.deal?.title ?? null,
+        companyName: invoice.deal?.company?.name ?? null,
+        personName: invoice.person?.name ?? null,
+      }))}
     />
   );
 }

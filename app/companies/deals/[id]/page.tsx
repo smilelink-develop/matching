@@ -64,6 +64,12 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           status: deal.status,
           unitPrice: deal.unitPrice,
           deadline: deal.deadline?.toISOString() ?? null,
+          acceptedAt: deal.acceptedAt?.toISOString() ?? null,
+          requiredCount: deal.requiredCount,
+          recommendedCount: deal.recommendedCount,
+          interviewCount: deal.interviewCount,
+          offerCount: deal.offerCount,
+          contractCount: deal.contractCount,
           notes: deal.notes,
           candidates: deal.candidates.map((candidate) => ({
             id: candidate.id,
