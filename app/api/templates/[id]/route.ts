@@ -3,17 +3,12 @@ import { AuthError, requireApiAccount } from "@/lib/auth";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const account = await requireApiAccount();
+    await requireApiAccount();
     const { id } = await params;
     const { name, content } = await req.json();
-    const existing = await prisma.messageTemplate.findFirst({
-      where: { id: Number(id), accountId: account.id },
-    });
-    if (!existing) {
-      return Response.json({ ok: false, error: "テンプレートが見つかりません" }, { status: 404 });
-    }
+    // メッセージテンプレートは全アカウントで共有
     const template = await prisma.messageTemplate.update({
-      where: { id: existing.id },
+      where: { id: Number(id) },
       data: { name, content },
     });
     return Response.json({ ok: true, template });
@@ -27,9 +22,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const account = await requireApiAccount();
+    await requireApiAccount();
     const { id } = await params;
-    await prisma.messageTemplate.deleteMany({ where: { id: Number(id), accountId: account.id } });
+    await prisma.messageTemplate.delete({ where: { id: Number(id) } });
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json(

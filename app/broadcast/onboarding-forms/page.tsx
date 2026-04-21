@@ -9,9 +9,9 @@ function normalizeQuestionType(type: string): "text" | "file" {
 }
 
 export default async function OnboardingFormsPage() {
-  const account = await requireCurrentAccount();
+  await requireCurrentAccount();
+  // 初期登録フォームテンプレートは全アカウント共通
   const templates = await prisma.onboardingFormTemplate.findMany({
-    where: { accountId: account.id },
     include: {
       questions: {
         orderBy: { sortOrder: "asc" },
@@ -25,7 +25,7 @@ export default async function OnboardingFormsPage() {
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">初期登録フォーム</h1>
         <p className="mt-1 text-sm text-gray-500">
-          {account.name}さん用の候補者入力依頼フォームを、質問ごとに一から作成できます。
+          候補者への入力依頼フォームは全アカウントで共有します。
         </p>
       </div>
       <OnboardingFormsClient

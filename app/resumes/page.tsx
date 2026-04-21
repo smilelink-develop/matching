@@ -5,14 +5,14 @@ import ResumesClient from "./ResumesClient";
 export const dynamic = "force-dynamic";
 
 export default async function ResumesPage() {
-  const account = await requireCurrentAccount();
+  await requireCurrentAccount();
+  // テンプレートも履歴書も全アカウント共通
   const [persons, templates, documents] = await Promise.all([
     prisma.person.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true, nationality: true, residenceStatus: true },
     }),
     prisma.resumeTemplate.findMany({
-      where: { accountId: account.id },
       orderBy: { createdAt: "desc" },
     }),
     prisma.resumeDocument.findMany({
@@ -30,10 +30,7 @@ export default async function ResumesPage() {
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">履歴書作成</h1>
         <p className="mt-1 text-sm text-gray-500">
-          候補者情報をもとに Google Docs の履歴書を自動生成し、候補者データへ紐づけます。
-        </p>
-        <p className="mt-2 text-xs text-gray-400">
-          テンプレート内では {"{{カタカナ名}}"} や {"{{英語名}}"} のようなプレースホルダを使います。
+          候補者情報をもとに Google Docs の履歴書を自動生成し、候補者の Google Drive フォルダへ保存します。
         </p>
       </div>
       <ResumesClient

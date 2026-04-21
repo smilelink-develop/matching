@@ -21,8 +21,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // テンプレートは全アカウントで共有
     const template = await prisma.resumeTemplate.findFirst({
-      where: { id: templateId, accountId: account.id },
+      where: { id: templateId },
     });
 
     if (!template) {

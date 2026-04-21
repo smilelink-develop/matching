@@ -3,9 +3,9 @@ import { AuthError, requireApiAccount } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const account = await requireApiAccount();
+    await requireApiAccount();
+    // メッセージテンプレートは全アカウント共通
     const templates = await prisma.messageTemplate.findMany({
-      where: { accountId: account.id },
       orderBy: { name: "asc" },
     });
     return Response.json({ ok: true, templates });

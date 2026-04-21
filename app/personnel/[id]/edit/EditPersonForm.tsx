@@ -20,6 +20,7 @@ type Person = {
   nationality: string;
   department: string | null;
   photoUrl: string | null;
+  driveFolderUrl: string | null;
   residenceStatus: string;
   partnerId: number | null;
   channel: string;
@@ -295,32 +296,56 @@ export default function EditPersonForm({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-6">
-        <p className="mb-4 text-sm font-medium text-[var(--color-text-dark)]">顔写真</p>
-        <div className="flex items-center gap-5">
-          <AvatarPreview name={form.name} photoUrl={form.photoUrl} />
-          <div className="space-y-3">
-            <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]">
-              {uploadingPhoto ? "読み込み中..." : "写真をアップロード"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => void handlePhotoChange(event.target.files?.[0] ?? null)}
-              />
-            </label>
-            {form.photoUrl ? (
-              <button
-                type="button"
-                onClick={() => setValue("photoUrl", "")}
-                className="block text-sm text-gray-500 hover:underline"
-              >
-                写真を削除
-              </button>
-            ) : null}
+      {activeSection === "basic" ? (
+        <div className="rounded-3xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-6">
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-sm font-medium text-[var(--color-text-dark)]">顔写真</p>
+            <DriveIconButtons
+              driveFolderUrl={person.driveFolderUrl ?? null}
+              onEditUrl={async () => {
+                const input = prompt("保管場所 (Google Drive) の URL", person.driveFolderUrl ?? "https://drive.google.com/drive/folders/");
+                if (input === null) return;
+                const trimmed = input.trim();
+                if (!trimmed) return;
+                const response = await fetch(`/api/personnel/${person.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ driveFolderUrl: trimmed }),
+                });
+                const result = await response.json();
+                if (!result.ok) {
+                  alert(result.error || "更新に失敗しました");
+                  return;
+                }
+                router.refresh();
+              }}
+            />
+          </div>
+          <div className="mt-4 flex items-center gap-5">
+            <AvatarPreview name={form.name} photoUrl={form.photoUrl} />
+            <div className="space-y-3">
+              <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]">
+                {uploadingPhoto ? "読み込み中..." : "写真をアップロード"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => void handlePhotoChange(event.target.files?.[0] ?? null)}
+                />
+              </label>
+              {form.photoUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setValue("photoUrl", "")}
+                  className="block text-sm text-gray-500 hover:underline"
+                >
+                  写真を削除
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       {activeSection === "basic" ? (
         <section className="space-y-5">
@@ -712,6 +737,52 @@ function Field({
     <div className={className}>
       <label className="mb-1 block text-sm font-medium text-[var(--color-text-dark)]">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function DriveIconButtons({
+  driveFolderUrl,
+  onEditUrl,
+}: {
+  driveFolderUrl: string | null;
+  onEditUrl: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      {driveFolderUrl ? (
+        <a
+          href={driveFolderUrl}
+          target="_blank"
+          rel="noreferrer"
+          title="保管場所を開く"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-secondary)] bg-white text-[var(--color-primary)] hover:bg-[var(--color-light)]"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l1.4 1.8c.2.25.5.4.82.4H18.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" />
+          </svg>
+        </a>
+      ) : (
+        <span
+          title="保管場所 未設定"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white text-gray-300"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l1.4 1.8c.2.25.5.4.82.4H18.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" />
+          </svg>
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={onEditUrl}
+        title="保管場所 URL を編集"
+        className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:text-[var(--color-primary)]"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+        </svg>
+      </button>
     </div>
   );
 }

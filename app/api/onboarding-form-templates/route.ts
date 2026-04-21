@@ -9,9 +9,9 @@ type QuestionInput = {
 
 export async function GET() {
   try {
-    const account = await requireApiAccount();
+    await requireApiAccount();
+    // 初期登録フォームテンプレートは全アカウントで共有
     const templates = await prisma.onboardingFormTemplate.findMany({
-      where: { accountId: account.id },
       include: {
         questions: {
           orderBy: { sortOrder: "asc" },

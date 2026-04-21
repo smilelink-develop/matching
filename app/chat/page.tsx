@@ -6,7 +6,7 @@ import ChatClient from "./ChatClient";
 export const dynamic = "force-dynamic";
 
 export default async function ChatPage() {
-  const account = await requireCurrentAccount();
+  await requireCurrentAccount();
   await reconcileMessagePersonLinks();
 
   const persons = await prisma.person.findMany({
@@ -18,8 +18,8 @@ export default async function ChatPage() {
     take: 500,
   });
 
+  // メッセージテンプレートは全アカウント共通
   const templates = await prisma.messageTemplate.findMany({
-    where: { accountId: account.id },
     orderBy: { name: "asc" },
   });
 

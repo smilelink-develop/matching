@@ -34,8 +34,9 @@ export async function PUT(
       }))
       .filter((question: { label: string }) => question.label);
 
+    // テンプレートは全アカウントで共有
     const existing = await prisma.onboardingFormTemplate.findFirst({
-      where: { id: templateId, accountId: account.id },
+      where: { id: templateId },
       select: { id: true },
     });
 
@@ -77,10 +78,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const account = await requireApiAccount();
+    await requireApiAccount();
     const { id } = await params;
-    await prisma.onboardingFormTemplate.deleteMany({
-      where: { id: Number(id), accountId: account.id },
+    await prisma.onboardingFormTemplate.delete({
+      where: { id: Number(id) },
     });
     return Response.json({ ok: true });
   } catch (e) {

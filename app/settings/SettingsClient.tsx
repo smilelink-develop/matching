@@ -10,10 +10,18 @@ type AccountSummary = {
   role: string;
 };
 
+type ResumeTemplate = {
+  id: number;
+  name: string;
+  templateUrl: string;
+  driveFolderUrl: string;
+};
+
 export default function SettingsClient({
   initialSettings,
   currentAccount,
   accounts,
+  resumeTemplates: initialResumeTemplates,
 }: {
   initialSettings: {
     calendarEmbedUrl: string;
@@ -27,6 +35,7 @@ export default function SettingsClient({
     role: string;
   };
   accounts: AccountSummary[];
+  resumeTemplates: ResumeTemplate[];
 }) {
   const isAdmin = currentAccount.role === "admin";
   const [calendarEmbedUrl, setCalendarEmbedUrl] = useState(initialSettings.calendarEmbedUrl);
@@ -37,6 +46,10 @@ export default function SettingsClient({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [fixedQuestionsOpen, setFixedQuestionsOpen] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
+  const [resumeTemplatesOpen, setResumeTemplatesOpen] = useState(false);
+  const [resumeTemplates, setResumeTemplates] = useState<ResumeTemplate[]>(initialResumeTemplates);
+  const [newTemplate, setNewTemplate] = useState({ name: "", templateUrl: "", driveFolderUrl: "" });
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [passcodes, setPasscodes] = useState<Record<number, string>>({});
   const [switchingId, setSwitchingId] = useState<number | null>(null);
   const [savingPasscodeId, setSavingPasscodeId] = useState<number | null>(null);
@@ -119,6 +132,56 @@ export default function SettingsClient({
     );
   };
 
+  const addResumeTemplate = async () => {
+    if (!newTemplate.name.trim() || !newTemplate.templateUrl.trim() || !newTemplate.driveFolderUrl.trim()) {
+      alert("テンプレート名・Docs URL・保存先 Drive URL を入力してください");
+      return;
+    }
+    setSavingTemplate(true);
+    try {
+      const res = await fetch("/api/resume-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTemplate),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        alert(data.error || "保存に失敗しました");
+        return;
+      }
+      setResumeTemplates((current) => [data.template, ...current]);
+      setNewTemplate({ name: "", templateUrl: "", driveFolderUrl: "" });
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const updateResumeTemplate = async (id: number, patch: Partial<ResumeTemplate>) => {
+    const previous = resumeTemplates;
+    setResumeTemplates((current) => current.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    const res = await fetch(`/api/resume-templates/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.error || "更新に失敗しました");
+      setResumeTemplates(previous);
+    }
+  };
+
+  const deleteResumeTemplate = async (id: number, name: string) => {
+    if (!confirm(`「${name}」を削除しますか?`)) return;
+    const res = await fetch(`/api/resume-templates/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.error || "削除に失敗しました");
+      return;
+    }
+    setResumeTemplates((current) => current.filter((t) => t.id !== id));
+  };
+
   const switchAccount = async (accountId: number) => {
     setSwitchingId(accountId);
     try {
@@ -198,6 +261,97 @@ export default function SettingsClient({
             <SecondaryButton onClick={clearCalendar} disabled={savingCalendar}>
               リンクを解除
             </SecondaryButton>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="履歴書テンプレート"
+        description="Google Docs テンプレートと保存先 Drive フォルダを登録します。テンプレートは全アカウントで共有され、履歴書作成ページから利用できます。"
+        open={resumeTemplatesOpen}
+        onToggle={() => setResumeTemplatesOpen((current) => !current)}
+      >
+        <div className="space-y-4">
+          <div className="space-y-3">
+            {resumeTemplates.map((template) => (
+              <div key={template.id} className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
+                <div className="grid gap-3">
+                  <Field label="テンプレート名">
+                    <input
+                      className={INPUT}
+                      value={template.name}
+                      onChange={(e) => setResumeTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, name: e.target.value } : t))}
+                      onBlur={(e) => void updateResumeTemplate(template.id, { name: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Google Docs テンプレートURL">
+                    <input
+                      className={INPUT}
+                      value={template.templateUrl}
+                      onChange={(e) => setResumeTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, templateUrl: e.target.value } : t))}
+                      onBlur={(e) => void updateResumeTemplate(template.id, { templateUrl: e.target.value })}
+                      placeholder="https://docs.google.com/document/d/..."
+                    />
+                  </Field>
+                  <Field label="保存先 Drive フォルダURL">
+                    <input
+                      className={INPUT}
+                      value={template.driveFolderUrl}
+                      onChange={(e) => setResumeTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, driveFolderUrl: e.target.value } : t))}
+                      onBlur={(e) => void updateResumeTemplate(template.id, { driveFolderUrl: e.target.value })}
+                      placeholder="https://drive.google.com/drive/folders/..."
+                    />
+                  </Field>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void deleteResumeTemplate(template.id, template.name)}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    削除
+                  </button>
+                </div>
+              </div>
+            ))}
+            {resumeTemplates.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-6 text-center text-xs text-gray-400">
+                まだテンプレートがありません
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-4">
+            <p className="text-sm font-semibold text-[var(--color-text-dark)]">新しいテンプレートを追加</p>
+            <div className="mt-3 grid gap-3">
+              <Field label="テンプレート名">
+                <input
+                  className={INPUT}
+                  value={newTemplate.name}
+                  onChange={(e) => setNewTemplate((c) => ({ ...c, name: e.target.value }))}
+                  placeholder="標準履歴書"
+                />
+              </Field>
+              <Field label="Google Docs テンプレートURL">
+                <input
+                  className={INPUT}
+                  value={newTemplate.templateUrl}
+                  onChange={(e) => setNewTemplate((c) => ({ ...c, templateUrl: e.target.value }))}
+                  placeholder="https://docs.google.com/document/d/..."
+                />
+              </Field>
+              <Field label="保存先 Drive フォルダURL">
+                <input
+                  className={INPUT}
+                  value={newTemplate.driveFolderUrl}
+                  onChange={(e) => setNewTemplate((c) => ({ ...c, driveFolderUrl: e.target.value }))}
+                  placeholder="https://drive.google.com/drive/folders/..."
+                />
+              </Field>
+              <ActionButton onClick={addResumeTemplate} disabled={savingTemplate}>
+                {savingTemplate ? "保存中..." : "テンプレートを追加"}
+              </ActionButton>
+            </div>
           </div>
         </div>
       </SectionCard>

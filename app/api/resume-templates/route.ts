@@ -1,6 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 
+export async function GET() {
+  try {
+    await requireApiAccount();
+    const templates = await prisma.resumeTemplate.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    return Response.json({ ok: true, templates });
+  } catch (error) {
+    return Response.json(
+      { ok: false, error: error instanceof Error ? error.message : "error" },
+      { status: error instanceof AuthError ? error.status : 500 }
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const account = await requireApiAccount();
@@ -16,6 +31,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // 作成者を記録するが、データは全アカウント共有
     const template = await prisma.resumeTemplate.create({
       data: {
         accountId: account.id,
