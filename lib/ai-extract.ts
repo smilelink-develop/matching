@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 
 export type ExtractedCandidate = {
   name?: string;
@@ -46,22 +46,22 @@ export type SourceFile = {
   base64: string;
 };
 
-const EXTRACTION_SCHEMA_DESCRIPTION = `次のJSONスキーマに沿って、読み取れた情報のみを出力してください。読み取れない項目は省略（null/undefined/空文字列を含めない）。日付は YYYY-MM-DD 形式で正規化してください。workExperiences は配列で、古い順。
+const EXTRACTION_SCHEMA_DESCRIPTION = `次のJSONスキーマに沿って、読み取れた情報のみを出力してください。読み取れない項目は省略(null/undefined/空文字列を含めない)。日付は YYYY-MM-DD 形式で正規化してください。workExperiences は配列で、古い順。
 
 fields:
-- name: 候補者のカナ表記（例: "グエン ヴァン アン"）
+- name: 候補者のカナ表記(例: "グエン ヴァン アン")
 - englishName: アルファベット表記
-- nationality: 国名の日本語（例: "ベトナム", "インドネシア", "ミャンマー", "フィリピン", "タイ", "その他"）
+- nationality: 国名の日本語(例: "ベトナム", "インドネシア", "ミャンマー", "フィリピン", "タイ", "その他")
 - residenceStatus: "技能実習", "特定技能1号", "特定技能2号", "技術・人文知識・国際業務" のいずれか
 - visaExpiryDate: 在留資格の有効期限 YYYY-MM-DD
 - birthDate: 生年月日 YYYY-MM-DD
 - gender: "男性", "女性", "その他"
 - phoneNumber: 電話番号
 - postalCode: 郵便番号
-- address: 住所（日本国内の住所があれば）
+- address: 住所(日本国内の住所があれば)
 - spouseStatus: "有" or "無"
 - childrenCount: 子供の人数を数字の文字列
-- japaneseLevel: 日本語レベル（例: "JLPT N3"）
+- japaneseLevel: 日本語レベル(例: "JLPT N3")
 - japaneseLevelDate: 取得日 YYYY-MM-DD
 - licenseName: 免許の名前
 - licenseExpiryDate: YYYY-MM-DD
@@ -81,102 +81,57 @@ fields:
 - preferenceNote: 本人希望記入欄`;
 
 const SYSTEM_PROMPT = `あなたは外国人人材の書類から候補者情報を抽出するアシスタントです。
-日本語の履歴書、在留カード、パスポート、送り出し機関が作成した候補者プロフィールなどの画像やPDFから、
-構造化されたJSONを抽出してください。
+日本語の履歴書、在留カード、パスポート、送り出し機関が作成した候補者プロフィールなどの画像やPDFから、構造化されたJSONを抽出してください。
 
 以下の JSON オブジェクト 1つだけを返してください。コードブロックや説明文は不要です。
-複数の書類から同じ項目が見つかった場合は、最も公式な書類（在留カード > パスポート > 履歴書）の値を優先してください。
+複数の書類から同じ項目が見つかった場合は、最も公式な書類(在留カード > パスポート > 履歴書)の値を優先してください。
 自信のない値は含めないでください。
 
 ${EXTRACTION_SCHEMA_DESCRIPTION}`;
 
-type MediaBlockImage = {
-  type: "image";
-  source: {
-    type: "base64";
-    media_type: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-    data: string;
-  };
-};
-
-type MediaBlockDocument = {
-  type: "document";
-  source: {
-    type: "base64";
-    media_type: "application/pdf";
-    data: string;
-  };
-};
-
-type TextBlock = {
-  type: "text";
-  text: string;
-};
-
-type ContentBlock = MediaBlockImage | MediaBlockDocument | TextBlock;
-
 const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
-function isImage(mime: string): mime is "image/jpeg" | "image/png" | "image/gif" | "image/webp" {
-  return SUPPORTED_IMAGE_MIMES.has(mime);
+function isSupported(mime: string) {
+  return SUPPORTED_IMAGE_MIMES.has(mime) || mime === "application/pdf";
 }
 
 export async function extractCandidateFromFiles(files: SourceFile[]): Promise<ExtractedCandidate> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY が未設定です");
+    throw new Error("GEMINI_API_KEY が未設定です");
   }
 
-  const client = new Anthropic({ apiKey });
-
-  const content: ContentBlock[] = [];
-  let supportedFileCount = 0;
-
-  for (const file of files) {
-    if (isImage(file.mimeType)) {
-      content.push({
-        type: "image",
-        source: { type: "base64", media_type: file.mimeType, data: file.base64 },
-      });
-      supportedFileCount += 1;
-    } else if (file.mimeType === "application/pdf") {
-      content.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: file.base64 },
-      });
-      supportedFileCount += 1;
-    }
-  }
-
-  if (supportedFileCount === 0) {
+  const supportedFiles = files.filter((file) => isSupported(file.mimeType));
+  if (supportedFiles.length === 0) {
     throw new Error("対応形式の画像/PDFが含まれていません");
   }
 
-  content.push({
-    type: "text",
-    text: "添付した書類から候補者情報を抽出して、指定のスキーマに沿う JSON を一つだけ返してください。",
-  });
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+  const client = new GoogleGenAI({ apiKey });
 
-  const model = process.env.ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-5";
+  const parts: {
+    text?: string;
+    inlineData?: { mimeType: string; data: string };
+  }[] = [
+    { text: SYSTEM_PROMPT },
+    ...supportedFiles.map((file) => ({
+      inlineData: { mimeType: file.mimeType, data: file.base64 },
+    })),
+    {
+      text: "添付した書類から候補者情報を抽出して、指定のスキーマに沿う JSON を一つだけ返してください。説明や Markdown コードブロックは一切不要です。",
+    },
+  ];
 
-  const response = await client.messages.create({
+  const response = await client.models.generateContent({
     model,
-    max_tokens: 3000,
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content,
-      },
-    ],
+    contents: [{ role: "user", parts }],
+    config: {
+      responseMimeType: "application/json",
+      temperature: 0.1,
+    },
   });
 
-  const text = response.content
-    .filter((block) => block.type === "text")
-    .map((block) => (block.type === "text" ? block.text : ""))
-    .join("")
-    .trim();
-
+  const text = response.text?.trim() ?? "";
   return parseJsonPayload(text);
 }
 
@@ -189,7 +144,6 @@ function parseJsonPayload(raw: string): ExtractedCandidate {
   try {
     return JSON.parse(cleaned) as ExtractedCandidate;
   } catch {
-    // try to extract the first top-level JSON object
     const match = cleaned.match(/\{[\s\S]*\}/);
     if (match) {
       try {
