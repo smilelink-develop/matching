@@ -86,14 +86,17 @@ const SECTION_ITEMS = [
   { id: "basic", label: "基本情報" },
   { id: "qualification", label: "資格・学歴" },
   { id: "visa", label: "各在留資格" },
+  { id: "custom", label: "個別質問" },
 ] as const;
 
 export default function EditPersonForm({
   person,
   partners,
+  customTabContent,
 }: {
   person: Person;
   partners: PartnerOption[];
+  customTabContent?: React.ReactNode;
 }) {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<(typeof SECTION_ITEMS)[number]["id"]>("basic");
@@ -568,15 +571,28 @@ export default function EditPersonForm({
         </section>
       ) : null}
 
+      {activeSection === "custom" ? (
+        <section className="space-y-5">
+          <SectionTitle title="個別質問" description="候補者ごとの追加質問とその回答を管理します。右上の「質問を編集」から質問の追加や編集、候補者ポータルへの送信ができます。" />
+          {customTabContent ?? (
+            <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
+              個別質問の表示が未設定です
+            </p>
+          )}
+        </section>
+      ) : null}
+
       <div className="flex items-center justify-between pt-2">
         <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-lg bg-[var(--color-primary)] px-6 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
-          >
-            {submitting ? "保存中..." : "保存"}
-          </button>
+          {activeSection !== "custom" ? (
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-lg bg-[var(--color-primary)] px-6 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            >
+              {submitting ? "保存中..." : "保存"}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => router.back()}

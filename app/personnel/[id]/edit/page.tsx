@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EditPersonForm from "./EditPersonForm";
-import CustomQuestionsPanel from "./CustomQuestionsPanel";
+import {
+  CustomQuestionsProvider,
+  CustomQuestionsBuilderButton,
+  CustomQuestionsList,
+} from "./CustomQuestionsPanel";
 import ExtractPanel from "./ExtractPanel";
 
 export const dynamic = "force-dynamic";
@@ -34,13 +38,11 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         <div>
           <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">候補者詳細</h1>
           <p className="text-sm text-gray-500 mt-2">
-            候補者情報を「基本情報」「資格・学歴」「各在留資格」に分けて管理します。
+            候補者情報を「基本情報」「資格・学歴」「各在留資格」「個別質問」に分けて管理します。
           </p>
         </div>
 
-        <ExtractPanel personId={person.id} personName={person.name} />
-
-        <CustomQuestionsPanel
+        <CustomQuestionsProvider
           personId={person.id}
           personName={person.name}
           initialQuestions={customQuestions.map((q) => ({
@@ -72,9 +74,18 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             japaneseLevel: person.resumeProfile?.japaneseLevel ?? null,
             visaExpiryDate: person.resumeProfile?.visaExpiryDate ?? null,
           }}
-        />
+        >
+          <div className="grid gap-6 md:grid-cols-2">
+            <ExtractPanel personId={person.id} personName={person.name} />
+            <CustomQuestionsBuilderButton />
+          </div>
 
-        <EditPersonForm person={person} partners={partners} />
+          <EditPersonForm
+            person={person}
+            partners={partners}
+            customTabContent={<CustomQuestionsList />}
+          />
+        </CustomQuestionsProvider>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 export type CustomQuestion = {
   id: number;
@@ -52,20 +52,90 @@ const KNOWN_LABELS: { key: keyof ProfileSummary; label: string }[] = [
   { key: "visaExpiryDate", label: "在留資格の有効期限" },
 ];
 
-export default function CustomQuestionsPanel({
+type Ctx = {
+  personId: number;
+  personName: string;
+  questions: CustomQuestion[];
+  setQuestions: (next: CustomQuestion[] | ((prev: CustomQuestion[]) => CustomQuestion[])) => void;
+  profile: ProfileSummary;
+  builderOpen: boolean;
+  openBuilder: () => void;
+  closeBuilder: () => void;
+};
+
+const CustomQuestionsContext = createContext<Ctx | null>(null);
+
+function useCtx() {
+  const ctx = useContext(CustomQuestionsContext);
+  if (!ctx) throw new Error("CustomQuestions components must be wrapped by CustomQuestionsProvider");
+  return ctx;
+}
+
+export function CustomQuestionsProvider({
   personId,
   personName,
   initialQuestions,
   profile,
+  children,
 }: {
   personId: number;
   personName: string;
   initialQuestions: CustomQuestion[];
   profile: ProfileSummary;
+  children: ReactNode;
 }) {
   const [questions, setQuestions] = useState<CustomQuestion[]>(initialQuestions);
+  const [builderOpen, setBuilderOpen] = useState(false);
+
+  const value = useMemo<Ctx>(
+    () => ({
+      personId,
+      personName,
+      questions,
+      setQuestions,
+      profile,
+      builderOpen,
+      openBuilder: () => setBuilderOpen(true),
+      closeBuilder: () => setBuilderOpen(false),
+    }),
+    [personId, personName, questions, profile, builderOpen]
+  );
+
+  return (
+    <CustomQuestionsContext.Provider value={value}>
+      {children}
+      <FormBuilderModalHost />
+    </CustomQuestionsContext.Provider>
+  );
+}
+
+export function CustomQuestionsBuilderButton() {
+  const { openBuilder, questions } = useCtx();
+  const activeCount = questions.filter((q) => q.active).length;
+  return (
+    <section className="flex h-full flex-col justify-between rounded-3xl border border-[var(--color-secondary)] bg-[linear-gradient(135deg,#EDE9FE_0%,#F5F3FF_100%)] p-6 shadow-sm">
+      <div>
+        <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--color-primary)]">CUSTOM QUESTIONS</p>
+        <h2 className="mt-1 text-lg font-semibold text-[var(--color-text-dark)]">入力フォーム作成</h2>
+        <p className="mt-1 text-xs text-gray-500">
+          足りない情報を本人に聞くためのフォームを作成し、候補者ポータルへ送信します。
+          現在 {activeCount} 件の個別質問があります。
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={openBuilder}
+        className="mt-4 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+      >
+        質問を編集して送信
+      </button>
+    </section>
+  );
+}
+
+export function CustomQuestionsList() {
+  const { personId, questions, setQuestions, openBuilder } = useCtx();
   const [savingId, setSavingId] = useState<number | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
   const activeQuestions = useMemo(
     () => questions.filter((q) => q.active).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -76,12 +146,7 @@ export default function CustomQuestionsPanel({
     [questions]
   );
 
-  const missingKnown = useMemo(
-    () => KNOWN_LABELS.filter((item) => !profile[item.key] || String(profile[item.key]).trim() === ""),
-    [profile]
-  );
-
-  const updateAnswer = async (id: number, answer: string) => {
+  const updateAnswer = (id: number, answer: string) => {
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, answer } : q)));
   };
 
@@ -99,29 +164,27 @@ export default function CustomQuestionsPanel({
   };
 
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--color-text-dark)]">個別質問</h2>
-          <p className="mt-1 text-xs text-gray-500">
-            候補者ごとに任意の質問を追加できます。削除した質問は空欄として残ります。
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]"
-        >
-          入力フォーム作成
-        </button>
-      </div>
+    <section className="space-y-4">
+      <SectionTitle
+        title="個別質問"
+        description="候補者ごとに任意の質問を追加できます。削除した質問は空欄として残ります。"
+        action={
+          <button
+            type="button"
+            onClick={openBuilder}
+            className="rounded-lg border border-[var(--color-secondary)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
+          >
+            質問を編集
+          </button>
+        }
+      />
 
       {activeQuestions.length === 0 && archivedQuestions.length === 0 ? (
-        <p className="mt-4 rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
-          個別質問はまだありません。「入力フォーム作成」から質問を追加してください。
+        <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
+          個別質問はまだありません。右上の「質問を編集」から追加してください。
         </p>
       ) : (
-        <div className="mt-4 space-y-3">
+        <div className="space-y-3">
           {activeQuestions.map((question) => (
             <div
               key={question.id}
@@ -157,7 +220,7 @@ export default function CustomQuestionsPanel({
                 <>
                   <textarea
                     value={question.answer ?? ""}
-                    onChange={(e) => void updateAnswer(question.id, e.target.value)}
+                    onChange={(e) => updateAnswer(question.id, e.target.value)}
                     onBlur={(e) => void persistAnswer(question.id, e.target.value)}
                     placeholder={question.required ? "（必須）候補者の回答" : "候補者の回答"}
                     className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
@@ -183,36 +246,30 @@ export default function CustomQuestionsPanel({
           ))}
         </div>
       )}
-
-      {modalOpen ? (
-        <FormBuilderModal
-          personId={personId}
-          personName={personName}
-          missingKnown={missingKnown}
-          questions={questions}
-          onClose={() => setModalOpen(false)}
-          onChange={setQuestions}
-        />
-      ) : null}
     </section>
   );
 }
 
-function FormBuilderModal({
-  personId,
-  personName,
-  missingKnown,
-  questions,
-  onClose,
-  onChange,
-}: {
-  personId: number;
-  personName: string;
-  missingKnown: { key: keyof ProfileSummary; label: string }[];
-  questions: CustomQuestion[];
-  onClose: () => void;
-  onChange: (next: CustomQuestion[]) => void;
-}) {
+function SectionTitle({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-semibold text-[var(--color-text-dark)]">{title}</h2>
+        {description ? <p className="mt-1 text-xs text-gray-500">{description}</p> : null}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function FormBuilderModalHost() {
+  const { builderOpen, closeBuilder } = useCtx();
+  if (!builderOpen) return null;
+  return <FormBuilderModal onClose={closeBuilder} />;
+}
+
+function FormBuilderModal({ onClose }: { onClose: () => void }) {
+  const { personId, personName, questions, setQuestions, profile } = useCtx();
   const [working, setWorking] = useState(false);
   const [sending, setSending] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -220,6 +277,11 @@ function FormBuilderModal({
   const [newType, setNewType] = useState<"text" | "file">("text");
 
   const activeQuestions = questions.filter((q) => q.active);
+
+  const missingKnown = useMemo(
+    () => KNOWN_LABELS.filter((item) => !profile[item.key] || String(profile[item.key]).trim() === ""),
+    [profile]
+  );
 
   const addQuestion = async () => {
     if (!newLabel.trim()) return;
@@ -232,7 +294,7 @@ function FormBuilderModal({
       });
       const result = await response.json();
       if (result.ok) {
-        onChange([...questions, result.question]);
+        setQuestions((prev) => [...prev, result.question]);
         setNewLabel("");
         setNewRequired(false);
         setNewType("text");
@@ -244,7 +306,7 @@ function FormBuilderModal({
 
   const updateQuestion = async (id: number, patch: Partial<Pick<CustomQuestion, "label" | "required" | "type">>) => {
     const previous = questions;
-    onChange(questions.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+    setQuestions(questions.map((q) => (q.id === id ? { ...q, ...patch } : q)));
     const response = await fetch(`/api/personnel/${personId}/custom-questions/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -253,21 +315,21 @@ function FormBuilderModal({
     const result = await response.json();
     if (!result.ok) {
       alert("更新に失敗しました");
-      onChange(previous);
+      setQuestions(previous);
     }
   };
 
   const deleteQuestion = async (id: number) => {
     if (!confirm("この質問を削除しますか?（個別ページには空欄として残ります）")) return;
     const previous = questions;
-    onChange(questions.map((q) => (q.id === id ? { ...q, active: false, answer: null } : q)));
+    setQuestions(questions.map((q) => (q.id === id ? { ...q, active: false, answer: null } : q)));
     const response = await fetch(`/api/personnel/${personId}/custom-questions/${id}`, {
       method: "DELETE",
     });
     const result = await response.json();
     if (!result.ok) {
       alert("削除に失敗しました");
-      onChange(previous);
+      setQuestions(previous);
     }
   };
 
@@ -286,7 +348,7 @@ function FormBuilderModal({
         alert(result.error || "送信に失敗しました");
         return;
       }
-      alert(`候補者ポータルに「個別質問への回答」タスクを送信しました。\n${personName} さんのポータルで回答が入力されると、この画面に反映されます。`);
+      alert(`候補者ポータルに「個別質問への回答」タスクを送信しました。\n${personName} さんのポータルで回答が入力されると、「個別質問」タブに反映されます。`);
       onClose();
     } finally {
       setSending(false);
@@ -335,7 +397,7 @@ function FormBuilderModal({
           <div>
             <p className="text-sm font-semibold text-[var(--color-text-dark)]">個別質問</p>
             <p className="mt-0.5 text-xs text-gray-500">
-              質問の追加・任意/必須の切替・削除ができます。
+              質問の追加・タイプ切替・任意/必須の切替・削除ができます。
             </p>
 
             <div className="mt-3 space-y-2">
@@ -351,7 +413,7 @@ function FormBuilderModal({
                 >
                   <input
                     value={question.label}
-                    onChange={(e) => onChange(questions.map((q) => (q.id === question.id ? { ...q, label: e.target.value } : q)))}
+                    onChange={(e) => setQuestions(questions.map((q) => (q.id === question.id ? { ...q, label: e.target.value } : q)))}
                     onBlur={(e) => void updateQuestion(question.id, { label: e.target.value })}
                     className="min-w-[120px] flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm focus:border-[var(--color-primary)] focus:bg-white focus:outline-none"
                   />

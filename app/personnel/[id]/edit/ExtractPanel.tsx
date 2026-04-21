@@ -91,23 +91,21 @@ export default function ExtractPanel({
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <section className="rounded-3xl border border-[var(--color-secondary)] bg-[linear-gradient(135deg,#F5F3FF_0%,#FDF4FF_100%)] p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--color-primary)]">AI AUTO FILL</p>
-          <h2 className="mt-1 text-lg font-semibold text-[var(--color-text-dark)]">書類から自動入力</h2>
-          <p className="mt-1 text-xs text-gray-500">
-            在留カード写真 / パスポート写真 / 履歴書 PDF などを投げ込むと、AI が候補者情報を抽出して自動入力します。
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
-        >
-          書類をアップロード
-        </button>
+    <section className="flex h-full flex-col justify-between rounded-3xl border border-[var(--color-secondary)] bg-[linear-gradient(135deg,#F5F3FF_0%,#FDF4FF_100%)] p-6 shadow-sm">
+      <div>
+        <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--color-primary)]">AI AUTO FILL</p>
+        <h2 className="mt-1 text-lg font-semibold text-[var(--color-text-dark)]">書類から自動作成</h2>
+        <p className="mt-1 text-xs text-gray-500">
+          在留カード写真 / パスポート写真 / 履歴書 PDF などを<strong>複数まとめて</strong>投げ込むと、AI が候補者情報を抽出して自動入力します。
+        </p>
       </div>
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        className="mt-4 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+      >
+        書類をアップロード（複数可）
+      </button>
 
       {modalOpen ? (
         <ExtractModal
@@ -253,10 +251,17 @@ function ExtractModal({
 
           {stage === "select" ? (
             <div className="space-y-4">
-              <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] px-6 py-8 text-center hover:bg-white">
-                <p className="text-sm font-semibold text-[var(--color-text-dark)]">ファイルをドラッグ&ドロップ または クリックして選択</p>
+              <label
+                className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] px-6 py-8 text-center hover:bg-white"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  void addFiles(event.dataTransfer.files);
+                }}
+              >
+                <p className="text-sm font-semibold text-[var(--color-text-dark)]">複数ファイルをまとめてドラッグ&ドロップ または クリックして選択</p>
                 <p className="mt-1 text-xs text-gray-500">
-                  在留カード / パスポート / 履歴書など 画像 (JPEG/PNG) または PDF, 1ファイル最大 20MB
+                  在留カード / パスポート / 履歴書など 画像 (JPEG/PNG) または PDF を一度に複数アップロードできます（1ファイル最大 20MB）
                 </p>
                 <input
                   type="file"
@@ -266,6 +271,10 @@ function ExtractModal({
                   onChange={(e) => void addFiles(e.target.files)}
                 />
               </label>
+
+              {files.length > 0 ? (
+                <p className="text-xs text-gray-500">選択中: {files.length} 件</p>
+              ) : null}
 
               <div className="space-y-2">
                 {files.map((file) => (
