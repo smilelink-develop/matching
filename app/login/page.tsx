@@ -4,19 +4,27 @@ export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,var(--color-text-dark)_0%,var(--color-primary)_100%)] px-4 py-10 text-white">
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(120%_120%_at_0%_0%,#2e1065_0%,#0f172a_55%,#020617_100%)] px-4 py-10 text-white">
+      {/* 装飾の光彩 */}
+      <div className="pointer-events-none absolute -top-32 -left-16 h-80 w-80 rounded-full bg-[var(--color-primary)]/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-[#38BDF8]/20 blur-3xl" />
+
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-md items-center">
-        <div className="w-full rounded-[28px] border border-white/10 bg-white/10 p-7 shadow-[0_30px_80px_rgba(15,23,42,0.35)] backdrop-blur">
+        <div className="relative w-full rounded-[32px] border border-white/10 bg-white/[0.07] p-8 shadow-[0_40px_120px_rgba(15,23,42,0.55)] backdrop-blur-xl">
           <div className="mb-8">
-            <p className="text-xs font-semibold tracking-[0.3em] text-white/60">
-              SMILE MATCHING
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold leading-tight">
-              人材紹介ダッシュボードへログイン
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-xs font-bold tracking-[0.2em] text-white">
+                SM
+              </div>
+              <p className="text-[11px] font-semibold tracking-[0.32em] text-white/60">
+                SMILE MATCHING
+              </p>
+            </div>
+            <h1 className="mt-6 text-3xl font-semibold leading-[1.2]">
+              人材紹介ダッシュボードへ
+              <br />
+              ログイン
             </h1>
-            <p className="mt-2 text-sm text-white/70">
-              社内メンバーだけが入れる最小ログインです。ログインIDとパスコードを入力してください。
-            </p>
           </div>
           <LoginForm />
         </div>

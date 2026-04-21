@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { HIRING_STATUSES, SSW_INDUSTRIES } from "@/lib/company-options";
 
 export default function NewCompanyPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    industry: "",
+    industry: SSW_INDUSTRIES[0] as string,
     location: "",
     hiringStatus: "募集中",
     notes: "",
@@ -51,14 +52,22 @@ export default function NewCompanyPage() {
           <Field label="企業名 *">
             <input className={INPUT} value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} />
           </Field>
-          <Field label="業種">
-            <input className={INPUT} value={form.industry} onChange={(e) => setForm((current) => ({ ...current, industry: e.target.value }))} />
+          <Field label="業種 (特定技能16分野)">
+            <select className={INPUT} value={form.industry} onChange={(e) => setForm((current) => ({ ...current, industry: e.target.value }))}>
+              {SSW_INDUSTRIES.map((industry) => (
+                <option key={industry} value={industry}>{industry}</option>
+              ))}
+            </select>
           </Field>
           <Field label="所在地">
             <input className={INPUT} value={form.location} onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))} />
           </Field>
           <Field label="採用状況">
-            <input className={INPUT} value={form.hiringStatus} onChange={(e) => setForm((current) => ({ ...current, hiringStatus: e.target.value }))} />
+            <select className={INPUT} value={form.hiringStatus} onChange={(e) => setForm((current) => ({ ...current, hiringStatus: e.target.value }))}>
+              {HIRING_STATUSES.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
           </Field>
           <Field label="メモ">
             <textarea className={`${INPUT} min-h-28`} value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} />

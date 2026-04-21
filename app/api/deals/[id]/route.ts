@@ -47,6 +47,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params;
     const body = await req.json();
     const updateData: {
+      title?: string;
+      field?: string | null;
       status?: string;
       priority?: string;
       ownerId?: number | null;
@@ -55,6 +57,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       notes?: string | null;
     } = {};
 
+    if (body.title !== undefined) updateData.title = String(body.title).trim();
+    if (body.field !== undefined) updateData.field = String(body.field ?? "").trim() || null;
     if (body.status !== undefined) updateData.status = String(body.status);
     if (body.priority !== undefined) updateData.priority = String(body.priority);
     if (body.ownerId !== undefined) updateData.ownerId = body.ownerId ? Number(body.ownerId) : null;

@@ -2,9 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { SSW_INDUSTRIES } from "@/lib/company-options";
 
 const CANDIDATE_COLUMNS = ["接続済み", "事前面談済み", "推薦済み", "内定済み"] as const;
+const STATUS_OPTIONS = ["至急募集", "募集中", "面接中", "成約"] as const;
+const PRIORITY_OPTIONS = [
+  { value: "normal", label: "通常" },
+  { value: "high", label: "高" },
+  { value: "urgent", label: "急ぎ" },
+] as const;
 
 type CandidateCard = {
   id: number;
@@ -49,10 +57,70 @@ export default function DealDetailClient({
   deal: DealDetail;
   persons: PersonOption[];
 }) {
+  const router = useRouter();
+  const [currentDeal, setCurrentDeal] = useState(deal);
   const [candidates, setCandidates] = useState(deal.candidates);
   const [draggingCandidateId, setDraggingCandidateId] = useState<number | null>(null);
   const [selectedPersonId, setSelectedPersonId] = useState("");
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: deal.title,
+    field: deal.field ?? SSW_INDUSTRIES[0],
+    priority: deal.priority,
+    status: deal.status,
+    unitPrice: deal.unitPrice ?? "",
+    deadline: deal.deadline ? deal.deadline.slice(0, 10) : "",
+    notes: deal.notes ?? "",
+  });
+
+  const startEdit = () => {
+    setEditForm({
+      title: currentDeal.title,
+      field: currentDeal.field ?? SSW_INDUSTRIES[0],
+      priority: currentDeal.priority,
+      status: currentDeal.status,
+      unitPrice: currentDeal.unitPrice ?? "",
+      deadline: currentDeal.deadline ? currentDeal.deadline.slice(0, 10) : "",
+      notes: currentDeal.notes ?? "",
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.title.trim()) {
+      alert("案件名を入力してください");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const response = await fetch(`/api/deals/${currentDeal.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(result.error || "更新に失敗しました");
+        return;
+      }
+      setCurrentDeal((prev) => ({
+        ...prev,
+        title: editForm.title,
+        field: editForm.field || null,
+        priority: editForm.priority,
+        status: editForm.status,
+        unitPrice: editForm.unitPrice || null,
+        deadline: editForm.deadline ? new Date(editForm.deadline).toISOString() : null,
+        notes: editForm.notes || null,
+      }));
+      setEditing(false);
+      router.refresh();
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const addablePersons = useMemo(
     () => persons.filter((person) => !candidates.some((candidate) => candidate.person.id === person.id)),
@@ -116,33 +184,104 @@ export default function DealDetailClient({
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <InfoCard label="企業" value={deal.company.name} />
-        <InfoCard label="担当者" value={deal.owner?.name ?? "未設定"} />
-        <InfoCard label="単価" value={formatUnitPrice(deal.unitPrice)} />
-        <InfoCard label="期限" value={deal.deadline ? new Date(deal.deadline).toLocaleDateString("ja-JP") : "未設定"} />
-        <InfoCard label="案件ステータス" value={deal.status} />
-        <InfoCard label="分野" value={deal.field ?? "未設定"} />
-      </section>
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-[var(--color-text-dark)]">案件情報</h2>
+              <span className={statusClass(currentDeal.status)}>{currentDeal.status}</span>
+              <span className={priorityClass(currentDeal.priority)}>{priorityLabel(currentDeal.priority)}</span>
+            </div>
+            {!editing ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+                <InfoRow label="企業" value={currentDeal.company.name} />
+                <InfoRow label="担当者" value={currentDeal.owner?.name ?? "未設定"} />
+                <InfoRow label="単価" value={formatUnitPrice(currentDeal.unitPrice)} />
+                <InfoRow label="期限" value={currentDeal.deadline ? new Date(currentDeal.deadline).toLocaleDateString("ja-JP") : "未設定"} />
+                <InfoRow label="案件ステータス" value={currentDeal.status} />
+                <InfoRow label="分野" value={currentDeal.field ?? "未設定"} />
+              </div>
+            ) : null}
+          </div>
+          <div className="flex gap-2">
+            <Link href={`/companies/${currentDeal.company.id}`} className="self-start rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50">
+              企業詳細へ戻る
+            </Link>
+            {!editing ? (
+              <button
+                type="button"
+                onClick={startEdit}
+                className="self-start rounded-lg border border-[var(--color-secondary)] bg-white px-4 py-1.5 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
+              >
+                編集
+              </button>
+            ) : null}
+          </div>
+        </div>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-[var(--color-text-dark)]">案件情報</h2>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
-              <Pill>{deal.status}</Pill>
-              <Pill>{priorityLabel(deal.priority)}</Pill>
+        {!editing ? (
+          currentDeal.notes ? (
+            <p className="mt-5 rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4 text-sm leading-7 text-[var(--color-text-dark)]">
+              {currentDeal.notes}
+            </p>
+          ) : null
+        ) : (
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <EditField label="案件名 *" className="md:col-span-2">
+              <input className={EDIT_INPUT} value={editForm.title} onChange={(e) => setEditForm((c) => ({ ...c, title: e.target.value }))} />
+            </EditField>
+            <EditField label="分野">
+              <select className={EDIT_INPUT} value={editForm.field} onChange={(e) => setEditForm((c) => ({ ...c, field: e.target.value }))}>
+                {SSW_INDUSTRIES.map((industry) => (
+                  <option key={industry} value={industry}>{industry}</option>
+                ))}
+              </select>
+            </EditField>
+            <EditField label="案件ステータス">
+              <select className={EDIT_INPUT} value={editForm.status} onChange={(e) => setEditForm((c) => ({ ...c, status: e.target.value }))}>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </EditField>
+            <EditField label="優先度">
+              <select className={EDIT_INPUT} value={editForm.priority} onChange={(e) => setEditForm((c) => ({ ...c, priority: e.target.value }))}>
+                {PRIORITY_OPTIONS.map((priority) => (
+                  <option key={priority.value} value={priority.value}>{priority.label}</option>
+                ))}
+              </select>
+            </EditField>
+            <EditField label="単価">
+              <div className="relative">
+                <input className={`${EDIT_INPUT} pr-12`} value={editForm.unitPrice} onChange={(e) => setEditForm((c) => ({ ...c, unitPrice: e.target.value }))} placeholder="45" />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">万円</span>
+              </div>
+            </EditField>
+            <EditField label="期限">
+              <input className={EDIT_INPUT} type="date" value={editForm.deadline} onChange={(e) => setEditForm((c) => ({ ...c, deadline: e.target.value }))} />
+            </EditField>
+            <EditField label="メモ" className="md:col-span-2">
+              <textarea className={`${EDIT_INPUT} min-h-24`} value={editForm.notes} onChange={(e) => setEditForm((c) => ({ ...c, notes: e.target.value }))} />
+            </EditField>
+            <div className="md:col-span-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => void saveEdit()}
+                disabled={savingEdit}
+                className="rounded-lg bg-[var(--color-primary)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+              >
+                {savingEdit ? "保存中..." : "保存"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="rounded-lg border border-gray-300 px-5 py-2 text-sm hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
             </div>
           </div>
-          <Link href={`/companies/${deal.company.id}`} className="text-xs text-[var(--color-primary)] hover:underline">
-            企業詳細へ戻る
-          </Link>
-        </div>
-        {deal.notes ? (
-          <p className="mt-4 rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4 text-sm leading-7 text-[var(--color-text-dark)]">
-            {deal.notes}
-          </p>
-        ) : null}
+        )}
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -248,17 +387,30 @@ export default function DealDetailClient({
   );
 }
 
-function InfoCard({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-[var(--color-text-dark)]">{value}</p>
+    <div className="flex items-start justify-between gap-3 rounded-xl bg-[var(--color-light)] px-3 py-2">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-sm font-semibold text-[var(--color-text-dark)] text-right">{value}</span>
     </div>
   );
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-full bg-[var(--color-light)] px-2.5 py-1">{children}</span>;
+function EditField({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-dark)]">{label}</label>
+      {children}
+    </div>
+  );
 }
 
 function priorityLabel(priority: string) {
@@ -272,8 +424,23 @@ function priorityLabel(priority: string) {
   }
 }
 
+function priorityClass(priority: string) {
+  if (priority === "urgent") return "rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[11px] font-medium text-[#B91C1C]";
+  if (priority === "high") return "rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-medium text-[#92400E]";
+  return "rounded-full bg-[var(--color-light)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary)]";
+}
+
+function statusClass(status: string) {
+  if (status === "至急募集") return "rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[11px] font-medium text-[#B91C1C]";
+  if (status === "募集中") return "rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-medium text-[#92400E]";
+  if (status === "面接中") return "rounded-full bg-[#DBEAFE] px-2.5 py-1 text-[11px] font-medium text-[#1D4ED8]";
+  return "rounded-full bg-[#DCFCE7] px-2.5 py-1 text-[11px] font-medium text-[#166534]";
+}
+
 const INPUT =
   "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";
+
+const EDIT_INPUT = INPUT;
 
 function formatUnitPrice(value: string | null) {
   if (!value) return "未設定";

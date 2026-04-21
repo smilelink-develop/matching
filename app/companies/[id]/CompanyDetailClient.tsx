@@ -1,0 +1,252 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { HIRING_STATUSES, SSW_INDUSTRIES } from "@/lib/company-options";
+
+type DealSummary = {
+  id: number;
+  title: string;
+  status: string;
+  unitPrice: string | null;
+  field: string | null;
+  deadline: string | null;
+  ownerName: string | null;
+  candidatesCount: number;
+};
+
+type CompanyData = {
+  id: number;
+  name: string;
+  industry: string | null;
+  location: string | null;
+  hiringStatus: string;
+  notes: string | null;
+  deals: DealSummary[];
+};
+
+export default function CompanyDetailClient({ initialCompany }: { initialCompany: CompanyData }) {
+  const router = useRouter();
+  const [company, setCompany] = useState(initialCompany);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: initialCompany.name,
+    industry: initialCompany.industry ?? SSW_INDUSTRIES[0],
+    location: initialCompany.location ?? "",
+    hiringStatus: initialCompany.hiringStatus,
+    notes: initialCompany.notes ?? "",
+  });
+
+  const startEdit = () => {
+    setForm({
+      name: company.name,
+      industry: company.industry ?? SSW_INDUSTRIES[0],
+      location: company.location ?? "",
+      hiringStatus: company.hiringStatus,
+      notes: company.notes ?? "",
+    });
+    setEditing(true);
+  };
+
+  const save = async () => {
+    if (!form.name.trim()) {
+      alert("企業名を入力してください");
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/companies/${company.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(result.error || "更新に失敗しました");
+        return;
+      }
+      setCompany((prev) => ({
+        ...prev,
+        name: result.company.name,
+        industry: result.company.industry,
+        location: result.company.location,
+        hiringStatus: result.company.hiringStatus,
+        notes: result.company.notes,
+      }));
+      setEditing(false);
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.16em] text-[var(--color-primary)]">COMPANY DETAIL</p>
+          <h1 className="mt-2 text-3xl font-bold text-[var(--color-text-dark)]">{company.name}</h1>
+          <p className="mt-2 text-sm text-gray-500">企業詳細と、この企業に紐づく案件をまとめて確認できます。</p>
+        </div>
+        <div className="flex gap-2">
+          {!editing ? (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="rounded-lg border border-[var(--color-secondary)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
+            >
+              編集
+            </button>
+          ) : null}
+          <Link
+            href="/companies/deals/new"
+            className="rounded-lg bg-[var(--color-primary)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]"
+          >
+            + 案件を追加
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-[var(--color-text-dark)]">企業情報</h2>
+          {!editing ? (
+            <>
+              <div className="mt-4 space-y-3 text-sm text-gray-600">
+                <InfoRow label="企業名" value={company.name} />
+                <InfoRow label="業種" value={company.industry ?? "-"} />
+                <InfoRow label="所在地" value={company.location ?? "-"} />
+                <InfoRow label="採用状況" value={company.hiringStatus} />
+                <InfoRow label="案件数" value={`${company.deals.length}件`} />
+              </div>
+              {company.notes ? (
+                <div className="mt-4 rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4 text-sm leading-6 text-[var(--color-text-dark)]">
+                  {company.notes}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="mt-4 space-y-4">
+              <Field label="企業名 *">
+                <input className={INPUT} value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} />
+              </Field>
+              <Field label="業種 (特定技能16分野)">
+                <select className={INPUT} value={form.industry} onChange={(e) => setForm((current) => ({ ...current, industry: e.target.value }))}>
+                  {SSW_INDUSTRIES.map((industry) => (
+                    <option key={industry} value={industry}>{industry}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="所在地">
+                <input className={INPUT} value={form.location} onChange={(e) => setForm((current) => ({ ...current, location: e.target.value }))} />
+              </Field>
+              <Field label="採用状況">
+                <select className={INPUT} value={form.hiringStatus} onChange={(e) => setForm((current) => ({ ...current, hiringStatus: e.target.value }))}>
+                  {HIRING_STATUSES.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="メモ">
+                <textarea className={`${INPUT} min-h-28`} value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} />
+              </Field>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => void save()}
+                  disabled={saving}
+                  className="rounded-lg bg-[var(--color-primary)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+                >
+                  {saving ? "保存中..." : "保存"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  className="rounded-lg border border-gray-300 px-5 py-2 text-sm hover:bg-gray-50"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-[var(--color-text-dark)]">紐づいている案件</h2>
+            <Link href="/companies/deals" className="text-xs text-[var(--color-primary)] hover:underline">
+              案件管理を見る
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {company.deals.map((deal) => (
+              <Link
+                key={deal.id}
+                href={`/companies/deals/${deal.id}`}
+                className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4 transition hover:border-[var(--color-secondary)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--color-text-dark)]">{deal.title}</p>
+                    <p className="mt-1 text-xs text-gray-500">{deal.ownerName ?? "担当未設定"}</p>
+                  </div>
+                  <span className={statusClass(deal.status)}>{deal.status}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
+                  <Pill>{formatUnitPrice(deal.unitPrice)}</Pill>
+                  <Pill>{deal.field ?? "分野未設定"}</Pill>
+                  <Pill>{deal.deadline ? `期限 ${new Date(deal.deadline).toLocaleDateString("ja-JP")}` : "期限未設定"}</Pill>
+                  <Pill>{deal.candidatesCount}名</Pill>
+                </div>
+              </Link>
+            ))}
+            {company.deals.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-12 text-center text-sm text-gray-400 md:col-span-2">
+                まだ案件がありません
+              </p>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3">
+      <span className="text-gray-400">{label}</span>
+      <span className="font-medium text-[var(--color-text-dark)]">{value}</span>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-dark)]">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function Pill({ children }: { children: React.ReactNode }) {
+  return <span className="rounded-full bg-white px-2.5 py-1">{children}</span>;
+}
+
+function statusClass(status: string) {
+  if (status === "至急募集") return "rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[11px] font-medium text-[#B91C1C]";
+  if (status === "募集中") return "rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-medium text-[#92400E]";
+  if (status === "面接中") return "rounded-full bg-[#DBEAFE] px-2.5 py-1 text-[11px] font-medium text-[#1D4ED8]";
+  return "rounded-full bg-[#DCFCE7] px-2.5 py-1 text-[11px] font-medium text-[#166534]";
+}
+
+function formatUnitPrice(value: string | null) {
+  if (!value) return "単価未設定";
+  return value.includes("万円") ? value : `${value}万円`;
+}
+
+const INPUT =
+  "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";

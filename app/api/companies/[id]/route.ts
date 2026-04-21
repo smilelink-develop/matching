@@ -30,3 +30,47 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     );
   }
 }
+
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    await requireApiAccount();
+    const { id } = await params;
+    const body = await req.json();
+    const name = String(body.name ?? "").trim();
+    if (!name) {
+      return Response.json({ ok: false, error: "企業名を入力してください" }, { status: 400 });
+    }
+
+    const company = await prisma.company.update({
+      where: { id: Number(id) },
+      data: {
+        name,
+        industry: String(body.industry ?? "").trim() || null,
+        location: String(body.location ?? "").trim() || null,
+        hiringStatus: String(body.hiringStatus ?? "").trim() || "募集中",
+        notes: String(body.notes ?? "").trim() || null,
+      },
+    });
+
+    return Response.json({ ok: true, company });
+  } catch (error) {
+    return Response.json(
+      { ok: false, error: error instanceof Error ? error.message : "error" },
+      { status: error instanceof AuthError ? error.status : 500 }
+    );
+  }
+}
+
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    await requireApiAccount();
+    const { id } = await params;
+    await prisma.company.delete({ where: { id: Number(id) } });
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json(
+      { ok: false, error: error instanceof Error ? error.message : "error" },
+      { status: error instanceof AuthError ? error.status : 500 }
+    );
+  }
+}

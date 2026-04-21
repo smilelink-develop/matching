@@ -15,7 +15,7 @@ export default async function PartnersPage() {
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">パートナーリスト</h1>
         <p className="mt-1 text-sm text-gray-500">
-          海外紹介パートナーの情報も全アカウント共通です。担当者が変わっても同じ台帳を見られます。
+          海外紹介パートナーの情報は全アカウント共通です。担当者が変わっても同じ台帳を見られます。
         </p>
       </div>
       <SharedPartnersClient

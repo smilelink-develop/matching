@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CHANNELS } from "@/lib/candidate-profile";
 
 type Partner = {
   id: number;
@@ -12,21 +13,27 @@ type Partner = {
   notes: string | null;
 };
 
+const DEFAULT_CHANNEL = CHANNELS[0]?.value ?? "";
+
+const emptyForm = {
+  name: "",
+  country: "",
+  channel: DEFAULT_CHANNEL,
+  linkStatus: "未",
+  contactName: "",
+  notes: "",
+};
+
 export default function SharedPartnersClient({
   initialPartners,
 }: {
   initialPartners: Partner[];
 }) {
   const [partners, setPartners] = useState(initialPartners);
-  const [form, setForm] = useState({
-    name: "",
-    country: "",
-    channel: "",
-    linkStatus: "未",
-    contactName: "",
-    notes: "",
-  });
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState(emptyForm);
 
   const submit = async () => {
     if (!form.name.trim()) {
@@ -47,17 +54,52 @@ export default function SharedPartnersClient({
         return;
       }
       setPartners((current) => [result.partner, ...current]);
-      setForm({
-        name: "",
-        country: "",
-        channel: "",
-        linkStatus: "未",
-        contactName: "",
-        notes: "",
-      });
+      setForm(emptyForm);
     } finally {
       setSaving(false);
     }
+  };
+
+  const startEdit = (partner: Partner) => {
+    setEditingId(partner.id);
+    setEditForm({
+      name: partner.name,
+      country: partner.country ?? "",
+      channel: partner.channel ?? DEFAULT_CHANNEL,
+      linkStatus: partner.linkStatus,
+      contactName: partner.contactName ?? "",
+      notes: partner.notes ?? "",
+    });
+  };
+
+  const saveEdit = async (id: number) => {
+    if (!editForm.name.trim()) {
+      alert("パートナー名を入力してください");
+      return;
+    }
+    const response = await fetch(`/api/partners/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editForm),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      alert(result.error || "更新に失敗しました");
+      return;
+    }
+    setPartners((current) => current.map((p) => (p.id === id ? result.partner : p)));
+    setEditingId(null);
+  };
+
+  const deletePartner = async (id: number, name: string) => {
+    if (!confirm(`「${name}」を削除しますか？この操作は取り消せません`)) return;
+    const response = await fetch(`/api/partners/${id}`, { method: "DELETE" });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      alert(result.error || "削除に失敗しました");
+      return;
+    }
+    setPartners((current) => current.filter((p) => p.id !== id));
   };
 
   return (
@@ -73,7 +115,11 @@ export default function SharedPartnersClient({
             <input className={INPUT} value={form.country} onChange={(e) => setForm((current) => ({ ...current, country: e.target.value }))} />
           </Field>
           <Field label="主な連絡手段">
-            <input className={INPUT} value={form.channel} onChange={(e) => setForm((current) => ({ ...current, channel: e.target.value }))} placeholder="LINE / Messenger / WhatsApp" />
+            <select className={INPUT} value={form.channel} onChange={(e) => setForm((current) => ({ ...current, channel: e.target.value }))}>
+              {CHANNELS.map((channel) => (
+                <option key={channel.value} value={channel.value}>{channel.label}</option>
+              ))}
+            </select>
           </Field>
           <Field label="連絡先紐づけ">
             <select className={INPUT} value={form.linkStatus} onChange={(e) => setForm((current) => ({ ...current, linkStatus: e.target.value }))}>
@@ -99,25 +145,79 @@ export default function SharedPartnersClient({
       </section>
 
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">共有パートナー一覧</h2>
+        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">パートナー一覧</h2>
         <div className="mt-4 space-y-3">
-          {partners.map((partner) => (
-            <div key={partner.id} className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
-              <p className="text-sm font-semibold text-[var(--color-text-dark)]">{partner.name}</p>
-              <p className="mt-1 text-xs text-gray-500">
-                {(partner.country || "国未設定")} / {(partner.channel || "連絡手段未設定")}
-              </p>
-              <p className="mt-2 text-xs">
-                <span className={`rounded-full px-2 py-0.5 ${partner.linkStatus === "完了" ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#FEF3C7] text-[#92400E]"}`}>
-                  連絡先紐づけ {partner.linkStatus}
-                </span>
-              </p>
-              {partner.contactName ? (
-                <p className="mt-2 text-sm text-gray-600">担当: {partner.contactName}</p>
-              ) : null}
-              {partner.notes ? <p className="mt-3 text-sm leading-6 text-gray-600">{partner.notes}</p> : null}
-            </div>
-          ))}
+          {partners.map((partner) =>
+            editingId === partner.id ? (
+              <div key={partner.id} className="rounded-2xl border border-[var(--color-secondary)] bg-white p-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field label="パートナー名 *">
+                    <input className={INPUT} value={editForm.name} onChange={(e) => setEditForm((c) => ({ ...c, name: e.target.value }))} />
+                  </Field>
+                  <Field label="国">
+                    <input className={INPUT} value={editForm.country} onChange={(e) => setEditForm((c) => ({ ...c, country: e.target.value }))} />
+                  </Field>
+                  <Field label="主な連絡手段">
+                    <select className={INPUT} value={editForm.channel} onChange={(e) => setEditForm((c) => ({ ...c, channel: e.target.value }))}>
+                      {CHANNELS.map((channel) => (
+                        <option key={channel.value} value={channel.value}>{channel.label}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="連絡先紐づけ">
+                    <select className={INPUT} value={editForm.linkStatus} onChange={(e) => setEditForm((c) => ({ ...c, linkStatus: e.target.value }))}>
+                      <option value="未">未</option>
+                      <option value="完了">完了</option>
+                    </select>
+                  </Field>
+                  <Field label="担当者名" className="md:col-span-2">
+                    <input className={INPUT} value={editForm.contactName} onChange={(e) => setEditForm((c) => ({ ...c, contactName: e.target.value }))} />
+                  </Field>
+                  <Field label="メモ" className="md:col-span-2">
+                    <textarea className={`${INPUT} min-h-20`} value={editForm.notes} onChange={(e) => setEditForm((c) => ({ ...c, notes: e.target.value }))} />
+                  </Field>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button type="button" onClick={() => void saveEdit(partner.id)} className="rounded-lg bg-[var(--color-primary)] px-4 py-1.5 text-sm text-white hover:bg-[var(--color-primary-hover)]">保存</button>
+                  <button type="button" onClick={() => setEditingId(null)} className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm hover:bg-gray-50">キャンセル</button>
+                </div>
+              </div>
+            ) : (
+              <div key={partner.id} className="relative rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4">
+                <div className="absolute right-3 top-3 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(partner)}
+                    title="編集"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white bg-white/80 text-gray-500 hover:bg-white hover:text-[var(--color-primary)]"
+                  >
+                    <EditIcon />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deletePartner(partner.id, partner.name)}
+                    title="削除"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white bg-white/80 text-gray-500 hover:bg-white hover:text-red-500"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+                <p className="pr-20 text-sm font-semibold text-[var(--color-text-dark)]">{partner.name}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {(partner.country || "国未設定")} / {(channelLabel(partner.channel) || "連絡手段未設定")}
+                </p>
+                <p className="mt-2 text-xs">
+                  <span className={`rounded-full px-2 py-0.5 ${partner.linkStatus === "完了" ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#FEF3C7] text-[#92400E]"}`}>
+                    連絡先紐づけ {partner.linkStatus}
+                  </span>
+                </p>
+                {partner.contactName ? (
+                  <p className="mt-2 text-sm text-gray-600">担当: {partner.contactName}</p>
+                ) : null}
+                {partner.notes ? <p className="mt-3 text-sm leading-6 text-gray-600">{partner.notes}</p> : null}
+              </div>
+            )
+          )}
           {partners.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
               まだパートナー情報がありません
@@ -129,12 +229,38 @@ export default function SharedPartnersClient({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function channelLabel(value: string | null) {
+  if (!value) return null;
+  return CHANNELS.find((channel) => channel.value === value)?.label ?? value;
+}
+
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div>
+    <div className={className}>
       <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-dark)]">{label}</label>
       {children}
     </div>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+    </svg>
   );
 }
 

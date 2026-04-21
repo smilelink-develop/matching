@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { SSW_INDUSTRIES } from "@/lib/company-options";
 
 type Option = { id: number; name: string };
 
@@ -18,7 +19,7 @@ export default function NewDealClient({
     title: "",
     companyId: companies[0]?.id ? String(companies[0].id) : "",
     ownerId: accounts[0]?.id ? String(accounts[0].id) : "",
-    field: "",
+    field: SSW_INDUSTRIES[0] as string,
     priority: "normal",
     status: "募集中",
     unitPrice: "",
@@ -64,8 +65,12 @@ export default function NewDealClient({
         </select>
       </Field>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="分野">
-          <input className={INPUT} value={form.field} onChange={(e) => setForm((current) => ({ ...current, field: e.target.value }))} placeholder="製造 / 介護 / 外食" />
+        <Field label="分野 (特定技能16分野)">
+          <select className={INPUT} value={form.field} onChange={(e) => setForm((current) => ({ ...current, field: e.target.value }))}>
+            {SSW_INDUSTRIES.map((industry) => (
+              <option key={industry} value={industry}>{industry}</option>
+            ))}
+          </select>
         </Field>
         <Field label="担当者">
           <select className={INPUT} value={form.ownerId} onChange={(e) => setForm((current) => ({ ...current, ownerId: e.target.value }))}>

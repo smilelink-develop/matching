@@ -39,34 +39,43 @@ export default async function CompaniesPage() {
               <th className="px-4 py-3 text-left font-semibold">所在地</th>
               <th className="px-4 py-3 text-left font-semibold">採用状況</th>
               <th className="px-4 py-3 text-left font-semibold">案件数</th>
-              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {companies.map((company) => (
               <tr key={company.id} className="border-t border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-[var(--color-text-dark)]">{company.name}</td>
-                <td className="px-4 py-3 text-gray-600">{company.industry ?? "-"}</td>
-                <td className="px-4 py-3 text-gray-600">{company.location ?? "-"}</td>
-                <td className="px-4 py-3">
-                  <span className="inline-block rounded-full bg-[var(--color-light)] px-2 py-0.5 text-xs font-medium text-[var(--color-primary)]">
-                    {company.hiringStatus}
-                  </span>
+                <td className="p-0 font-medium text-[var(--color-text-dark)]">
+                  <Link href={`/companies/${company.id}`} className="block px-4 py-3">
+                    {company.name}
+                  </Link>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{company.deals.length}件</td>
-                <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/companies/${company.id}`}
-                    className="text-xs text-[var(--color-primary)] hover:underline"
-                  >
-                    詳細を見る
+                <td className="p-0 text-gray-600">
+                  <Link href={`/companies/${company.id}`} className="block px-4 py-3">
+                    {company.industry ?? "-"}
+                  </Link>
+                </td>
+                <td className="p-0 text-gray-600">
+                  <Link href={`/companies/${company.id}`} className="block px-4 py-3">
+                    {company.location ?? "-"}
+                  </Link>
+                </td>
+                <td className="p-0">
+                  <Link href={`/companies/${company.id}`} className="block px-4 py-3">
+                    <span className="inline-block rounded-full bg-[var(--color-light)] px-2 py-0.5 text-xs font-medium text-[var(--color-primary)]">
+                      {company.hiringStatus}
+                    </span>
+                  </Link>
+                </td>
+                <td className="p-0 text-gray-600">
+                  <Link href={`/companies/${company.id}`} className="block px-4 py-3">
+                    {company.deals.length}件
                   </Link>
                 </td>
               </tr>
             ))}
             {companies.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
                   まだ企業情報が登録されていません
                 </td>
               </tr>
