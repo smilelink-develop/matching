@@ -138,6 +138,7 @@ function ExtractModal({
   const [extracted, setExtracted] = useState<ExtractedCandidate>({});
   const [driveFolderUrl, setDriveFolderUrl] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<{ fileName: string; fileUrl: string }[]>([]);
+  const [driveWarning, setDriveWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
 
@@ -187,6 +188,7 @@ function ExtractModal({
       setExtracted(result.extracted ?? {});
       setDriveFolderUrl(result.driveFolderUrl ?? null);
       setUploaded(result.uploadedFiles ?? []);
+      setDriveWarning(result.driveWarning ?? null);
       setStage("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラー");
@@ -315,7 +317,12 @@ function ExtractModal({
                 抽出が完了しました。内容を確認・修正してから反映してください。
               </div>
 
-              {driveFolderUrl ? (
+              {driveWarning ? (
+                <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-xs text-[#92400E]">
+                  <p className="font-semibold">書類の保存について</p>
+                  <pre className="mt-1 whitespace-pre-wrap font-sans">{driveWarning}</pre>
+                </div>
+              ) : driveFolderUrl && uploaded.length > 0 ? (
                 <p className="text-xs text-gray-500">
                   アップロードした書類は{" "}
                   <a href={driveFolderUrl} target="_blank" rel="noreferrer" className="text-[var(--color-primary)] underline">

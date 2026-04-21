@@ -16,6 +16,13 @@ function parseDataUrl(dataUrl: string): { mimeType: string; base64: string } | n
   return { mimeType: match[1], base64: match[2] };
 }
 
+function isDriveConfigured() {
+  return Boolean(
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() &&
+      process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim()
+  );
+}
+
 export async function POST(req: Request, { params }: { params: Params }) {
   try {
     await requireApiAccount();
@@ -54,13 +61,41 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
     const extracted = await extractCandidateFromFiles(sourceFiles);
 
+    // Google Drive は任意設定。未設定なら抽出結果のみ返す
+    if (!isDriveConfigured()) {
+      return Response.json({
+        ok: true,
+        extracted,
+        uploadedFiles: [],
+        driveFolderUrl: person.driveFolderUrl,
+        driveWarning:
+          "Google Drive 連携が未設定のためファイルは保管されませんでした。Railway の環境変数 GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY / GOOGLE_CANDIDATE_FILES_FOLDER_URL を設定してください。",
+      });
+    }
+
     // Google Drive の候補者フォルダへアップロード
-    const folder = await ensurePersonDriveFolder({
-      existingFolderUrl: person.driveFolderUrl,
-      personName: person.name,
-    });
-    if (!person.driveFolderUrl) {
-      await prisma.person.update({ where: { id: personId }, data: { driveFolderUrl: folder.folderUrl } });
+    let folderUrl: string | null = person.driveFolderUrl ?? null;
+    const driveFailures: string[] = [];
+
+    try {
+      const folder = await ensurePersonDriveFolder({
+        existingFolderUrl: person.driveFolderUrl,
+        personName: person.name,
+      });
+      folderUrl = folder.folderUrl;
+      if (!person.driveFolderUrl) {
+        await prisma.person.update({ where: { id: personId }, data: { driveFolderUrl: folderUrl } });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "フォルダ作成失敗";
+      driveFailures.push(`フォルダ: ${message}`);
+      return Response.json({
+        ok: true,
+        extracted,
+        uploadedFiles: [],
+        driveFolderUrl: null,
+        driveWarning: `Google Drive のフォルダ作成に失敗しました: ${message}`,
+      });
     }
 
     const uploadedFiles: { fileName: string; fileUrl: string; mimeType: string }[] = [];
@@ -69,7 +104,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
         const uploaded = await uploadDataUrlToDrive({
           dataUrl: file.dataUrl,
           fileName: file.fileName,
-          folderUrl: folder.folderUrl,
+          folderUrl: folderUrl!,
         });
         uploadedFiles.push({
           fileName: file.fileName,
@@ -77,8 +112,8 @@ export async function POST(req: Request, { params }: { params: Params }) {
           mimeType: uploaded.mimeType,
         });
       } catch (error) {
-        // 1ファイルの Drive アップロード失敗で全体を止めない
-        console.warn("Drive upload failed", file.fileName, error);
+        const message = error instanceof Error ? error.message : "unknown error";
+        driveFailures.push(`${file.fileName}: ${message}`);
       }
     }
 
@@ -86,7 +121,9 @@ export async function POST(req: Request, { params }: { params: Params }) {
       ok: true,
       extracted,
       uploadedFiles,
-      driveFolderUrl: folder.folderUrl,
+      driveFolderUrl: folderUrl,
+      driveWarning:
+        driveFailures.length > 0 ? `一部のファイルの保存に失敗しました:\n${driveFailures.join("\n")}` : undefined,
     });
   } catch (error) {
     return Response.json(
