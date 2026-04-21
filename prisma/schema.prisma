@@ -31,7 +31,23 @@ model Person {
   resumeProfile   ResumeProfile?
   resumeDocuments ResumeDocument[]
   dealCandidates DealCandidate[]
+  customQuestions PersonCustomQuestion[]
   partner         Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+}
+
+model PersonCustomQuestion {
+  id        Int      @id @default(autoincrement())
+  personId  Int
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label     String
+  required  Boolean  @default(false)
+  answer    String?
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([personId, sortOrder])
 }
 
 model Company {
