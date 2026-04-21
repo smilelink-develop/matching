@@ -32,10 +32,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       where: { personId },
       orderBy: { sortOrder: "desc" },
     });
+    const rawType = String(body?.type ?? "text");
+    const type = rawType === "file" ? "file" : "text";
     const question = await prisma.personCustomQuestion.create({
       data: {
         personId,
         label,
+        type,
         required: Boolean(body?.required ?? false),
         answer: body?.answer ? String(body.answer) : null,
         sortOrder: (last?.sortOrder ?? 0) + 1,

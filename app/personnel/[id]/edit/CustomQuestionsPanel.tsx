@@ -5,8 +5,11 @@ import { useMemo, useState } from "react";
 export type CustomQuestion = {
   id: number;
   label: string;
+  type: string; // "text" | "file"
   required: boolean;
   answer: string | null;
+  fileName: string | null;
+  fileUrl: string | null;
   active: boolean;
   sortOrder: number;
 };
@@ -125,22 +128,44 @@ export default function CustomQuestionsPanel({
               className="rounded-2xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold text-[var(--color-text-dark)]">
                     {question.label}
                     {question.required ? <span className="ml-1 text-red-500">*</span> : null}
                   </p>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)] border border-[var(--color-secondary)]">
+                    {question.type === "file" ? "ファイル" : "テキスト"}
+                  </span>
                 </div>
               </div>
-              <textarea
-                value={question.answer ?? ""}
-                onChange={(e) => void updateAnswer(question.id, e.target.value)}
-                onBlur={(e) => void persistAnswer(question.id, e.target.value)}
-                placeholder={question.required ? "（必須）候補者の回答" : "候補者の回答"}
-                className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
-                rows={2}
-              />
-              {savingId === question.id ? <p className="mt-1 text-[11px] text-gray-400">保存中...</p> : null}
+              {question.type === "file" ? (
+                <div className="mt-2">
+                  {question.fileUrl ? (
+                    <a
+                      href={question.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-[var(--color-primary)] underline"
+                    >
+                      {question.fileName || "アップロード済みファイル"}
+                    </a>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">候補者の回答待ち</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <textarea
+                    value={question.answer ?? ""}
+                    onChange={(e) => void updateAnswer(question.id, e.target.value)}
+                    onBlur={(e) => void persistAnswer(question.id, e.target.value)}
+                    placeholder={question.required ? "（必須）候補者の回答" : "候補者の回答"}
+                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+                    rows={2}
+                  />
+                  {savingId === question.id ? <p className="mt-1 text-[11px] text-gray-400">保存中...</p> : null}
+                </>
+              )}
             </div>
           ))}
 
@@ -189,8 +214,10 @@ function FormBuilderModal({
   onChange: (next: CustomQuestion[]) => void;
 }) {
   const [working, setWorking] = useState(false);
+  const [sending, setSending] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newRequired, setNewRequired] = useState(false);
+  const [newType, setNewType] = useState<"text" | "file">("text");
 
   const activeQuestions = questions.filter((q) => q.active);
 
@@ -201,20 +228,21 @@ function FormBuilderModal({
       const response = await fetch(`/api/personnel/${personId}/custom-questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: newLabel.trim(), required: newRequired }),
+        body: JSON.stringify({ label: newLabel.trim(), required: newRequired, type: newType }),
       });
       const result = await response.json();
       if (result.ok) {
         onChange([...questions, result.question]);
         setNewLabel("");
         setNewRequired(false);
+        setNewType("text");
       }
     } finally {
       setWorking(false);
     }
   };
 
-  const updateQuestion = async (id: number, patch: Partial<Pick<CustomQuestion, "label" | "required">>) => {
+  const updateQuestion = async (id: number, patch: Partial<Pick<CustomQuestion, "label" | "required" | "type">>) => {
     const previous = questions;
     onChange(questions.map((q) => (q.id === id ? { ...q, ...patch } : q)));
     const response = await fetch(`/api/personnel/${personId}/custom-questions/${id}`, {
@@ -243,12 +271,26 @@ function FormBuilderModal({
     }
   };
 
-  const send = () => {
-    // MVP: 現状は個別質問の保存までを「送信」とし、候補者への実送信は別タスク
-    alert(
-      `個別質問を保存しました。\n\n候補者「${personName}」向けにLINE/メッセンジャーへ送信する機能は近日追加予定です。`
-    );
-    onClose();
+  const send = async () => {
+    if (activeQuestions.length === 0) {
+      alert("送信できる質問がありません");
+      return;
+    }
+    setSending(true);
+    try {
+      const response = await fetch(`/api/personnel/${personId}/custom-questions/send`, {
+        method: "POST",
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(result.error || "送信に失敗しました");
+        return;
+      }
+      alert(`候補者ポータルに「個別質問への回答」タスクを送信しました。\n${personName} さんのポータルで回答が入力されると、この画面に反映されます。`);
+      onClose();
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -305,14 +347,22 @@ function FormBuilderModal({
               {activeQuestions.map((question) => (
                 <div
                   key={question.id}
-                  className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-[var(--color-light)] px-3 py-2"
+                  className="flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-[var(--color-light)] px-3 py-2"
                 >
                   <input
                     value={question.label}
                     onChange={(e) => onChange(questions.map((q) => (q.id === question.id ? { ...q, label: e.target.value } : q)))}
                     onBlur={(e) => void updateQuestion(question.id, { label: e.target.value })}
-                    className="flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm focus:border-[var(--color-primary)] focus:bg-white focus:outline-none"
+                    className="min-w-[120px] flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm focus:border-[var(--color-primary)] focus:bg-white focus:outline-none"
                   />
+                  <select
+                    value={question.type}
+                    onChange={(e) => void updateQuestion(question.id, { type: e.target.value })}
+                    className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs focus:border-[var(--color-primary)] focus:outline-none"
+                  >
+                    <option value="text">テキスト</option>
+                    <option value="file">ファイル</option>
+                  </select>
                   <label className="flex items-center gap-1 text-xs text-gray-600">
                     <input
                       type="checkbox"
@@ -334,13 +384,21 @@ function FormBuilderModal({
               ))}
             </div>
 
-            <div className="mt-3 flex items-center gap-2 rounded-2xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] px-3 py-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] px-3 py-2">
               <input
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
                 placeholder="新しい質問を入力"
-                className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+                className="min-w-[140px] flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
               />
+              <select
+                value={newType}
+                onChange={(e) => setNewType(e.target.value === "file" ? "file" : "text")}
+                className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-[var(--color-primary)] focus:outline-none"
+              >
+                <option value="text">テキスト</option>
+                <option value="file">ファイル</option>
+              </select>
               <label className="flex items-center gap-1 text-xs text-gray-600">
                 <input
                   type="checkbox"
@@ -372,10 +430,11 @@ function FormBuilderModal({
           </button>
           <button
             type="button"
-            onClick={send}
-            className="rounded-lg bg-[var(--color-primary)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]"
+            onClick={() => void send()}
+            disabled={sending}
+            className="rounded-lg bg-[var(--color-primary)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
-            送信
+            {sending ? "送信中..." : "送信"}
           </button>
         </div>
       </div>

@@ -43,8 +43,11 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
           initialQuestions={customQuestions.map((q) => ({
             id: q.id,
             label: q.label,
+            type: q.type,
             required: q.required,
             answer: q.answer,
+            fileName: q.fileName,
+            fileUrl: q.fileUrl,
             active: q.active,
             sortOrder: q.sortOrder,
           }))}

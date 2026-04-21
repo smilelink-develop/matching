@@ -168,7 +168,7 @@ export default function PersonnelTableClient({ persons }: { persons: PersonRow[]
                   {column.label}
                 </th>
               ))}
-              <th className="w-16 px-4 py-3 text-center font-semibold">資料</th>
+              <th className="w-20 px-4 py-3 text-center font-semibold">保管場所</th>
             </tr>
           </thead>
           <tbody>
@@ -182,21 +182,11 @@ export default function PersonnelTableClient({ persons }: { persons: PersonRow[]
                   </td>
                 ))}
                 <td className="px-4 py-3 text-center">
-                  {person.driveFolderUrl ? (
-                    <a
-                      href={person.driveFolderUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] text-[var(--color-primary)] hover:bg-white"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <FolderIcon />
-                    </a>
-                  ) : (
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-300">
-                      <FolderIcon />
-                    </span>
-                  )}
+                  <DriveFolderCell
+                    personId={person.id}
+                    personName={person.name}
+                    driveFolderUrl={person.driveFolderUrl}
+                  />
                 </td>
               </tr>
             ))}
@@ -315,6 +305,66 @@ function getColumnText(person: PersonRow, key: PersonnelColumnKey) {
     default:
       return person.name;
   }
+}
+
+function DriveFolderCell({
+  personId,
+  personName,
+  driveFolderUrl,
+}: {
+  personId: number;
+  personName: string;
+  driveFolderUrl: string | null;
+}) {
+  const [url, setUrl] = useState(driveFolderUrl);
+
+  const assignUrl = async () => {
+    const input = prompt(`「${personName}」の保管場所 URL を入力してください`, url ?? "https://drive.google.com/drive/folders/");
+    if (input === null) return;
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    const response = await fetch(`/api/personnel/${personId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driveFolderUrl: trimmed }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      alert(result.error || "保管場所の登録に失敗しました");
+      return;
+    }
+    setUrl(trimmed);
+  };
+
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] text-[var(--color-primary)] hover:bg-white"
+        onClick={(event) => event.stopPropagation()}
+        title="保管場所を開く (右クリックで URL を変更)"
+        onContextMenu={(event) => {
+          event.preventDefault();
+          void assignUrl();
+        }}
+      >
+        <FolderIcon />
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void assignUrl()}
+      title="保管場所 URL を設定"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white text-gray-400 hover:border-[var(--color-secondary)] hover:text-[var(--color-primary)]"
+    >
+      <FolderIcon />
+    </button>
+  );
 }
 
 function FolderIcon() {

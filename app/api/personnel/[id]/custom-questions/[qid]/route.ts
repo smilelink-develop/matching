@@ -10,8 +10,12 @@ export async function PATCH(req: Request, { params }: { params: RouteParams }) {
     const body = await req.json();
     const data: Record<string, unknown> = {};
     if (body.label !== undefined) data.label = String(body.label);
+    if (body.type !== undefined) data.type = body.type === "file" ? "file" : "text";
     if (body.required !== undefined) data.required = Boolean(body.required);
     if (body.answer !== undefined) data.answer = body.answer === null ? null : String(body.answer);
+    if (body.fileName !== undefined) data.fileName = body.fileName === null ? null : String(body.fileName);
+    if (body.fileUrl !== undefined) data.fileUrl = body.fileUrl === null ? null : String(body.fileUrl);
+    if (body.mimeType !== undefined) data.mimeType = body.mimeType === null ? null : String(body.mimeType);
     if (body.active !== undefined) data.active = Boolean(body.active);
     if (body.sortOrder !== undefined) data.sortOrder = Number(body.sortOrder);
 

@@ -36,16 +36,20 @@ model Person {
 }
 
 model PersonCustomQuestion {
-  id        Int      @id @default(autoincrement())
-  personId  Int
-  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
-  label     String
-  required  Boolean  @default(false)
-  answer    String?
-  active    Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  personId    Int
+  person      Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label       String
+  type        String   @default("text") // "text" or "file"
+  required    Boolean  @default(false)
+  answer      String?
+  fileName    String?
+  fileUrl     String?
+  mimeType    String?
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([personId, sortOrder])
 }

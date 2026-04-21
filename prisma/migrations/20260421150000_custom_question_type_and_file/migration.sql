@@ -1,0 +1,4 @@
+ALTER TABLE "PersonCustomQuestion" ADD COLUMN IF NOT EXISTS "type" TEXT NOT NULL DEFAULT 'text';
+ALTER TABLE "PersonCustomQuestion" ADD COLUMN IF NOT EXISTS "fileName" TEXT;
+ALTER TABLE "PersonCustomQuestion" ADD COLUMN IF NOT EXISTS "fileUrl" TEXT;
+ALTER TABLE "PersonCustomQuestion" ADD COLUMN IF NOT EXISTS "mimeType" TEXT;
