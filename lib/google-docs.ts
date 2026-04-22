@@ -157,8 +157,17 @@ export async function createResumeDocumentFromTemplate({
     throw new Error("Google Docs の複製に失敗しました");
   }
 
-  // まず {{顔写真}} の位置を画像に置換できるよう、photoUrl が指定されていれば先に処理する
-  // text 置換の前に実行することで、テンプレ上の placeholder 文字列を目印にして位置を特定できる
+  // 1) 空グループ行の自動削除 (大学なし、職歴1件のみ等)
+  // 2) 顔写真の画像挿入
+  // 3) テキスト置換
+  // ── 順番を守る (行削除と画像挿入は placeholder 位置を手掛かりに動くので文字置換より先)
+
+  try {
+    await pruneEmptyRowGroups({ docs, documentId, replacements });
+  } catch (error) {
+    console.warn("pruneEmptyRowGroups failed:", error);
+  }
+
   if (photoUrl && /^https?:\/\//.test(photoUrl)) {
     try {
       await insertInlineImageAtPlaceholder({
@@ -197,6 +206,122 @@ export async function createResumeDocumentFromTemplate({
 }
 
 type DocsClient = ReturnType<typeof google.docs>;
+
+/**
+ * 値が空のときに、テンプレの関連行ごと自動削除するグループ定義。
+ * guard が空なら rowMarkers を含むテーブル行が削除される。
+ *
+ * テンプレ側の約束:
+ *  - 「大学の 1 行」には {{大学名}} を書く (あるいは {{入学_大学}} / {{卒業_大学}})
+ *  - 「職歴 N」の 2 行目に {{退社Nラベル}}、1 行目に {{会社名N}} を書く
+ * → 会社名N が空なら、職歴N の 2 行 (会社名N を含む行、退社Nラベル を含む行) が同時に削除される
+ */
+const RESUME_EMPTY_ROW_GROUPS: { guard: string; rowMarkers: string[] }[] = [
+  { guard: "大学名", rowMarkers: ["大学名", "入学_大学", "卒業_大学"] },
+  { guard: "会社名1", rowMarkers: ["会社名1", "入社1", "退社1", "退社1ラベル"] },
+  { guard: "会社名2", rowMarkers: ["会社名2", "入社2", "退社2", "退社2ラベル"] },
+  { guard: "会社名3", rowMarkers: ["会社名3", "入社3", "退社3", "退社3ラベル"] },
+];
+
+type TableRowHit = {
+  tableStartLocation: number;
+  rowIndex: number;
+};
+
+/**
+ * 値が空のグループ (例: 「会社名2」= 空) に属するテーブル行を自動削除する。
+ * deleteTableRow は後ろから順に実行しないと rowIndex がずれるので、
+ * (table, rowIndex) を全部集めてからソートして逆順に消す。
+ */
+async function pruneEmptyRowGroups({
+  docs,
+  documentId,
+  replacements,
+}: {
+  docs: DocsClient;
+  documentId: string;
+  replacements: Record<string, string>;
+}) {
+  const emptyMarkers = new Set<string>();
+  for (const group of RESUME_EMPTY_ROW_GROUPS) {
+    const guardValue = (replacements[group.guard] ?? "").trim();
+    if (guardValue) continue;
+    for (const marker of group.rowMarkers) emptyMarkers.add(marker);
+  }
+  if (emptyMarkers.size === 0) return;
+
+  const doc = await docs.documents.get({ documentId });
+  const body = doc.data.body;
+  if (!body?.content) return;
+
+  const hits: TableRowHit[] = [];
+
+  const rowContainsAnyMarker = (row: Record<string, unknown>, markers: Set<string>): boolean => {
+    const cells = row.tableCells as Record<string, unknown>[] | undefined;
+    if (!cells) return false;
+    for (const cell of cells) {
+      const content = (cell.content as Record<string, unknown>[] | undefined) ?? [];
+      for (const el of content) {
+        const paragraph = el.paragraph as { elements?: Record<string, unknown>[] } | undefined;
+        if (!paragraph?.elements) continue;
+        for (const run of paragraph.elements) {
+          const tr = run.textRun as { content?: string } | undefined;
+          if (!tr?.content) continue;
+          for (const m of markers) {
+            if (tr.content.includes(`{{${m}}}`)) return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  const walk = (elements: unknown[] | null | undefined) => {
+    if (!elements) return;
+    for (const el of elements as Record<string, unknown>[]) {
+      const table = el.table as { tableRows?: Record<string, unknown>[] } | undefined;
+      const startIndex = typeof el.startIndex === "number" ? el.startIndex : null;
+      if (table?.tableRows && startIndex !== null) {
+        table.tableRows.forEach((row, rowIndex) => {
+          if (rowContainsAnyMarker(row, emptyMarkers)) {
+            hits.push({ tableStartLocation: startIndex, rowIndex });
+          }
+        });
+        // ネストしたテーブルの中も歩く
+        for (const row of table.tableRows) {
+          const cells = row.tableCells as Record<string, unknown>[] | undefined;
+          if (!cells) continue;
+          for (const cell of cells) {
+            walk((cell.content as unknown[]) ?? []);
+          }
+        }
+      }
+    }
+  };
+
+  walk(body.content);
+
+  if (hits.length === 0) return;
+
+  // テーブルごとにまとめて、rowIndex の降順で削除 (後ろから削除しないとインデックスがずれる)
+  hits.sort((a, b) => {
+    if (a.tableStartLocation !== b.tableStartLocation) return b.tableStartLocation - a.tableStartLocation;
+    return b.rowIndex - a.rowIndex;
+  });
+
+  const requests = hits.map((hit) => ({
+    deleteTableRow: {
+      tableCellLocation: {
+        tableStartLocation: { index: hit.tableStartLocation },
+        rowIndex: hit.rowIndex,
+        columnIndex: 0,
+      },
+    },
+  }));
+
+  // 1 回でまとめて batchUpdate
+  await docs.documents.batchUpdate({ documentId, requestBody: { requests } });
+}
 
 /**
  * Google Docs 内で指定の placeholder 文字列を見つけ、そこに画像を挿入する。
