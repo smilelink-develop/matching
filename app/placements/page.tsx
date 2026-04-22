@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAccount } from "@/lib/auth";
-import PlacementsBoard, { inferPlacementStage, type PlacementCardData } from "./PlacementsBoard";
+import PlacementsBoard, { type PlacementCardData } from "./PlacementsBoard";
+import { inferPlacementStage } from "@/lib/placement-stage";
 
 export const dynamic = "force-dynamic";
 
