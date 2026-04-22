@@ -146,7 +146,7 @@ export default function SharedPartnersClient({
 
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-base font-semibold text-[var(--color-text-dark)]">パートナー一覧</h2>
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-3 max-h-[calc(100vh-14rem)] overflow-y-auto pr-2">
           {partners.map((partner) =>
             editingId === partner.id ? (
               <div key={partner.id} className="rounded-2xl border border-[var(--color-secondary)] bg-white p-4">

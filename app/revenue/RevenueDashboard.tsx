@@ -161,8 +161,7 @@ export default function RevenueDashboard({
     { label: "募集", value: kpi.required, color: "#DCE8DF" },
     { label: "推薦", value: kpi.recommended, color: "#B5CEC3" },
     { label: "面接", value: kpi.interview, color: "#7EAE97" },
-    { label: "内定", value: kpi.offer, color: "#3E8365" },
-    { label: "成約", value: kpi.contract, color: "#234A3E" },
+    { label: "内定", value: kpi.offer, color: "#2E5E4E" },
   ];
   const funnelMax = Math.max(1, ...funnel.map((f) => f.value));
 
@@ -216,7 +215,7 @@ export default function RevenueDashboard({
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="案件数" value={`${kpi.dealCount}件`} hint="期間内に受付された案件" />
-        <KpiCard label="成約数" value={`${kpi.contract}名`} hint="案件内カウンター合計" />
+        <KpiCard label="内定数" value={`${kpi.offer}名`} hint="案件内カウンター合計" />
         <KpiCard label="請求売上" value={`${kpi.revenue.toLocaleString()}円`} hint={`入金済み ${kpi.paid.toLocaleString()} 円`} />
         <KpiCard label="粗利" value={`${kpi.gross.toLocaleString()}円`} hint={`仕入高 ${kpi.cost.toLocaleString()} 円`} />
       </section>
@@ -225,7 +224,7 @@ export default function RevenueDashboard({
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-base font-semibold text-[var(--color-text-dark)]">案件ファネル</h2>
-            <p className="text-xs text-gray-500">募集 → 推薦 → 面接 → 内定 → 成約</p>
+            <p className="text-xs text-gray-500">募集 → 推薦 → 面接 → 内定</p>
           </div>
           <div className="mt-4 space-y-3">
             {funnel.map((stage) => (
@@ -310,10 +309,10 @@ export default function RevenueDashboard({
 
 function KpiCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-[var(--color-text-dark)]">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-gray-400">{hint}</p> : null}
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <p className="text-sm font-semibold text-[var(--color-text-dark)]">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-[var(--color-text-dark)]">{value}</p>
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
     </div>
   );
 }

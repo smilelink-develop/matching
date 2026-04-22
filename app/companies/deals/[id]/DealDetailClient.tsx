@@ -391,7 +391,7 @@ export default function DealDetailClient({
                   setDraggingCandidateId(null);
                 }
               }}
-              className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+              className="flex max-h-[calc(100vh-16rem)] flex-col rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold text-[var(--color-text-dark)]">{column}</h3>
@@ -399,7 +399,7 @@ export default function DealDetailClient({
                   {columnCandidates.length}名
                 </span>
               </div>
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
                 {columnCandidates.map((candidate) => (
                   <div
                     key={candidate.id}

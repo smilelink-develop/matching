@@ -72,7 +72,7 @@ export default function PlacementsBoard({ initialCards }: { initialCards: Placem
                 setDraggingId(null);
               }
             }}
-            className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+            className="flex max-h-[calc(100vh-12rem)] flex-col rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
           >
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-[var(--color-text-dark)]">{stage.label}</h2>
@@ -80,14 +80,15 @@ export default function PlacementsBoard({ initialCards }: { initialCards: Placem
                 {summary[stage.id]}名
               </span>
             </div>
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
               {columnCards.map((card) => (
-                <div
+                <Link
                   key={card.id}
+                  href={`/personnel/${card.personId}/edit`}
                   draggable
                   onDragStart={() => setDraggingId(card.personId)}
                   onDragEnd={() => setDraggingId(null)}
-                  className="cursor-grab rounded-2xl border border-gray-200 bg-[var(--color-light)] p-3 transition hover:border-[var(--color-secondary)] active:cursor-grabbing"
+                  className="block cursor-grab rounded-2xl border border-gray-200 bg-[var(--color-light)] p-3 transition hover:border-[var(--color-secondary)] hover:bg-white active:cursor-grabbing"
                 >
                   <div className="flex items-start gap-3">
                     {card.photoUrl ? (
@@ -105,12 +106,9 @@ export default function PlacementsBoard({ initialCards }: { initialCards: Placem
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/personnel/${card.personId}/edit`}
-                        className="text-sm font-semibold text-[var(--color-text-dark)] hover:underline"
-                      >
+                      <p className="text-sm font-semibold text-[var(--color-text-dark)]">
                         {card.personName}
-                      </Link>
+                      </p>
                       <p className="mt-0.5 text-[11px] text-gray-500">
                         {card.nationality} / {card.residenceStatus}
                       </p>
@@ -124,7 +122,7 @@ export default function PlacementsBoard({ initialCards }: { initialCards: Placem
                     {card.entryAt ? <Pill>国 {formatDate(card.entryAt)}</Pill> : null}
                     {card.joinAt ? <Pill>社 {formatDate(card.joinAt)}</Pill> : null}
                   </div>
-                </div>
+                </Link>
               ))}
               {columnCards.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-gray-200 px-3 py-8 text-center text-xs text-gray-400">

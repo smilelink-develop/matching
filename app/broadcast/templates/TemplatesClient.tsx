@@ -48,7 +48,7 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
   const reset = () => { setEditId(null); setName(""); setContent(""); };
 
   return (
-    <div className="grid grid-cols-2 gap-6">
+    <div className="grid grid-cols-2 items-start gap-6">
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-4">
         <p className="font-semibold text-[var(--color-text-dark)]">{editId ? "テンプレートを編集" : "テンプレートを作成"}</p>
         <div>
@@ -69,7 +69,7 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="max-h-[calc(100vh-12rem)] space-y-3 overflow-y-auto pr-2">
         {templates.map((t) => (
           <div key={t.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="flex items-start justify-between">

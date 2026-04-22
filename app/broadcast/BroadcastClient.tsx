@@ -79,7 +79,7 @@ export default function BroadcastClient({ persons, templates, groups }: {
   };
 
   return (
-    <div className="grid grid-cols-2 gap-6">
+    <div className="grid grid-cols-2 items-start gap-6">
       {/* 左: 設定 */}
       <div className="space-y-5">
         {/* 送信モード */}
