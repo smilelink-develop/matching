@@ -218,7 +218,9 @@ export default function DealDetailClient({
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-[var(--color-text-dark)]">案件情報</h2>
               <span className={statusClass(currentDeal.status)}>{currentDeal.status}</span>
-              <span className={priorityClass(currentDeal.priority)}>{priorityLabel(currentDeal.priority)}</span>
+              {currentDeal.priority && currentDeal.priority !== "normal" ? (
+                <span className={priorityClass(currentDeal.priority)}>{priorityLabel(currentDeal.priority)}</span>
+              ) : null}
             </div>
             {!editing ? (
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">

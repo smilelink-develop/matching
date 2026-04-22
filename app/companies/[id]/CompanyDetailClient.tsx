@@ -99,6 +99,18 @@ export default function CompanyDetailClient({ initialCompany }: { initialCompany
           <p className="mt-2 text-sm text-gray-500">企業詳細と、この企業に紐づく案件をまとめて確認できます。</p>
         </div>
         <div className="flex gap-2">
+          {company.driveFolderUrl ? (
+            <a
+              href={company.driveFolderUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Drive フォルダを開く"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-secondary)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
+            >
+              <DriveFolderIcon />
+              <span>Drive</span>
+            </a>
+          ) : null}
           {!editing ? (
             <button
               type="button"
@@ -288,3 +300,11 @@ function formatUnitPrice(value: string | null) {
 
 const INPUT =
   "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";
+
+function DriveFolderIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l1.4 1.8c.2.25.5.4.82.4H18.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z" />
+    </svg>
+  );
+}

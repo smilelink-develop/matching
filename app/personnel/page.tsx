@@ -42,19 +42,19 @@ export default async function PersonnelPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">候補者一覧</h1>
-          <p className="text-sm text-gray-500 mt-1">{persons.length} 件</p>
-        </div>
-        <Link
-          href="/personnel/new"
-          className="bg-[var(--color-primary)] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition-colors"
-        >
-          + 候補者を追加
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">候補者一覧</h1>
+        <p className="text-sm text-gray-500 mt-1">{persons.length} 件</p>
       </div>
       <PersonnelTableClient
+        headerExtras={
+          <Link
+            href="/personnel/new"
+            className="bg-[var(--color-primary)] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] transition-colors"
+          >
+            + 候補者を追加
+          </Link>
+        }
         persons={persons.map((person) => ({
           id: person.id,
           name: person.name,

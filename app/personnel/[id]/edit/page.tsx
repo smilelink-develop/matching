@@ -79,7 +79,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         <div>
           <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">候補者詳細</h1>
           <p className="text-sm text-gray-500 mt-2">
-            候補者情報を「基本情報」「各在留資格」「内定後」に分けて管理します。
+            候補者情報を「基本情報」「詳細情報」「内定後」に分けて管理します。
           </p>
         </div>
 
@@ -116,54 +116,54 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             visaExpiryDate: person.resumeProfile?.visaExpiryDate ?? null,
           }}
         >
-          <div className="flex items-stretch justify-between gap-4">
-            <PhotoPanel
-              personId={person.id}
-              personName={person.name}
-              initialPhotoUrl={person.photoUrl}
-            />
-            <div className="flex items-center gap-2">
-              <ExtractPanel
-                personId={person.id}
-                personName={person.name}
-                existingProfile={{
-                  name: person.name,
-                  englishName: person.onboarding?.englishName ?? null,
-                  nationality: person.nationality,
-                  residenceStatus: person.residenceStatus,
-                  visaExpiryDate: person.resumeProfile?.visaExpiryDate ?? null,
-                  birthDate: person.onboarding?.birthDate ?? null,
-                  gender: person.resumeProfile?.gender ?? null,
-                  phoneNumber: person.onboarding?.phoneNumber ?? null,
-                  postalCode: person.onboarding?.postalCode ?? null,
-                  address: person.onboarding?.address ?? null,
-                  spouseStatus: person.resumeProfile?.spouseStatus ?? null,
-                  childrenCount: person.resumeProfile?.childrenCount ?? null,
-                  japaneseLevel: person.resumeProfile?.japaneseLevel ?? null,
-                  japaneseLevelDate: person.resumeProfile?.japaneseLevelDate ?? null,
-                  licenseName: person.resumeProfile?.licenseName ?? null,
-                  licenseExpiryDate: person.resumeProfile?.licenseExpiryDate ?? null,
-                  otherQualificationName: person.resumeProfile?.otherQualificationName ?? null,
-                  otherQualificationExpiryDate: person.resumeProfile?.otherQualificationExpiryDate ?? null,
-                  traineeExperience: person.resumeProfile?.traineeExperience ?? null,
-                  highSchoolName: person.resumeProfile?.highSchoolName ?? null,
-                  highSchoolStartDate: person.resumeProfile?.highSchoolStartDate ?? null,
-                  highSchoolEndDate: person.resumeProfile?.highSchoolEndDate ?? null,
-                  universityName: person.resumeProfile?.universityName ?? null,
-                  universityStartDate: person.resumeProfile?.universityStartDate ?? null,
-                  universityEndDate: person.resumeProfile?.universityEndDate ?? null,
-                  motivation: person.resumeProfile?.motivation ?? null,
-                  selfIntroduction: person.resumeProfile?.selfIntroduction ?? null,
-                  japanPurpose: person.resumeProfile?.japanPurpose ?? null,
-                  currentJob: person.resumeProfile?.currentJob ?? null,
-                  retirementReason: person.resumeProfile?.retirementReason ?? null,
-                  preferenceNote: person.resumeProfile?.preferenceNote ?? null,
-                }}
-              />
-              <CustomQuestionsBuilderButton />
-              <DriveActionsPanel personId={person.id} initialDriveFolderUrl={person.driveFolderUrl ?? null} />
-            </div>
-          </div>
+          <PhotoPanel
+            personId={person.id}
+            personName={person.name}
+            initialPhotoUrl={person.photoUrl}
+            iconActions={
+              <>
+                <ExtractPanel
+                  personId={person.id}
+                  personName={person.name}
+                  existingProfile={{
+                    name: person.name,
+                    englishName: person.onboarding?.englishName ?? null,
+                    nationality: person.nationality,
+                    residenceStatus: person.residenceStatus,
+                    visaExpiryDate: person.resumeProfile?.visaExpiryDate ?? null,
+                    birthDate: person.onboarding?.birthDate ?? null,
+                    gender: person.resumeProfile?.gender ?? null,
+                    phoneNumber: person.onboarding?.phoneNumber ?? null,
+                    postalCode: person.onboarding?.postalCode ?? null,
+                    address: person.onboarding?.address ?? null,
+                    spouseStatus: person.resumeProfile?.spouseStatus ?? null,
+                    childrenCount: person.resumeProfile?.childrenCount ?? null,
+                    japaneseLevel: person.resumeProfile?.japaneseLevel ?? null,
+                    japaneseLevelDate: person.resumeProfile?.japaneseLevelDate ?? null,
+                    licenseName: person.resumeProfile?.licenseName ?? null,
+                    licenseExpiryDate: person.resumeProfile?.licenseExpiryDate ?? null,
+                    otherQualificationName: person.resumeProfile?.otherQualificationName ?? null,
+                    otherQualificationExpiryDate: person.resumeProfile?.otherQualificationExpiryDate ?? null,
+                    traineeExperience: person.resumeProfile?.traineeExperience ?? null,
+                    highSchoolName: person.resumeProfile?.highSchoolName ?? null,
+                    highSchoolStartDate: person.resumeProfile?.highSchoolStartDate ?? null,
+                    highSchoolEndDate: person.resumeProfile?.highSchoolEndDate ?? null,
+                    universityName: person.resumeProfile?.universityName ?? null,
+                    universityStartDate: person.resumeProfile?.universityStartDate ?? null,
+                    universityEndDate: person.resumeProfile?.universityEndDate ?? null,
+                    motivation: person.resumeProfile?.motivation ?? null,
+                    selfIntroduction: person.resumeProfile?.selfIntroduction ?? null,
+                    japanPurpose: person.resumeProfile?.japanPurpose ?? null,
+                    currentJob: person.resumeProfile?.currentJob ?? null,
+                    retirementReason: person.resumeProfile?.retirementReason ?? null,
+                    preferenceNote: person.resumeProfile?.preferenceNote ?? null,
+                  }}
+                />
+                <CustomQuestionsBuilderButton />
+                <DriveActionsPanel personId={person.id} initialDriveFolderUrl={person.driveFolderUrl ?? null} />
+              </>
+            }
+          />
 
           <EditPersonForm
             person={person}

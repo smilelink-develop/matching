@@ -147,6 +147,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         licenseExpiryDate: body.licenseExpiryDate || null,
         otherQualificationName: body.otherQualificationName || null,
         otherQualificationExpiryDate: body.otherQualificationExpiryDate || null,
+        certifications: Array.isArray(body.otherQualifications)
+          ? body.otherQualifications
+              .map((q: { name?: string; expiryDate?: string }) => ({
+                name: (q?.name ?? "").trim(),
+                expiryDate: (q?.expiryDate ?? "").trim(),
+                label: (q?.name ?? "").trim(),
+                date: (q?.expiryDate ?? "").trim(),
+              }))
+              .filter((q: { name: string; expiryDate: string }) => q.name || q.expiryDate)
+          : undefined,
         traineeExperience: body.traineeExperience || null,
         highSchoolName: body.highSchoolName || null,
         highSchoolStartDate: body.highSchoolStartDate || null,
@@ -175,6 +185,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         licenseExpiryDate: body.licenseExpiryDate || null,
         otherQualificationName: body.otherQualificationName || null,
         otherQualificationExpiryDate: body.otherQualificationExpiryDate || null,
+        certifications: Array.isArray(body.otherQualifications)
+          ? body.otherQualifications
+              .map((q: { name?: string; expiryDate?: string }) => ({
+                name: (q?.name ?? "").trim(),
+                expiryDate: (q?.expiryDate ?? "").trim(),
+                label: (q?.name ?? "").trim(),
+                date: (q?.expiryDate ?? "").trim(),
+              }))
+              .filter((q: { name: string; expiryDate: string }) => q.name || q.expiryDate)
+          : undefined,
         traineeExperience: body.traineeExperience || null,
         highSchoolName: body.highSchoolName || null,
         highSchoolStartDate: body.highSchoolStartDate || null,

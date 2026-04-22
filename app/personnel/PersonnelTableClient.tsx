@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   DEFAULT_PERSONNEL_COLUMNS,
   MAX_PERSONNEL_COLUMNS,
@@ -57,7 +57,13 @@ const CHANNEL_LABEL: Record<string, string> = {
   WhatsApp: "WhatsApp",
 };
 
-export default function PersonnelTableClient({ persons }: { persons: PersonRow[] }) {
+export default function PersonnelTableClient({
+  persons,
+  headerExtras,
+}: {
+  persons: PersonRow[];
+  headerExtras?: ReactNode;
+}) {
   const [selectedColumns, setSelectedColumns] = useState<PersonnelColumnKey[]>(DEFAULT_PERSONNEL_COLUMNS);
   const [draftColumns, setDraftColumns] = useState<PersonnelColumnKey[]>(DEFAULT_PERSONNEL_COLUMNS);
   const [editingColumns, setEditingColumns] = useState(false);
@@ -99,18 +105,18 @@ export default function PersonnelTableClient({ persons }: { persons: PersonRow[]
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col items-end">
+      <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={() => {
             setDraftColumns(selectedColumns);
             setEditingColumns((current) => !current);
           }}
-          className="rounded-lg border border-[var(--color-secondary)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-primary)]"
+          className="rounded-lg border border-[var(--color-secondary)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
         >
           表示項目を編集
         </button>
-        <p className="mt-1 text-xs text-gray-500">最大 {MAX_PERSONNEL_COLUMNS} 項目まで表示できます</p>
+        {headerExtras}
       </div>
 
       {editingColumns ? (
@@ -140,21 +146,24 @@ export default function PersonnelTableClient({ persons }: { persons: PersonRow[]
               </div>
             ))}
           </div>
-          <div className="mt-4 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setEditingColumns(false)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm"
-            >
-              キャンセル
-            </button>
-            <button
-              type="button"
-              onClick={applyColumns}
-              className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white"
-            >
-              反映
-            </button>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-xs text-gray-500">最大 {MAX_PERSONNEL_COLUMNS} 項目まで表示できます</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingColumns(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={applyColumns}
+                className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white"
+              >
+                反映
+              </button>
+            </div>
           </div>
         </section>
       ) : null}

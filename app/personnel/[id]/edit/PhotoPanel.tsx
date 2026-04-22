@@ -2,16 +2,18 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 export default function PhotoPanel({
   personId,
   personName,
   initialPhotoUrl,
+  iconActions,
 }: {
   personId: number;
   personName: string;
   initialPhotoUrl: string | null;
+  iconActions?: ReactNode;
 }) {
   const router = useRouter();
   const [photoUrl, setPhotoUrl] = useState(initialPhotoUrl);
@@ -65,7 +67,7 @@ export default function PhotoPanel({
   };
 
   return (
-    <section className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <section className="flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       {photoUrl ? (
         <Image
           src={photoUrl}
@@ -80,7 +82,7 @@ export default function PhotoPanel({
           {(personName.trim()[0] ?? "人").toUpperCase()}
         </div>
       )}
-      <div className="min-w-0 space-y-1.5">
+      <div className="min-w-0 flex-1 space-y-1.5">
         <p className="truncate text-sm font-semibold text-[var(--color-text-dark)]">{personName}</p>
         <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-primary-hover)]">
           {uploading ? "読み込み中..." : "写真をアップロード"}
@@ -101,6 +103,9 @@ export default function PhotoPanel({
           </button>
         ) : null}
       </div>
+      {iconActions ? (
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">{iconActions}</div>
+      ) : null}
     </section>
   );
 }
