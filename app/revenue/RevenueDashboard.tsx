@@ -158,11 +158,11 @@ export default function RevenueDashboard({
   }, [dealsInRange, invoicesInRange]);
 
   const funnel = [
-    { label: "募集", value: kpi.required, color: "#E0E7FF" },
-    { label: "推薦", value: kpi.recommended, color: "#C7D2FE" },
-    { label: "面接", value: kpi.interview, color: "#A5B4FC" },
-    { label: "内定", value: kpi.offer, color: "#818CF8" },
-    { label: "成約", value: kpi.contract, color: "#6366F1" },
+    { label: "募集", value: kpi.required, color: "#DCE8DF" },
+    { label: "推薦", value: kpi.recommended, color: "#B5CEC3" },
+    { label: "面接", value: kpi.interview, color: "#7EAE97" },
+    { label: "内定", value: kpi.offer, color: "#3E8365" },
+    { label: "成約", value: kpi.contract, color: "#234A3E" },
   ];
   const funnelMax = Math.max(1, ...funnel.map((f) => f.value));
 
@@ -369,7 +369,7 @@ function MonthlyChart({
                 y={padding.top + innerHeight - barOfferH}
                 width={barWidth * 0.8}
                 height={barOfferH}
-                fill="#818CF8"
+                fill="#66A786"
                 rx={4}
               />
               <rect
@@ -377,7 +377,7 @@ function MonthlyChart({
                 y={padding.top + innerHeight - barContractH}
                 width={barWidth * 0.8}
                 height={barContractH}
-                fill="#6366F1"
+                fill="#2E5E4E"
                 rx={4}
               />
               <text
@@ -394,20 +394,20 @@ function MonthlyChart({
         })}
         <polyline
           fill="none"
-          stroke="#22C55E"
+          stroke="#C89F5B"
           strokeWidth={2}
           points={revenuePoints}
         />
         {data.map((d, i) => {
           const x = padding.left + (innerWidth / data.length) * (i + 0.5);
           const y = padding.top + innerHeight - (d.revenue / maxRevenue) * innerHeight;
-          return <circle key={`dot-${d.month}`} cx={x} cy={y} r={3} fill="#22C55E" />;
+          return <circle key={`dot-${d.month}`} cx={x} cy={y} r={3} fill="#C89F5B" />;
         })}
       </svg>
       <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
         <LegendDot color="#818CF8" label="内定数" />
         <LegendDot color="#6366F1" label="成約数" />
-        <LegendDot color="#22C55E" label="請求売上（折れ線）" />
+        <LegendDot color="#C89F5B" label="請求売上（折れ線）" />
       </div>
     </div>
   );

@@ -1,13 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #6F627A;
-  --color-primary-hover: #5F5369;
-  --color-secondary: #C3BCC9;
-  --color-light: #F8F7FA;
-  --color-text-dark: #302B34;
-  --background: #F8F7FA;
-  --foreground: #302B34;
+  /* フォレストグリーン系のパレット: 落ち着いた深緑 + セージ + アンバーアクセント */
+  --color-primary: #2E5E4E;          /* ディープフォレスト (ボタン・リンク・ハイライト) */
+  --color-primary-hover: #234A3E;    /* ホバー時: さらに深い */
+  --color-secondary: #B5CEC3;        /* セージグリーン (ピル/ボーダー) */
+  --color-light: #F1F6F2;            /* 極薄セージ (セクション背景) */
+  --color-text-dark: #1E3B33;        /* テキスト用ダーク */
+  --background: #F6F8F6;             /* ページ背景: ほんのり緑がかった白 */
+  --foreground: #1E3B33;
+  --color-accent: #C89F5B;           /* 温かみのアンバー (任意のアクセント) */
 }
 
 @theme inline {
@@ -16,6 +18,7 @@
   --color-secondary: var(--color-secondary);
   --color-light: var(--color-light);
   --color-text-dark: var(--color-text-dark);
+  --color-accent: var(--color-accent);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);

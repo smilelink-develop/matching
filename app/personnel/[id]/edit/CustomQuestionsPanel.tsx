@@ -117,7 +117,7 @@ export function CustomQuestionsBuilderButton() {
       type="button"
       onClick={openBuilder}
       title={`個別質問フォームを作成して送信${activeCount > 0 ? ` (${activeCount}件)` : ""}`}
-      className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#EC4899] text-white shadow-md transition-transform hover:scale-110"
+      className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#3E8365] via-[#66A786] to-[#C89F5B] text-white shadow-md transition-transform hover:scale-110"
     >
       <ChatIcon />
       {activeCount > 0 ? (

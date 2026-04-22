@@ -96,7 +96,7 @@ export default function LoginForm() {
         type="button"
         onClick={() => void submit()}
         disabled={saving}
-        className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-[var(--color-primary)] via-[#A78BFA] to-[#38BDF8] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(99,102,241,0.35)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(99,102,241,0.45)] active:translate-y-0 disabled:opacity-60"
+        className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-[var(--color-primary)] via-[#3E8365] to-[#C89F5B] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(46,94,78,0.35)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(46,94,78,0.45)] active:translate-y-0 disabled:opacity-60"
       >
         <span className="relative z-10 inline-flex items-center justify-center gap-2">
           {saving ? "ログイン中..." : "ログイン"}
