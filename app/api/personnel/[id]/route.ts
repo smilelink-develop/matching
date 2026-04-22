@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { reconcileMessagePersonLinks } from "@/lib/message-linking";
 import {
+  buildPersonAssetName,
   buildPersonFolderName,
   ensurePersonDriveFolder,
-  formatPersonIdPrefix,
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
 
@@ -42,7 +42,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       englishName,
       name: body.name || currentPerson.name,
     });
-    const idPrefix = formatPersonIdPrefix(currentPerson.id);
+    const personForName = {
+      id: currentPerson.id,
+      englishName,
+      name: body.name || currentPerson.name,
+    };
 
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: currentPerson.driveFolderUrl,
@@ -54,7 +58,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       typeof body.photoUrl === "string" && body.photoUrl.startsWith("data:")
         ? await uploadDataUrlToDrive({
             dataUrl: body.photoUrl,
-            fileName: `${idPrefix}_photo`,
+            fileName: buildPersonAssetName({ person: personForName, assetName: "顔写真" }),
             folderUrl: folder.folderUrl,
           })
         : null;
@@ -72,9 +76,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       (documents as DocumentPayload[]).map(async (document: DocumentPayload) => {
         if (!document?.kind || !document?.fileName || !document?.fileUrl) return document;
         if (typeof document.fileUrl === "string" && document.fileUrl.startsWith("data:")) {
+          const ext = document.fileName.match(/\.[^.]+$/)?.[0] ?? "";
+          const assetName = document.fileName.replace(/\.[^.]+$/, "");
           const uploaded = await uploadDataUrlToDrive({
             dataUrl: document.fileUrl,
-            fileName: `${idPrefix}_${document.fileName}`,
+            fileName: `${buildPersonAssetName({ person: personForName, assetName })}${ext}`,
             folderUrl: folder.folderUrl,
           });
           return {

@@ -189,6 +189,25 @@ export function buildPersonFolderName(person: { id: number; englishName?: string
   return `${prefix}_${label}`;
 }
 
+/**
+ * 候補者に紐づくファイル名を {ID4桁}_{英語名 or カナ名}_{書類名} の形で組み立てる。
+ * 例: 0001_KODAI TSUCHIDA_履歴書
+ */
+export function buildPersonAssetName({
+  person,
+  assetName,
+}: {
+  person: { id: number; englishName?: string | null; name: string };
+  assetName: string;
+}) {
+  const prefix = formatPersonIdPrefix(person.id);
+  const label = (person.englishName?.trim() || person.name.trim() || "候補者")
+    .replace(/[\\/:*?"<>|]/g, "")
+    .trim();
+  const safeAsset = (assetName ?? "").replace(/[\\/:*?"<>|]/g, "").trim() || "書類";
+  return `${prefix}_${label}_${safeAsset}`;
+}
+
 // 親フォルダ内で指定の名前プレフィックスで始まるフォルダを検索
 async function findFolderByPrefix({
   parentFolderUrl,

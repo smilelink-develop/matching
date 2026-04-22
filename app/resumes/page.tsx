@@ -10,7 +10,14 @@ export default async function ResumesPage() {
   const [persons, templates, documents] = await Promise.all([
     prisma.person.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, nationality: true, residenceStatus: true },
+      select: {
+        id: true,
+        name: true,
+        nationality: true,
+        residenceStatus: true,
+        photoUrl: true,
+        onboarding: { select: { englishName: true } },
+      },
     }),
     prisma.resumeTemplate.findMany({
       orderBy: { createdAt: "desc" },
@@ -34,7 +41,14 @@ export default async function ResumesPage() {
         </p>
       </div>
       <ResumesClient
-        persons={persons}
+        persons={persons.map((p) => ({
+          id: p.id,
+          name: p.name,
+          nationality: p.nationality,
+          residenceStatus: p.residenceStatus,
+          photoUrl: p.photoUrl,
+          englishName: p.onboarding?.englishName ?? null,
+        }))}
         templates={templates.map((template) => ({
           id: template.id,
           name: template.name,

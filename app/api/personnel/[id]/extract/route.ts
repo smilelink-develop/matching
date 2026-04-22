@@ -2,9 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 import { extractCandidateFromFiles, type SourceFile } from "@/lib/ai-extract";
 import {
+  buildPersonAssetName,
   buildPersonFolderName,
   ensurePersonDriveFolder,
-  formatPersonIdPrefix,
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
 
@@ -57,7 +57,11 @@ export async function POST(req: Request, { params }: { params: Params }) {
       englishName: person.onboarding?.englishName ?? null,
       name: person.name,
     });
-    const idPrefix = formatPersonIdPrefix(person.id);
+    const personForName = {
+      id: person.id,
+      englishName: person.onboarding?.englishName ?? null,
+      name: person.name,
+    };
 
     // AI に渡すために base64 を抜き出す
     const sourceFiles: SourceFile[] = [];
@@ -118,9 +122,11 @@ export async function POST(req: Request, { params }: { params: Params }) {
     const uploadedFiles: { fileName: string; fileUrl: string; mimeType: string }[] = [];
     for (const file of files) {
       try {
+        const ext = file.fileName.match(/\.[^.]+$/)?.[0] ?? "";
+        const assetName = file.fileName.replace(/\.[^.]+$/, "");
         const uploaded = await uploadDataUrlToDrive({
           dataUrl: file.dataUrl,
-          fileName: `${idPrefix}_${file.fileName}`,
+          fileName: `${buildPersonAssetName({ person: personForName, assetName })}${ext}`,
           folderUrl: folderUrl!,
         });
         uploadedFiles.push({

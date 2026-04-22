@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getDocumentDefinitions } from "@/lib/candidate-profile";
 import {
+  buildPersonAssetName,
   buildPersonFolderName,
   ensurePersonDriveFolder,
-  formatPersonIdPrefix,
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
 
@@ -115,7 +115,11 @@ export async function POST(
       englishName: body.englishName ?? person.onboarding?.englishName ?? null,
       name: body.name || person.name,
     });
-    const idPrefix = formatPersonIdPrefix(person.id);
+    const personForName = {
+      id: person.id,
+      englishName: (body.englishName ?? person.onboarding?.englishName) ?? null,
+      name: body.name || person.name,
+    };
 
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: person.driveFolderUrl,
@@ -127,7 +131,7 @@ export async function POST(
       typeof body.photoUrl === "string" && body.photoUrl.startsWith("data:")
         ? await uploadDataUrlToDrive({
             dataUrl: body.photoUrl,
-            fileName: `${idPrefix}_photo`,
+            fileName: buildPersonAssetName({ person: personForName, assetName: "顔写真" }),
             folderUrl: folder.folderUrl,
           })
         : null;
@@ -136,9 +140,12 @@ export async function POST(
       documents.map(async (document) => {
         if (!document?.kind || !document?.fileName || !document?.fileUrl) return document;
         if (typeof document.fileUrl === "string" && document.fileUrl.startsWith("data:")) {
+          // 元ファイル名から拡張子を抽出
+          const ext = document.fileName.match(/\.[^.]+$/)?.[0] ?? "";
+          const assetName = document.fileName.replace(/\.[^.]+$/, "");
           const uploaded = await uploadDataUrlToDrive({
             dataUrl: document.fileUrl,
-            fileName: `${idPrefix}_${document.fileName}`,
+            fileName: `${buildPersonAssetName({ person: personForName, assetName })}${ext}`,
             folderUrl: folder.folderUrl,
           });
           return {

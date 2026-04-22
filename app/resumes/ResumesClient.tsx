@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import PersonPicker from "@/app/components/PersonPicker";
 
 type Person = {
   id: number;
   name: string;
   nationality: string;
   residenceStatus: string;
+  englishName?: string | null;
+  photoUrl?: string | null;
 };
 
 type ResumeTemplate = {
@@ -45,10 +48,6 @@ export default function ResumesClient({
   });
   const [savingResume, setSavingResume] = useState(false);
 
-  const selectedPerson = useMemo(
-    () => persons.find((person) => String(person.id) === resumeForm.personId),
-    [persons, resumeForm.personId]
-  );
   const selectedTemplate = useMemo(
     () => templates.find((template) => String(template.id) === resumeForm.templateId),
     [templates, resumeForm.templateId]
@@ -68,9 +67,8 @@ export default function ResumesClient({
         body: JSON.stringify({
           personId: Number(resumeForm.personId),
           templateId: Number(resumeForm.templateId),
-          title:
-            resumeForm.title.trim() ||
-            `${selectedPerson?.name ?? "候補者"} 履歴書`,
+          // title は書類名として扱い、API 側で {ID}_{名前}_{書類名} に整形される
+          title: resumeForm.title.trim() || "履歴書",
         }),
       });
       const data = await res.json();
@@ -122,17 +120,11 @@ export default function ResumesClient({
         ) : (
           <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
             <Field label="候補者">
-              <select
-                className={INPUT}
-                value={resumeForm.personId}
-                onChange={(e) => setResumeForm((c) => ({ ...c, personId: e.target.value }))}
-              >
-                {persons.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name} / {person.nationality}
-                  </option>
-                ))}
-              </select>
+              <PersonPicker
+                persons={persons}
+                selectedId={resumeForm.personId}
+                onSelect={(id) => setResumeForm((c) => ({ ...c, personId: id }))}
+              />
             </Field>
             <Field label="履歴書テンプレート">
               <select
@@ -148,12 +140,12 @@ export default function ResumesClient({
                 ))}
               </select>
             </Field>
-            <Field label="履歴書名">
+            <Field label="書類名 (任意)">
               <input
                 className={INPUT}
                 value={resumeForm.title}
                 onChange={(e) => setResumeForm((c) => ({ ...c, title: e.target.value }))}
-                placeholder={selectedPerson ? `${selectedPerson.name} 履歴書` : "履歴書タイトル"}
+                placeholder="履歴書"
               />
             </Field>
             <div className="flex items-end">

@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import {
+  buildPersonAssetName,
   buildPersonFolderName,
   ensurePersonDriveFolder,
-  formatPersonIdPrefix,
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
 
@@ -62,7 +62,6 @@ export async function POST(req: Request, { params }: { params: Params }) {
       englishName: person.onboarding?.englishName ?? null,
       name: person.name,
     });
-    const idPrefix = formatPersonIdPrefix(person.id);
 
     // ファイル添付があるときのみ Drive フォルダを確保（無い場合は一切触らない）
     let folderUrl: string | null = person.driveFolderUrl ?? null;
@@ -85,9 +84,18 @@ export async function POST(req: Request, { params }: { params: Params }) {
       if (!item?.id) continue;
       if (item.type === "file") {
         if (typeof item.fileDataUrl === "string" && item.fileDataUrl.startsWith("data:") && folderUrl) {
+          const assetName = (item.fileName || `custom-${item.id}`).replace(/\.[^.]+$/, "");
+          const ext = (item.fileName ?? "").match(/\.[^.]+$/)?.[0] ?? "";
           const uploaded = await uploadDataUrlToDrive({
             dataUrl: item.fileDataUrl,
-            fileName: `${idPrefix}_${item.fileName || `custom-${item.id}`}`,
+            fileName: `${buildPersonAssetName({
+              person: {
+                id: person.id,
+                englishName: person.onboarding?.englishName ?? null,
+                name: person.name,
+              },
+              assetName,
+            })}${ext}`,
             folderUrl,
           });
           await prisma.personCustomQuestion.update({

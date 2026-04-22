@@ -2,10 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 import { buildResumePlaceholders } from "@/lib/resume-placeholders";
 import {
+  buildPersonAssetName,
   buildPersonFolderName,
   createResumeDocumentFromTemplate,
   ensurePersonDriveFolder,
-  formatPersonIdPrefix,
 } from "@/lib/google-docs";
 
 export const runtime = "nodejs";
@@ -52,7 +52,6 @@ export async function POST(req: Request) {
       englishName: person.onboarding?.englishName ?? null,
       name: person.name,
     });
-    const idPrefix = formatPersonIdPrefix(person.id);
     // 保存先は必ず候補者フォルダ (候補者ルート配下で id プレフィックスでフォルダ検索、なければ新規作成)
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: person.driveFolderUrl,
@@ -67,7 +66,21 @@ export async function POST(req: Request) {
       });
     }
 
-    const prefixedTitle = title.startsWith(`${idPrefix}_`) ? title : `${idPrefix}_${title}`;
+    // ファイル名は {ID}_{英語名/カナ}_{書類名} 形式で統一
+    // title はユーザーが入力した "履歴書" などの書類名 (UI側でテンプレ名などを割当)
+    const assetName = title
+      .replace(new RegExp(`^\\d{4,}_`), "") // 旧形式の ID_ を取り除く
+      .replace(new RegExp(`^${person.name}\\s*`), "") // 名前重複を除去
+      .replace(new RegExp(`^${person.onboarding?.englishName ?? ""}\\s*`), "")
+      .trim() || "履歴書";
+    const prefixedTitle = buildPersonAssetName({
+      person: {
+        id: person.id,
+        englishName: person.onboarding?.englishName ?? null,
+        name: person.name,
+      },
+      assetName,
+    });
     const generated = await createResumeDocumentFromTemplate({
       templateUrl: template.templateUrl,
       folderUrl: folder.folderUrl,
