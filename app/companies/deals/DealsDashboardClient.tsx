@@ -91,11 +91,27 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
                     className="block rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4 transition hover:border-[var(--color-secondary)]"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm font-semibold text-[var(--color-text-dark)]">{deal.title}</p>
                         <p className="mt-1 text-xs text-gray-500">{deal.companyName}</p>
                       </div>
-                      <span className={priorityClass(deal.priority)}>{priorityLabel(deal.priority)}</span>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {deal.priority && deal.priority !== "normal" ? (
+                          <span className={priorityClass(deal.priority)}>{priorityLabel(deal.priority)}</span>
+                        ) : null}
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            deal.deadline
+                              ? "bg-[var(--color-light)] text-[var(--color-primary)]"
+                              : "bg-gray-100 text-gray-400"
+                          }`}
+                          title={deal.deadline ? "期限" : "期限未設定"}
+                        >
+                          {deal.deadline
+                            ? new Date(deal.deadline).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })
+                            : "期限なし"}
+                        </span>
+                      </div>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-gray-500">
                       <Pill>{deal.ownerName}</Pill>
@@ -103,9 +119,6 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
                       <Pill>{formatUnitPrice(deal.unitPrice)}</Pill>
                       <Pill>{deal.candidatesCount}名</Pill>
                     </div>
-                    <p className="mt-3 text-xs text-gray-400">
-                      {deal.deadline ? `期限 ${new Date(deal.deadline).toLocaleDateString("ja-JP")}` : "期限未設定"}
-                    </p>
                   </Link>
                 ))}
                 {columnDeals.length === 0 ? (

@@ -1,22 +1,29 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAccount } from "@/lib/auth";
+import { compareExternalId, findExternalIdByName } from "@/lib/company-id-mapping";
 
 export const dynamic = "force-dynamic";
 
 export default async function CompaniesPage() {
   await requireCurrentAccount();
+
+  // externalId が未設定の企業に、マッピング (data/company-id-mapping.json) から自動補完
+  await autoFillExternalIds();
+
   const companies = await prisma.company.findMany({
     include: {
       deals: {
         select: { id: true },
       },
     },
-    orderBy: { id: "desc" },
   });
 
-  const active = companies.filter((company) => company.hiringStatus !== "停止");
-  const stopped = companies.filter((company) => company.hiringStatus === "停止");
+  // externalId (数値プレフィックス) で昇順。欠番は末尾
+  const sorted = [...companies].sort((a, b) => compareExternalId(a.externalId, b.externalId));
+
+  const active = sorted.filter((company) => company.hiringStatus !== "停止");
+  const stopped = sorted.filter((company) => company.hiringStatus === "停止");
 
   return (
     <div className="p-8 space-y-6">
@@ -50,6 +57,28 @@ export default async function CompaniesPage() {
   );
 }
 
+async function autoFillExternalIds() {
+  const candidates = await prisma.company.findMany({
+    where: { externalId: null },
+    select: { id: true, name: true },
+  });
+  for (const company of candidates) {
+    const externalId = findExternalIdByName(company.name);
+    if (!externalId) continue;
+    // 既に他の企業が同じ externalId を使っていたらスキップ
+    const conflict = await prisma.company.findUnique({ where: { externalId } });
+    if (conflict) continue;
+    try {
+      await prisma.company.update({
+        where: { id: company.id },
+        data: { externalId },
+      });
+    } catch {
+      // 並列更新でぶつかっても無視
+    }
+  }
+}
+
 type CompanyRow = {
   id: number;
   externalId: string | null;
@@ -77,19 +106,19 @@ function CompaniesTable({
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-[var(--color-light)] text-[var(--color-text-dark)]">
-            <th className="px-4 py-3 text-left font-semibold w-24">企業ID</th>
+            <th className="px-4 py-3 text-left font-semibold w-28">企業ID</th>
             <th className="px-4 py-3 text-left font-semibold">企業名</th>
             <th className="px-4 py-3 text-left font-semibold">業種</th>
             <th className="px-4 py-3 text-left font-semibold">採用状況</th>
-            <th className="px-4 py-3 text-left font-semibold">案件数</th>
+            <th className="px-4 py-3 text-left font-semibold w-20">案件数</th>
           </tr>
         </thead>
         <tbody>
           {companies.map((company) => (
             <tr key={company.id} className="border-t border-gray-100 hover:bg-gray-50">
-              <td className="p-0 font-mono text-[12px] text-gray-500">
+              <td className="p-0 font-mono text-[13px] text-[var(--color-primary)]">
                 <Link href={`/companies/${company.id}`} className="block px-4 py-3">
-                  {company.externalId ?? company.id}
+                  {company.externalId ?? <span className="text-gray-300">未設定</span>}
                 </Link>
               </td>
               <td className="p-0 font-medium text-[var(--color-text-dark)]">
