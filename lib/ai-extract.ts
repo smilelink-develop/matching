@@ -135,6 +135,44 @@ function isSupported(mime: string) {
   return SUPPORTED_IMAGE_MIMES.has(mime) || mime === "application/pdf";
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// 503 UNAVAILABLE / 429 RESOURCE_EXHAUSTED の時だけ指数バックオフでリトライ
+async function callGeminiWithRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      const retryable =
+        message.includes("UNAVAILABLE") ||
+        message.includes("503") ||
+        message.includes("RESOURCE_EXHAUSTED") ||
+        message.includes("429");
+      if (!retryable || i === attempts - 1) break;
+      // 1.5s → 3s → ...
+      await sleep(1500 * Math.pow(2, i));
+    }
+  }
+  // ユーザー向けに分かりやすいエラーに置き換え
+  const raw = lastError instanceof Error ? lastError.message : String(lastError);
+  if (raw.includes("UNAVAILABLE") || raw.includes("503")) {
+    throw new Error(
+      "Google の AI サーバーが混雑しています (503)。数十秒〜数分待ってからもう一度お試しください。"
+    );
+  }
+  if (raw.includes("RESOURCE_EXHAUSTED") || raw.includes("429")) {
+    throw new Error(
+      "AI のレート制限に達しました。少し時間を置いてから再度お試しください。"
+    );
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
 export async function extractCandidateFromFiles(files: SourceFile[]): Promise<ExtractedCandidate> {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
@@ -162,14 +200,16 @@ export async function extractCandidateFromFiles(files: SourceFile[]): Promise<Ex
     },
   ];
 
-  const response = await client.models.generateContent({
-    model,
-    contents: [{ role: "user", parts }],
-    config: {
-      responseMimeType: "application/json",
-      temperature: 0.1,
-    },
-  });
+  const response = await callGeminiWithRetry(() =>
+    client.models.generateContent({
+      model,
+      contents: [{ role: "user", parts }],
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.1,
+      },
+    })
+  );
 
   const text = response.text?.trim() ?? "";
   return parseJsonPayload(text);
@@ -245,14 +285,16 @@ export async function extractJobPostingFromFiles(files: SourceFile[]): Promise<E
     { text: "添付した求人票から情報を抽出して、指定のスキーマに沿う JSON を一つだけ返してください。" },
   ];
 
-  const response = await client.models.generateContent({
-    model,
-    contents: [{ role: "user", parts }],
-    config: {
-      responseMimeType: "application/json",
-      temperature: 0.1,
-    },
-  });
+  const response = await callGeminiWithRetry(() =>
+    client.models.generateContent({
+      model,
+      contents: [{ role: "user", parts }],
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.1,
+      },
+    })
+  );
 
   const text = response.text?.trim() ?? "";
   return parseJsonPayloadAs<ExtractedJobPosting>(text);
