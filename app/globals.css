@@ -6,9 +6,9 @@
   --color-primary-hover: #234A3E;    /* ホバー時: さらに深い */
   --color-secondary: #B5CEC3;        /* セージグリーン (ピル/ボーダー) */
   --color-light: #F1F6F2;            /* 極薄セージ (セクション背景) */
-  --color-text-dark: #0F2620;        /* テキスト用ダーク (より濃く) */
+  --color-text-dark: #22443A;        /* テキスト用ダーク (程よい濃さ) */
   --background: #F6F8F6;             /* ページ背景: ほんのり緑がかった白 */
-  --foreground: #0F2620;             /* 本文テキスト (より濃く) */
+  --foreground: #22443A;             /* 本文テキスト (程よい濃さ) */
   --color-accent: #C89F5B;           /* 温かみのアンバー (任意のアクセント) */
 }
 
@@ -35,18 +35,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 補助テキストを全体的に一段濃くする (tailwind の text-gray-*/500 を少し濃い目に) */
+/* 補助テキスト: 薄すぎる gray-400 だけ少しだけ濃くする (gray-500/600 はそのまま) */
 .text-gray-400 {
-  color: #5E6B66 !important;
-}
-.text-gray-500 {
-  color: #4A5752 !important;
-}
-.text-gray-600 {
-  color: #2F3C37 !important;
+  color: #7A8782 !important;
 }
 
-/* ラベル等の極小フォントを底上げ (text-xs/text-[10px]〜[11px] を底上げ) */
+/* ラベル等の極小フォントを底上げ (読める大きさに) */
 .text-xs {
   font-size: 13px !important;
   line-height: 1.55;
@@ -64,19 +58,7 @@ body {
   line-height: 1.6;
 }
 
-/* 見出し・強調系を明示的に濃く */
-h1, h2, h3, h4, h5, h6 {
-  color: var(--color-text-dark);
-}
-
-label, .font-medium, .font-semibold, .font-bold {
-  color: inherit;
-}
-
-/* フォーム入力の文字色を濃く */
-input, textarea, select {
-  color: var(--color-text-dark);
-}
+/* フォーム入力のプレースホルダーは視認できる濃さに */
 input::placeholder, textarea::placeholder {
-  color: #7A857F;
+  color: #8A948F;
 }
