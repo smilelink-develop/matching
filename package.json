@@ -12,7 +12,8 @@
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
     "reset-data": "tsx scripts/reset-data.ts",
-    "import-xlsx": "tsx scripts/import-xlsx.ts"
+    "import-xlsx": "tsx scripts/import-xlsx.ts",
+    "backfill-photos": "tsx scripts/backfill-photos.ts"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
