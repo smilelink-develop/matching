@@ -183,13 +183,44 @@ export function buildPersonFolderName(person: { id: number; englishName?: string
   return `${prefix}_${label}`;
 }
 
+// 親フォルダ内で指定の名前プレフィックスで始まるフォルダを検索
+async function findFolderByPrefix({
+  parentFolderUrl,
+  namePrefix,
+}: {
+  parentFolderUrl: string;
+  namePrefix: string;
+}): Promise<{ folderId: string; folderUrl: string } | null> {
+  const parentId = parseGoogleDriveFolderId(parentFolderUrl);
+  if (!parentId) return null;
+  const { drive } = await getGoogleClients();
+  const escaped = namePrefix.replace(/'/g, "\\'");
+  const res = await drive.files.list({
+    q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and name contains '${escaped}' and trashed = false`,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+    fields: "files(id, name, webViewLink)",
+    pageSize: 20,
+  });
+  const files = res.data.files ?? [];
+  // 厳密に namePrefix で始まるものを優先
+  const match = files.find((f) => (f.name ?? "").startsWith(namePrefix)) ?? files[0];
+  if (!match || !match.id) return null;
+  return {
+    folderId: match.id,
+    folderUrl: match.webViewLink ?? `https://drive.google.com/drive/folders/${match.id}`,
+  };
+}
+
 export async function ensurePersonDriveFolder({
   existingFolderUrl,
   personName,
+  personId,
   rootFolderUrl,
 }: {
   existingFolderUrl?: string | null;
   personName: string;
+  personId?: number;
   rootFolderUrl?: string | null;
 }) {
   if (existingFolderUrl?.trim()) {
@@ -204,11 +235,56 @@ export async function ensurePersonDriveFolder({
     throw new Error("GOOGLE_CANDIDATE_FILES_FOLDER_URL が未設定です");
   }
 
+  // Drive 上に "0033_" で始まるフォルダが既にあれば再利用
+  if (personId !== undefined) {
+    const prefix = formatPersonIdPrefix(personId) + "_";
+    const found = await findFolderByPrefix({ parentFolderUrl, namePrefix: prefix });
+    if (found) return found;
+  }
+
   const { drive } = await getGoogleClients();
   return getOrCreateFolder({
     drive,
     parentFolderUrl,
     folderName: personName,
+  });
+}
+
+// 企業フォルダ (externalId_会社名 で検索 or 新規作成)
+export async function ensureCompanyDriveFolder({
+  existingFolderUrl,
+  externalId,
+  companyName,
+  rootFolderUrl,
+}: {
+  existingFolderUrl?: string | null;
+  externalId?: string | null;
+  companyName: string;
+  rootFolderUrl?: string | null;
+}) {
+  if (existingFolderUrl?.trim()) {
+    return {
+      folderId: parseGoogleDriveFolderId(existingFolderUrl),
+      folderUrl: existingFolderUrl,
+    };
+  }
+  const parentFolderUrl = rootFolderUrl?.trim() || process.env.GOOGLE_COMPANY_FILES_FOLDER_URL?.trim();
+  if (!parentFolderUrl) {
+    throw new Error("GOOGLE_COMPANY_FILES_FOLDER_URL が未設定です");
+  }
+
+  // externalId で始まる企業フォルダを検索
+  if (externalId) {
+    const found = await findFolderByPrefix({ parentFolderUrl, namePrefix: externalId });
+    if (found) return found;
+  }
+
+  const { drive } = await getGoogleClients();
+  const folderName = externalId ? `${externalId}_${companyName}` : companyName;
+  return getOrCreateFolder({
+    drive,
+    parentFolderUrl,
+    folderName,
   });
 }
 

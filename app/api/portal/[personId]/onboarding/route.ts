@@ -119,6 +119,7 @@ export async function POST(
 
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: person.driveFolderUrl,
+      personId: person.id,
       personName: folderName,
     });
 

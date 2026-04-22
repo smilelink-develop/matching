@@ -18,10 +18,12 @@ type DealSummary = {
 
 type CompanyData = {
   id: number;
+  externalId: string | null;
   name: string;
   industry: string | null;
   location: string | null;
   hiringStatus: string;
+  driveFolderUrl: string | null;
   notes: string | null;
   deals: DealSummary[];
 };
@@ -32,19 +34,23 @@ export default function CompanyDetailClient({ initialCompany }: { initialCompany
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
+    externalId: initialCompany.externalId ?? "",
     name: initialCompany.name,
     industry: initialCompany.industry ?? SSW_INDUSTRIES[0],
     location: initialCompany.location ?? "",
     hiringStatus: initialCompany.hiringStatus,
+    driveFolderUrl: initialCompany.driveFolderUrl ?? "",
     notes: initialCompany.notes ?? "",
   });
 
   const startEdit = () => {
     setForm({
+      externalId: company.externalId ?? "",
       name: company.name,
       industry: company.industry ?? SSW_INDUSTRIES[0],
       location: company.location ?? "",
       hiringStatus: company.hiringStatus,
+      driveFolderUrl: company.driveFolderUrl ?? "",
       notes: company.notes ?? "",
     });
     setEditing(true);
@@ -69,10 +75,12 @@ export default function CompanyDetailClient({ initialCompany }: { initialCompany
       }
       setCompany((prev) => ({
         ...prev,
+        externalId: result.company.externalId,
         name: result.company.name,
         industry: result.company.industry,
         location: result.company.location,
         hiringStatus: result.company.hiringStatus,
+        driveFolderUrl: result.company.driveFolderUrl,
         notes: result.company.notes,
       }));
       setEditing(false);
@@ -115,11 +123,25 @@ export default function CompanyDetailClient({ initialCompany }: { initialCompany
           {!editing ? (
             <>
               <div className="mt-4 space-y-3 text-sm text-gray-600">
+                <InfoRow label="企業ID" value={company.externalId ?? "-"} />
                 <InfoRow label="企業名" value={company.name} />
                 <InfoRow label="業種" value={company.industry ?? "-"} />
                 <InfoRow label="所在地" value={company.location ?? "-"} />
                 <InfoRow label="採用状況" value={company.hiringStatus} />
                 <InfoRow label="案件数" value={`${company.deals.length}件`} />
+                {company.driveFolderUrl ? (
+                  <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                    <span className="text-gray-400">Drive フォルダ</span>
+                    <a
+                      href={company.driveFolderUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate font-medium text-[var(--color-primary)] hover:underline"
+                    >
+                      開く
+                    </a>
+                  </div>
+                ) : null}
               </div>
               {company.notes ? (
                 <div className="mt-4 rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4 text-sm leading-6 text-[var(--color-text-dark)]">
@@ -129,6 +151,14 @@ export default function CompanyDetailClient({ initialCompany }: { initialCompany
             </>
           ) : (
             <div className="mt-4 space-y-4">
+              <Field label="企業ID (任意、Drive フォルダ名に使用)">
+                <input
+                  className={INPUT}
+                  value={form.externalId}
+                  onChange={(e) => setForm((current) => ({ ...current, externalId: e.target.value }))}
+                  placeholder="例: 14sv / ABC-001"
+                />
+              </Field>
               <Field label="企業名 *">
                 <input className={INPUT} value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} />
               </Field>
@@ -148,6 +178,14 @@ export default function CompanyDetailClient({ initialCompany }: { initialCompany
                     <option key={status} value={status}>{status}</option>
                   ))}
                 </select>
+              </Field>
+              <Field label="Drive フォルダ URL (任意、空欄なら企業IDで自動検索)">
+                <input
+                  className={INPUT}
+                  value={form.driveFolderUrl}
+                  onChange={(e) => setForm((current) => ({ ...current, driveFolderUrl: e.target.value }))}
+                  placeholder="https://drive.google.com/drive/folders/..."
+                />
               </Field>
               <Field label="メモ">
                 <textarea className={`${INPUT} min-h-28`} value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} />

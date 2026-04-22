@@ -13,6 +13,35 @@ export default function RecommendationsClient({ deals }: { deals: Deal[] }) {
   const [dealId, setDealId] = useState(deals[0]?.id ? String(deals[0].id) : "");
   const [stageFilter, setStageFilter] = useState<string>("接続済み");
   const [downloading, setDownloading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const saveToDrive = async () => {
+    if (!dealId) {
+      alert("案件を選択してください");
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await fetch("/api/recommendations/save-to-drive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dealId: Number(dealId), stage: stageFilter }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(result.error || "Drive への保存に失敗しました");
+        return;
+      }
+      const openFolder = confirm(
+        `企業フォルダに保存しました\nファイル: ${result.fileName}\n\n企業フォルダを開きますか？`
+      );
+      if (openFolder && result.folderUrl) {
+        window.open(result.folderUrl, "_blank");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const download = async () => {
     if (!dealId) {
@@ -65,14 +94,22 @@ export default function RecommendationsClient({ deals }: { deals: Deal[] }) {
             <option value="all">すべて</option>
           </select>
         </Field>
-        <div className="flex items-end">
+        <div className="flex items-end gap-2">
           <button
             type="button"
             onClick={() => void download()}
             disabled={downloading}
-            className="h-[42px] rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+            className="h-[42px] rounded-xl border border-[var(--color-secondary)] bg-white px-4 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-light)] disabled:opacity-60"
           >
             {downloading ? "出力中..." : "CSV ダウンロード"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void saveToDrive()}
+            disabled={saving}
+            className="h-[42px] rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+          >
+            {saving ? "保存中..." : "Drive に保存"}
           </button>
         </div>
       </div>

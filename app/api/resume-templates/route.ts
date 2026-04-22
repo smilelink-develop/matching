@@ -24,20 +24,21 @@ export async function POST(req: Request) {
     const templateUrl = String(body.templateUrl ?? "").trim();
     const driveFolderUrl = String(body.driveFolderUrl ?? "").trim();
 
-    if (!name || !templateUrl || !driveFolderUrl) {
+    if (!name || !templateUrl) {
       return Response.json(
-        { ok: false, error: "テンプレート名、Docs URL、Drive URL を入力してください" },
+        { ok: false, error: "テンプレート名、Docs URL を入力してください" },
         { status: 400 }
       );
     }
 
     // 作成者を記録するが、データは全アカウント共有
+    // driveFolderUrl は任意 (保存先は候補者フォルダを自動選択)
     const template = await prisma.resumeTemplate.create({
       data: {
         accountId: account.id,
         name,
         templateUrl,
-        driveFolderUrl,
+        driveFolderUrl: driveFolderUrl || null,
       },
     });
 

@@ -28,10 +28,12 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
       <CompanyDetailClient
         initialCompany={{
           id: company.id,
+          externalId: company.externalId,
           name: company.name,
           industry: company.industry,
           location: company.location,
           hiringStatus: company.hiringStatus,
+          driveFolderUrl: company.driveFolderUrl,
           notes: company.notes,
           deals: company.deals.map((deal) => ({
             id: deal.id,

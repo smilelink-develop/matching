@@ -8,6 +8,7 @@ export default function NewCompanyPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
+    externalId: "",
     name: "",
     industry: SSW_INDUSTRIES[0] as string,
     location: "",
@@ -49,6 +50,14 @@ export default function NewCompanyPage() {
         </div>
 
         <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <Field label="企業ID (任意、Drive フォルダ名に使用) 例: 14sv / ABC-001">
+            <input
+              className={INPUT}
+              value={form.externalId}
+              onChange={(e) => setForm((current) => ({ ...current, externalId: e.target.value }))}
+              placeholder="空欄でも可"
+            />
+          </Field>
           <Field label="企業名 *">
             <input className={INPUT} value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} />
           </Field>

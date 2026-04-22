@@ -14,7 +14,7 @@ type ResumeTemplate = {
   id: number;
   name: string;
   templateUrl: string;
-  driveFolderUrl: string;
+  driveFolderUrl: string | null;
 };
 
 export default function SettingsClient({
@@ -352,7 +352,7 @@ export default function SettingsClient({
                   <Field label="保存先 Drive フォルダURL">
                     <input
                       className={INPUT}
-                      value={template.driveFolderUrl}
+                      value={template.driveFolderUrl ?? ""}
                       onChange={(e) => setResumeTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, driveFolderUrl: e.target.value } : t))}
                       onBlur={(e) => void updateResumeTemplate(template.id, { driveFolderUrl: e.target.value })}
                       placeholder="https://drive.google.com/drive/folders/..."
@@ -442,7 +442,7 @@ export default function SettingsClient({
                   <Field label="保存先 Drive フォルダURL">
                     <input
                       className={INPUT}
-                      value={template.driveFolderUrl}
+                      value={template.driveFolderUrl ?? ""}
                       onChange={(e) => setJobPostingTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, driveFolderUrl: e.target.value } : t))}
                       onBlur={(e) => void updateJobPostingTemplate(template.id, { driveFolderUrl: e.target.value })}
                     />

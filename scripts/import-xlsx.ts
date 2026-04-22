@@ -152,6 +152,7 @@ async function main() {
 
       const company = await prisma.company.create({
         data: {
+          externalId,
           name,
           industry: s(rec["分野"]),
           notes,

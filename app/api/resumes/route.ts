@@ -53,10 +53,11 @@ export async function POST(req: Request) {
       name: person.name,
     });
     const idPrefix = formatPersonIdPrefix(person.id);
+    // 保存先は必ず候補者フォルダ (候補者ルート配下で id プレフィックスでフォルダ検索、なければ新規作成)
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: person.driveFolderUrl,
+      personId: person.id,
       personName: folderName,
-      rootFolderUrl: template.driveFolderUrl,
     });
 
     if (person.driveFolderUrl !== folder.folderUrl) {

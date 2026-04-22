@@ -41,13 +41,28 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return Response.json({ ok: false, error: "企業名を入力してください" }, { status: 400 });
     }
 
+    const externalId = body.externalId !== undefined
+      ? (String(body.externalId ?? "").trim() || null)
+      : undefined;
+    if (externalId) {
+      const dup = await prisma.company.findFirst({
+        where: { externalId, NOT: { id: Number(id) } },
+      });
+      if (dup) {
+        return Response.json({ ok: false, error: `企業ID "${externalId}" は既に使われています` }, { status: 409 });
+      }
+    }
     const company = await prisma.company.update({
       where: { id: Number(id) },
       data: {
         name,
+        ...(externalId !== undefined ? { externalId } : {}),
         industry: String(body.industry ?? "").trim() || null,
         location: String(body.location ?? "").trim() || null,
         hiringStatus: String(body.hiringStatus ?? "").trim() || "募集中",
+        driveFolderUrl: body.driveFolderUrl !== undefined
+          ? (String(body.driveFolderUrl ?? "").trim() || null)
+          : undefined,
         notes: String(body.notes ?? "").trim() || null,
       },
     });

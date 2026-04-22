@@ -14,7 +14,7 @@ type ResumeTemplate = {
   id: number;
   name: string;
   templateUrl: string;
-  driveFolderUrl: string;
+  driveFolderUrl: string | null;
 };
 
 type ResumeDocument = {
@@ -22,7 +22,7 @@ type ResumeDocument = {
   title: string;
   status: string;
   documentUrl: string | null;
-  driveFolderUrl: string;
+  driveFolderUrl: string | null;
   personName: string;
   templateName: string;
   createdAt: string;
@@ -168,7 +168,7 @@ export default function ResumesClient({
             </div>
             {selectedTemplate ? (
               <p className="text-xs text-gray-400 lg:col-span-4">
-                テンプレート: {selectedTemplate.templateUrl} / 初期保存先: {selectedTemplate.driveFolderUrl}
+                テンプレート: {selectedTemplate.templateUrl} / 保存先: 候補者フォルダへ自動保存
               </p>
             ) : null}
           </div>

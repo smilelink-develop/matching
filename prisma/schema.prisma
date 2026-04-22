@@ -57,16 +57,18 @@ model PersonCustomQuestion {
 }
 
 model Company {
-  id          Int      @id @default(autoincrement())
-  name        String
-  industry    String?
-  location    String?
-  hiringStatus String  @default("募集中")
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  externalId   String?  @unique
+  name         String
+  industry     String?
+  location     String?
+  hiringStatus String   @default("募集中")
+  driveFolderUrl String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  deals       Deal[]
+  deals        Deal[]
 }
 
 model Partner {
@@ -218,7 +220,7 @@ model ResumeTemplate {
   account          StaffAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   name             String
   templateUrl      String
-  driveFolderUrl   String
+  driveFolderUrl   String?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
