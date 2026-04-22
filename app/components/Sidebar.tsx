@@ -151,8 +151,8 @@ const NAV: NavItem[] = [
     icon: InvoiceIcon,
     children: [
       { label: "入社進捗", href: "/placements" },
-      { label: "企業への請求", href: "/invoices?tab=companies" },
-      { label: "PAへの請求", href: "/invoices?tab=partners" },
+      { label: "企業への請求", href: "/invoices/companies" },
+      { label: "PAへの請求", href: "/invoices/partners" },
     ],
   },
   { label: "売上ダッシュボード", href: "/revenue", icon: BroadcastIcon },

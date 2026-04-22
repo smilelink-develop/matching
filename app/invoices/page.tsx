@@ -1,59 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { requireCurrentAccount } from "@/lib/auth";
-import InvoicesDashboard from "./InvoicesDashboard";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function InvoicesPage() {
-  await requireCurrentAccount();
-  const invoices = await prisma.invoice.findMany({
-    orderBy: [{ invoiceDate: "desc" }, { createdAt: "desc" }],
-    include: {
-      person: { select: { id: true, name: true } },
-      partner: { select: { id: true, name: true } },
-      deal: {
-        select: {
-          id: true,
-          title: true,
-          company: { select: { id: true, name: true } },
-        },
-      },
-    },
-  });
-
-  return (
-    <div className="space-y-6 p-8">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--color-text-dark)]">請求</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          企業への請求と、パートナーへの支払いタスクを一元管理します。
-        </p>
-      </div>
-
-      <InvoicesDashboard
-        invoices={invoices.map((invoice) => ({
-          id: invoice.id,
-          personId: invoice.person?.id ?? null,
-          personName: invoice.person?.name ?? null,
-          dealId: invoice.dealId,
-          dealTitle: invoice.deal?.title ?? null,
-          companyId: invoice.deal?.company?.id ?? null,
-          companyName: invoice.deal?.company?.name ?? null,
-          partnerId: invoice.partner?.id ?? null,
-          partnerName: invoice.partner?.name ?? null,
-          invoiceDate: invoice.invoiceDate?.toISOString() ?? null,
-          invoiceAmount: invoice.invoiceAmount,
-          invoiceNumber: invoice.invoiceNumber,
-          invoiceStatus: invoice.invoiceStatus,
-          invoiceUrl: invoice.invoiceUrl,
-          channel: invoice.channel,
-          costAmount: invoice.costAmount,
-          paInvoiceUrl: invoice.paInvoiceUrl,
-          paPaid: invoice.paPaid,
-          paPaidAt: invoice.paPaidAt?.toISOString() ?? null,
-          createdAt: invoice.createdAt.toISOString(),
-        }))}
-      />
-    </div>
-  );
+export default function InvoicesIndex() {
+  // サイドバーから /invoices を押したときは「企業への請求」に遷移
+  redirect("/invoices/companies");
 }

@@ -282,7 +282,7 @@ export default function CompanyDetailClient({ initialCompany }: { initialCompany
             <h2 className="text-base font-semibold text-[var(--color-text-dark)]">この企業への請求</h2>
             <p className="mt-1 text-xs text-gray-500">{company.invoices.length} 件 (候補者/案件ごとに請求発行済)</p>
           </div>
-          <Link href="/invoices?tab=companies" className="text-xs text-[var(--color-primary)] hover:underline">
+          <Link href="/invoices/companies" className="text-xs text-[var(--color-primary)] hover:underline">
             請求管理を見る
           </Link>
         </div>
