@@ -139,8 +139,8 @@ export default function SettingsClient({
   };
 
   const addResumeTemplate = async () => {
-    if (!newTemplate.name.trim() || !newTemplate.templateUrl.trim() || !newTemplate.driveFolderUrl.trim()) {
-      alert("テンプレート名・Docs URL・保存先 Drive URL を入力してください");
+    if (!newTemplate.name.trim() || !newTemplate.templateUrl.trim()) {
+      alert("テンプレート名と Docs URL を入力してください");
       return;
     }
     setSavingTemplate(true);
@@ -178,8 +178,8 @@ export default function SettingsClient({
   };
 
   const addJobPostingTemplate = async () => {
-    if (!newJobPostingTemplate.name.trim() || !newJobPostingTemplate.templateUrl.trim() || !newJobPostingTemplate.driveFolderUrl.trim()) {
-      alert("テンプレート名・Docs URL・保存先 Drive URL を入力してください");
+    if (!newJobPostingTemplate.name.trim() || !newJobPostingTemplate.templateUrl.trim()) {
+      alert("テンプレート名と Docs URL を入力してください");
       return;
     }
     setSavingJobPostingTemplate(true);
@@ -323,7 +323,7 @@ export default function SettingsClient({
 
       <SectionCard
         title="履歴書テンプレート"
-        description="Google Docs テンプレートと保存先 Drive フォルダを登録します。テンプレートは全アカウントで共有され、履歴書作成ページから利用できます。"
+        description="Google Docs テンプレートを登録します。作成した履歴書は候補者ごとの Drive フォルダに自動保存されます (候補者IDで既存フォルダを検索し、無ければ新規作成)。"
         open={resumeTemplatesOpen}
         onToggle={() => setResumeTemplatesOpen((current) => !current)}
       >
@@ -349,15 +349,6 @@ export default function SettingsClient({
                       placeholder="https://docs.google.com/document/d/..."
                     />
                   </Field>
-                  <Field label="保存先 Drive フォルダURL">
-                    <input
-                      className={INPUT}
-                      value={template.driveFolderUrl ?? ""}
-                      onChange={(e) => setResumeTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, driveFolderUrl: e.target.value } : t))}
-                      onBlur={(e) => void updateResumeTemplate(template.id, { driveFolderUrl: e.target.value })}
-                      placeholder="https://drive.google.com/drive/folders/..."
-                    />
-                  </Field>
                 </div>
                 <div className="mt-3 flex justify-end">
                   <button
@@ -379,6 +370,7 @@ export default function SettingsClient({
 
           <div className="rounded-2xl border border-dashed border-[var(--color-secondary)] bg-[var(--color-light)] p-4">
             <p className="text-sm font-semibold text-[var(--color-text-dark)]">新しいテンプレートを追加</p>
+            <p className="mt-1 text-xs text-gray-500">作成した履歴書は候補者フォルダに自動保存されます。</p>
             <div className="mt-3 grid gap-3">
               <Field label="テンプレート名">
                 <input
@@ -396,14 +388,6 @@ export default function SettingsClient({
                   placeholder="https://docs.google.com/document/d/..."
                 />
               </Field>
-              <Field label="保存先 Drive フォルダURL">
-                <input
-                  className={INPUT}
-                  value={newTemplate.driveFolderUrl}
-                  onChange={(e) => setNewTemplate((c) => ({ ...c, driveFolderUrl: e.target.value }))}
-                  placeholder="https://drive.google.com/drive/folders/..."
-                />
-              </Field>
               <ActionButton onClick={addResumeTemplate} disabled={savingTemplate}>
                 {savingTemplate ? "保存中..." : "テンプレートを追加"}
               </ActionButton>
@@ -414,7 +398,7 @@ export default function SettingsClient({
 
       <SectionCard
         title="求人票テンプレート"
-        description="求人票作成用の Google Docs テンプレートと保存先 Drive フォルダを登録します。全アカウントで共有されます。"
+        description="求人票作成用の Google Docs テンプレートを登録します。作成した求人票は案件に紐づく企業の Drive フォルダに自動保存されます。"
         open={jobPostingTemplatesOpen}
         onToggle={() => setJobPostingTemplatesOpen((current) => !current)}
       >
@@ -437,14 +421,6 @@ export default function SettingsClient({
                       value={template.templateUrl}
                       onChange={(e) => setJobPostingTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, templateUrl: e.target.value } : t))}
                       onBlur={(e) => void updateJobPostingTemplate(template.id, { templateUrl: e.target.value })}
-                    />
-                  </Field>
-                  <Field label="保存先 Drive フォルダURL">
-                    <input
-                      className={INPUT}
-                      value={template.driveFolderUrl ?? ""}
-                      onChange={(e) => setJobPostingTemplates((cur) => cur.map((t) => t.id === template.id ? { ...t, driveFolderUrl: e.target.value } : t))}
-                      onBlur={(e) => void updateJobPostingTemplate(template.id, { driveFolderUrl: e.target.value })}
                     />
                   </Field>
                 </div>
@@ -484,13 +460,7 @@ export default function SettingsClient({
                   onChange={(e) => setNewJobPostingTemplate((c) => ({ ...c, templateUrl: e.target.value }))}
                 />
               </Field>
-              <Field label="保存先 Drive フォルダURL">
-                <input
-                  className={INPUT}
-                  value={newJobPostingTemplate.driveFolderUrl}
-                  onChange={(e) => setNewJobPostingTemplate((c) => ({ ...c, driveFolderUrl: e.target.value }))}
-                />
-              </Field>
+              <p className="text-xs text-gray-500">作成した求人票は企業フォルダに自動保存されます。</p>
               <ActionButton onClick={addJobPostingTemplate} disabled={savingJobPostingTemplate}>
                 {savingJobPostingTemplate ? "保存中..." : "テンプレートを追加"}
               </ActionButton>

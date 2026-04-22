@@ -21,6 +21,10 @@ export default function NewCompanyPage() {
       alert("企業名を入力してください");
       return;
     }
+    if (!form.externalId.trim()) {
+      alert("企業IDを入力してください (自動生成はされません)");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -50,13 +54,16 @@ export default function NewCompanyPage() {
         </div>
 
         <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <Field label="企業ID (任意、Drive フォルダ名に使用) 例: 14sv / ABC-001">
+          <Field label="企業ID * (スタッフで手動設定 / 例: 14sv, ABC-001)">
             <input
               className={INPUT}
               value={form.externalId}
               onChange={(e) => setForm((current) => ({ ...current, externalId: e.target.value }))}
-              placeholder="空欄でも可"
+              placeholder="14sv"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Drive の企業フォルダ名と推薦リストの保存先検索に使用します。自動生成はされません。
+            </p>
           </Field>
           <Field label="企業名 *">
             <input className={INPUT} value={form.name} onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))} />

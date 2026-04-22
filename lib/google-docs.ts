@@ -3,6 +3,12 @@ import { google } from "googleapis";
 const DOC_URL_RE = /\/document\/d\/([a-zA-Z0-9_-]+)/;
 const DRIVE_FOLDER_RE = /\/folders\/([a-zA-Z0-9_-]+)/;
 
+// 候補者・企業のルートフォルダ (env で上書き可能、未設定時はこの既定値を使用)
+const DEFAULT_PERSON_ROOT_FOLDER_URL =
+  "https://drive.google.com/drive/folders/1Pmv-hFyk8DKIuu24mtMS5c26DWXmjqXr";
+const DEFAULT_COMPANY_ROOT_FOLDER_URL =
+  "https://drive.google.com/drive/folders/1TEqGDtoQZlLU8bg8c4cWZSNDp7mRwbin";
+
 export function parseGoogleDocId(urlOrId: string) {
   const value = urlOrId.trim();
   const match = value.match(DOC_URL_RE);
@@ -230,9 +236,12 @@ export async function ensurePersonDriveFolder({
     };
   }
 
-  const parentFolderUrl = rootFolderUrl?.trim() || process.env.GOOGLE_CANDIDATE_FILES_FOLDER_URL?.trim();
+  const parentFolderUrl =
+    rootFolderUrl?.trim() ||
+    process.env.GOOGLE_CANDIDATE_FILES_FOLDER_URL?.trim() ||
+    DEFAULT_PERSON_ROOT_FOLDER_URL;
   if (!parentFolderUrl) {
-    throw new Error("GOOGLE_CANDIDATE_FILES_FOLDER_URL が未設定です");
+    throw new Error("候補者ルートフォルダの URL が解決できません");
   }
 
   // Drive 上に "0033_" で始まるフォルダが既にあれば再利用
@@ -268,9 +277,12 @@ export async function ensureCompanyDriveFolder({
       folderUrl: existingFolderUrl,
     };
   }
-  const parentFolderUrl = rootFolderUrl?.trim() || process.env.GOOGLE_COMPANY_FILES_FOLDER_URL?.trim();
+  const parentFolderUrl =
+    rootFolderUrl?.trim() ||
+    process.env.GOOGLE_COMPANY_FILES_FOLDER_URL?.trim() ||
+    DEFAULT_COMPANY_ROOT_FOLDER_URL;
   if (!parentFolderUrl) {
-    throw new Error("GOOGLE_COMPANY_FILES_FOLDER_URL が未設定です");
+    throw new Error("企業ルートフォルダの URL が解決できません");
   }
 
   // externalId で始まる企業フォルダを検索

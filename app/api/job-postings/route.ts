@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
-import { createResumeDocumentFromTemplate, ensurePersonDriveFolder } from "@/lib/google-docs";
+import { createResumeDocumentFromTemplate, ensureCompanyDriveFolder } from "@/lib/google-docs";
 
 type JobPostingFields = {
   title?: string;
@@ -117,13 +117,21 @@ export async function POST(req: Request) {
       const template = await prisma.jobPostingTemplate.findUnique({ where: { id: templateId } });
       if (template) {
         try {
-          // 案件用フォルダを確保 (会社名 + 案件タイトル)
-          const folder = await ensurePersonDriveFolder({
-            existingFolderUrl: null,
-            personName: `${deal.company.name} ${deal.title}`,
-            rootFolderUrl: template.driveFolderUrl,
+          // 求人票は企業フォルダに保存 (企業ID で既存フォルダを検索、なければ新規作成)
+          const folder = await ensureCompanyDriveFolder({
+            existingFolderUrl: deal.company.driveFolderUrl,
+            externalId: deal.company.externalId,
+            companyName: deal.company.name,
           });
           driveFolderUrl = folder.folderUrl;
+
+          // 初めて作成した場合は Company.driveFolderUrl を保存
+          if (!deal.company.driveFolderUrl && folder.folderUrl) {
+            await prisma.company.update({
+              where: { id: deal.company.id },
+              data: { driveFolderUrl: folder.folderUrl },
+            });
+          }
 
           // テンプレートの差し込み変数
           const replacements: Record<string, string> = {
