@@ -151,6 +151,64 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function errorToText(error: unknown): string {
+  if (error instanceof Error) {
+    const details: string[] = [error.message];
+    const extra = error as Error & { status?: number; cause?: unknown; response?: { status?: number; data?: unknown } };
+    if (extra.status) details.push(`status=${extra.status}`);
+    if (extra.response?.status) details.push(`response.status=${extra.response.status}`);
+    if (extra.response?.data) {
+      try {
+        details.push(`response.data=${typeof extra.response.data === "string" ? extra.response.data : JSON.stringify(extra.response.data)}`);
+      } catch {
+        // ignore
+      }
+    }
+    if (extra.cause && extra.cause !== error) details.push(`cause=${String(extra.cause)}`);
+    return details.join(" | ");
+  }
+  if (typeof error === "object" && error !== null) {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+  return String(error);
+}
+
+function mapGeminiError(raw: string): string {
+  if (/\bAPI_KEY_INVALID\b|\bAPI key not valid\b|\bInvalid API key\b/i.test(raw)) {
+    return "Gemini API キーが無効です。Railway の GEMINI_API_KEY を確認してください。";
+  }
+  if (/\b403\b|\bPERMISSION_DENIED\b|\bSERVICE_DISABLED\b/i.test(raw)) {
+    return "Gemini API の利用権限がありません (403)。Google Cloud コンソールで Generative Language API / Vertex AI API が有効化されているか、請求情報の紐付けを確認してください。";
+  }
+  if (/\b404\b|model.*not found|NOT_FOUND/i.test(raw)) {
+    return "指定された Gemini モデルが見つかりません (404)。GEMINI_MODEL の値 (例: gemini-2.5-flash) を確認してください。";
+  }
+  if (/\bUNAUTHENTICATED\b|\b401\b/i.test(raw)) {
+    return "Gemini への認証に失敗しました (401)。GEMINI_API_KEY を再発行してください。";
+  }
+  if (/UNAVAILABLE|\b503\b/i.test(raw)) {
+    return "Google の AI サーバーが混雑しています (503)。数十秒〜数分待ってからもう一度お試しください。";
+  }
+  if (/RESOURCE_EXHAUSTED|\b429\b|quota/i.test(raw)) {
+    return "Gemini のレート制限 / クォータに達しました。少し時間を置いてから再度お試しください (必要に応じて有料プランへの引き上げも検討してください)。";
+  }
+  if (/INVALID_ARGUMENT|\b400\b/i.test(raw)) {
+    return `Gemini が入力を受け付けませんでした (400)。ファイルサイズが大きすぎる/形式がサポート外の可能性があります。詳細: ${raw}`;
+  }
+  if (/DEADLINE_EXCEEDED|timeout|ETIMEDOUT/i.test(raw)) {
+    return "AI の応答が時間内に返ってきませんでした。ファイル数を減らすか少し経ってから再試行してください。";
+  }
+  if (/fetch failed|ENETUNREACH|ECONNRESET|ECONNREFUSED|getaddrinfo/i.test(raw)) {
+    return `Gemini へのネットワーク接続に失敗しました。詳細: ${raw}`;
+  }
+  // 未分類: 生メッセージを返して調査できるようにする
+  return `AI 抽出中にエラーが発生しました。詳細: ${raw}`;
+}
+
 // 503 UNAVAILABLE / 429 RESOURCE_EXHAUSTED の時だけ指数バックオフでリトライ
 async function callGeminiWithRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
   let lastError: unknown;
@@ -159,30 +217,20 @@ async function callGeminiWithRetry<T>(fn: () => Promise<T>, attempts = 3): Promi
       return await fn();
     } catch (error) {
       lastError = error;
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorToText(error);
+      console.error(`[gemini] attempt ${i + 1}/${attempts} failed:`, message);
       const retryable =
         message.includes("UNAVAILABLE") ||
         message.includes("503") ||
         message.includes("RESOURCE_EXHAUSTED") ||
-        message.includes("429");
+        message.includes("429") ||
+        message.includes("DEADLINE_EXCEEDED");
       if (!retryable || i === attempts - 1) break;
-      // 1.5s → 3s → ...
       await sleep(1500 * Math.pow(2, i));
     }
   }
-  // ユーザー向けに分かりやすいエラーに置き換え
-  const raw = lastError instanceof Error ? lastError.message : String(lastError);
-  if (raw.includes("UNAVAILABLE") || raw.includes("503")) {
-    throw new Error(
-      "Google の AI サーバーが混雑しています (503)。数十秒〜数分待ってからもう一度お試しください。"
-    );
-  }
-  if (raw.includes("RESOURCE_EXHAUSTED") || raw.includes("429")) {
-    throw new Error(
-      "AI のレート制限に達しました。少し時間を置いてから再度お試しください。"
-    );
-  }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  const raw = errorToText(lastError);
+  throw new Error(mapGeminiError(raw));
 }
 
 export async function extractCandidateFromFiles(files: SourceFile[]): Promise<ExtractedCandidate> {

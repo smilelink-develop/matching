@@ -55,6 +55,54 @@ const STRING_FIELDS: (keyof JobPostingFields)[] = [
   "holidays", "otherBenefits", "notes",
 ];
 
+// Docs テンプレ側の日本語 placeholder ({{勤務地}} など) と、AI 抽出結果の英語キーのマッピング
+const JP_KEY_MAP: Record<keyof JobPostingFields, string[]> = {
+  title: ["求人名", "タイトル"],
+  jobDescription: ["仕事内容"],
+  workLocation: ["勤務地"],
+  nearestStation: ["最寄り駅", "最寄駅"],
+  headcount: ["募集人数"],
+  gender: ["性別"],
+  nationality: ["国籍"],
+  workTime1Start: ["勤務時間1開始"],
+  workTime1End: ["勤務時間1終了"],
+  workTime2Start: ["勤務時間2開始"],
+  workTime2End: ["勤務時間2終了"],
+  overtime: ["残業有無", "残業"],
+  avgMonthlyOvertime: ["月間平均残業時間"],
+  fixedOvertimeHours: ["固定残業時間"],
+  fixedOvertimePay: ["固定残業代"],
+  monthlyGross: ["月総支給額"],
+  basicSalary: ["基本給"],
+  salaryCalcMethod: ["給与計算方法"],
+  perfectAttendance: ["皆勤手当"],
+  housingAllowance: ["住宅手当"],
+  nightShiftAllowance: ["深夜手当"],
+  commuteAllowance: ["通勤手当"],
+  socialInsurance: ["社会保険料"],
+  employmentInsurance: ["雇用保険料"],
+  healthInsurance: ["健康保険料"],
+  pensionInsurance: ["厚生年金保険料"],
+  incomeTax: ["所得税"],
+  residentTax: ["住民税"],
+  mealProvision: ["食費支給有無", "食費支給"],
+  mealAmount: ["食費金額"],
+  dormProvision: ["寮費有無", "寮有無"],
+  dormAmount: ["寮費金額", "寮費"],
+  utilitiesProvision: ["光熱費有無"],
+  utilitiesAmount: ["光熱費金額"],
+  holidays: ["休日詳細", "休日"],
+  otherBenefits: ["福利厚生", "その他手当"],
+  notes: ["特記事項", "備考"],
+};
+
+// 勤務時間の結合キー (例: 勤務時間1 = 09:00〜18:00) も自動生成
+function buildWorkTimeString(start: string | null | undefined, end: string | null | undefined) {
+  if (!start && !end) return "";
+  if (start && end) return `${start}〜${end}`;
+  return start || end || "";
+}
+
 function clean(value: unknown) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -133,16 +181,38 @@ export async function POST(req: Request) {
             });
           }
 
-          // テンプレートの差し込み変数
+          // テンプレートの差し込み変数を日本語 placeholder に変換して組み立てる
           const replacements: Record<string, string> = {
             会社名: deal.company.name,
             案件名: deal.title,
             タイトル: title,
+            求人名: title,
+            案件ID: String(deal.id),
+            作成日: new Date().toLocaleDateString("ja-JP"),
+            分野: deal.field ?? "",
+            // 未設定項目はよく聞かれるがフォームに無いので空で初期化 (テンプレに出ても空で消える)
+            雇用形態: "",
+            ビザ種類: "",
+            雇用期間: "",
+            勤務時間1休憩分: "",
+            勤務時間2休憩分: "",
+            勤務時間3休憩分: "",
+            勤務時間3: "",
           };
           for (const key of STRING_FIELDS) {
             const value = fields[key];
-            if (value) replacements[key] = value;
+            if (!value) continue;
+            // 英語キーでも従来通り置換できるように維持
+            replacements[key] = value;
+            // 日本語 placeholder にマッピング
+            const jpKeys = JP_KEY_MAP[key] ?? [];
+            for (const jpKey of jpKeys) {
+              replacements[jpKey] = value;
+            }
           }
+          // 勤務時間1/2 の結合を追加 (テンプレで {{勤務時間1}} と書いてある想定)
+          replacements["勤務時間1"] = buildWorkTimeString(fields.workTime1Start, fields.workTime1End);
+          replacements["勤務時間2"] = buildWorkTimeString(fields.workTime2Start, fields.workTime2End);
 
           const generated = await createResumeDocumentFromTemplate({
             templateUrl: template.templateUrl,

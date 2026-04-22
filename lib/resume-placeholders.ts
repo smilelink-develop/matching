@@ -122,6 +122,9 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
   const educationLines = asResumeLines(profile?.educations);
   const workLines = asWorkLines(profile?.workExperiences);
   const certLines = asResumeLines(profile?.certifications);
+
+  // 未入力の職歴・大学等の行は placeholder が {{…}} のまま残らないように、
+  // 空文字ではなく行全体を視覚的に消せる半角スペースで置換する。
   const education1 = {
     date: valueOrBlank(profile?.highSchoolStartDate),
     label: valueOrBlank(profile?.highSchoolName),

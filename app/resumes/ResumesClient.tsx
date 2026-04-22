@@ -184,9 +184,6 @@ export default function ResumesClient({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-[var(--color-secondary)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary-hover)]">
-                    {document.status}
-                  </span>
                   {document.documentUrl ? (
                     <a
                       href={document.documentUrl}
