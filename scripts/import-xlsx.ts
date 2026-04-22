@@ -181,8 +181,10 @@ async function main() {
       const addressParts = [s(rec["都道府県"]), s(rec["現住所"])].filter(Boolean);
       const address = addressParts.join(" ") || null;
 
+      const explicitId = Number(externalId);
       const person = await prisma.person.create({
         data: {
+          ...(Number.isFinite(explicitId) && explicitId > 0 ? { id: explicitId } : {}),
           name,
           nationality: normalizeNationality(rec["国籍"]),
           residenceStatus: normalizeResidenceStatus(rec["在留資格"]),
@@ -310,8 +312,10 @@ async function main() {
         continue;
       }
       const ownerId = await resolveStaffByName(s(rec["担当者"]));
+      const explicitDealId = Number(externalId);
       const deal = await prisma.deal.create({
         data: {
+          ...(Number.isFinite(explicitDealId) && explicitDealId > 0 ? { id: explicitDealId } : {}),
           title,
           companyId,
           ownerId,
@@ -521,6 +525,18 @@ async function main() {
       imported++;
     }
     console.log(`  更新 ${imported} 件`);
+  }
+
+  // 明示ID挿入後、自動採番のシーケンスを MAX(id)+1 に同期
+  console.log("\n== ID シーケンス同期 ==");
+  for (const table of ["Person", "Deal", "Company", "Partner", "Invoice", "JobPosting", "PersonPlacement"]) {
+    try {
+      await prisma.$executeRawUnsafe(
+        `SELECT setval('"${table}_id_seq"', COALESCE((SELECT MAX(id) FROM "${table}"), 0) + 1, false)`
+      );
+    } catch {
+      // シーケンスが無ければスキップ
+    }
   }
 
   console.log("\n✅ インポート完了");
