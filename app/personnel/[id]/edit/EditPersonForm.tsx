@@ -338,7 +338,7 @@ export default function EditPersonForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="rounded-3xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-3">
         <div className="grid gap-2 md:grid-cols-3">
           {SECTION_ITEMS.map((section) => (
@@ -360,8 +360,7 @@ export default function EditPersonForm({
 
 
       {activeSection === "basic" ? (
-        <section className="space-y-5">
-          <SectionTitle title="基本情報" description="候補者の基本プロフィールと紹介パートナー、連絡先を管理します。" />
+        <section className="space-y-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="英語名">
               <input className={INPUT} value={form.englishName} onChange={(event) => setValue("englishName", event.target.value)} placeholder="NGUYEN VAN AN" />
@@ -464,8 +463,6 @@ export default function EditPersonForm({
 
       {activeSection === "visa" ? (
         <section className="space-y-5">
-          <SectionTitle title="詳細情報" description="在留資格・免許、学歴・職歴、現在の在留資格に関する補足情報をそれぞれの島でまとめます。" />
-
           {/* 島1: 在留資格・免許 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-base font-semibold text-[var(--color-text-dark)]">在留資格・免許</p>
@@ -684,16 +681,15 @@ export default function EditPersonForm({
 
       {activeSection === "placement" ? (
         <section className="space-y-5">
-          <SectionTitle title="内定後" description="内定後の進捗と請求を管理します。" />
           {placementTabContent ?? (
-            <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
+            <p className="rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-400">
               内定後の情報表示が未設定です
             </p>
           )}
         </section>
       ) : null}
 
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex gap-3">
           {activeSection === "basic" || activeSection === "visa" ? (
             <button
