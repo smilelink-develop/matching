@@ -129,10 +129,22 @@ const SYSTEM_PROMPT = `あなたは外国人人材の書類から候補者情報
 
 ${EXTRACTION_SCHEMA_DESCRIPTION}`;
 
-const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+const SUPPORTED_IMAGE_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
 
 function isSupported(mime: string) {
   return SUPPORTED_IMAGE_MIMES.has(mime) || mime === "application/pdf";
+}
+
+function unsupportedMimeHint(mimes: string[]) {
+  if (mimes.some((mime) => mime === "image/heic" || mime === "image/heif")) {
+    return "HEIC / HEIF 画像はそのままでは読み取れません。iPhone の写真は JPEG に変換してからアップロードしてください。";
+  }
+  return `未対応の形式が含まれています: ${mimes.join(", ")}`;
 }
 
 function sleep(ms: number) {
@@ -181,7 +193,7 @@ export async function extractCandidateFromFiles(files: SourceFile[]): Promise<Ex
 
   const supportedFiles = files.filter((file) => isSupported(file.mimeType));
   if (supportedFiles.length === 0) {
-    throw new Error("対応形式の画像/PDFが含まれていません");
+    throw new Error(unsupportedMimeHint(files.map((file) => file.mimeType)));
   }
 
   const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
@@ -268,7 +280,7 @@ export async function extractJobPostingFromFiles(files: SourceFile[]): Promise<E
 
   const supportedFiles = files.filter((file) => isSupported(file.mimeType));
   if (supportedFiles.length === 0) {
-    throw new Error("対応形式の画像/PDFが含まれていません");
+    throw new Error(unsupportedMimeHint(files.map((file) => file.mimeType)));
   }
 
   const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
@@ -301,7 +313,9 @@ export async function extractJobPostingFromFiles(files: SourceFile[]): Promise<E
 }
 
 function parseJsonPayloadAs<T>(raw: string): T {
-  if (!raw) return {} as T;
+  if (!raw) {
+    throw new Error("Gemini から空のレスポンスが返りました");
+  }
   const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   try {
     return JSON.parse(cleaned) as T;
@@ -311,15 +325,27 @@ function parseJsonPayloadAs<T>(raw: string): T {
       try {
         return JSON.parse(match[0]) as T;
       } catch {
-        return {} as T;
+        console.error("Gemini JSON parse failed (matched object)", match[0].slice(0, 1000));
+        throw new Error(
+          `Gemini の返答を JSON として解釈できませんでした。返答冒頭: ${match[0]
+            .slice(0, 180)
+            .replace(/\s+/g, " ")}`
+        );
       }
     }
-    return {} as T;
+    console.error("Gemini JSON parse failed (raw)", cleaned.slice(0, 1000));
+    throw new Error(
+      `Gemini の返答形式が想定と違います。返答冒頭: ${cleaned
+        .slice(0, 180)
+        .replace(/\s+/g, " ")}`
+    );
   }
 }
 
 function parseJsonPayload(raw: string): ExtractedCandidate {
-  if (!raw) return {};
+  if (!raw) {
+    throw new Error("Gemini から空のレスポンスが返りました");
+  }
   const cleaned = raw
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/i, "")
@@ -332,9 +358,19 @@ function parseJsonPayload(raw: string): ExtractedCandidate {
       try {
         return JSON.parse(match[0]) as ExtractedCandidate;
       } catch {
-        return {};
+        console.error("Gemini candidate JSON parse failed (matched object)", match[0].slice(0, 1000));
+        throw new Error(
+          `Gemini の返答を JSON として解釈できませんでした。返答冒頭: ${match[0]
+            .slice(0, 180)
+            .replace(/\s+/g, " ")}`
+        );
       }
     }
-    return {};
+    console.error("Gemini candidate JSON parse failed (raw)", cleaned.slice(0, 1000));
+    throw new Error(
+      `Gemini の返答形式が想定と違います。返答冒頭: ${cleaned
+        .slice(0, 180)
+        .replace(/\s+/g, " ")}`
+    );
   }
 }
