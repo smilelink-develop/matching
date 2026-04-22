@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SSW_INDUSTRIES } from "@/lib/company-options";
 
 const CANDIDATE_COLUMNS = ["接続済み", "事前面談済み", "推薦済み", "内定済み"] as const;
@@ -361,18 +361,11 @@ export default function DealDetailClient({
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[260px] flex-1">
             <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-dark)]">候補者を追加</label>
-            <select
-              className={INPUT}
-              value={selectedPersonId}
-              onChange={(event) => setSelectedPersonId(event.target.value)}
-            >
-              <option value="">候補者を選択</option>
-              {addablePersons.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name} / {person.nationality} / {person.residenceStatus}
-                </option>
-              ))}
-            </select>
+            <PersonPicker
+              persons={addablePersons}
+              selectedId={selectedPersonId}
+              onSelect={setSelectedPersonId}
+            />
           </div>
           <button
             type="button"
@@ -578,6 +571,125 @@ function CounterCell({
           </svg>
         </button>
       </div>
+    </div>
+  );
+}
+
+function PersonPicker({
+  persons,
+  selectedId,
+  onSelect,
+}: {
+  persons: PersonOption[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const selected = persons.find((p) => String(p.id) === selectedId) ?? null;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return persons;
+    return persons.filter((p) => {
+      const hay = [p.name, p.nationality, p.residenceStatus].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [persons, query]);
+
+  // クリック外で閉じる
+  useEffect(() => {
+    const handler = (event: MouseEvent) => {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <div
+        className={`${INPUT} flex cursor-text items-center gap-2`}
+        onClick={() => setOpen(true)}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="text"
+          value={open ? query : selected ? `${selected.name} / ${selected.nationality} / ${selected.residenceStatus}` : query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="名前・国籍・在留資格で検索"
+          className="flex-1 bg-transparent outline-none"
+        />
+        {selected && !open ? (
+          <button
+            type="button"
+            aria-label="選択をクリア"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect("");
+              setQuery("");
+            }}
+            className="rounded-full px-1.5 text-[11px] text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          >
+            ✕
+          </button>
+        ) : null}
+      </div>
+      {open ? (
+        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-6 text-center text-xs text-gray-400">
+              {query ? `「${query}」に一致する候補者がいません` : "追加できる候補者がいません"}
+            </p>
+          ) : (
+            filtered.map((person) => (
+              <button
+                key={person.id}
+                type="button"
+                onClick={() => {
+                  onSelect(String(person.id));
+                  setQuery("");
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[var(--color-light)] ${
+                  String(person.id) === selectedId ? "bg-[var(--color-light)]" : ""
+                }`}
+              >
+                {person.photoUrl ? (
+                  <Image
+                    src={person.photoUrl}
+                    alt={person.name}
+                    width={32}
+                    height={32}
+                    unoptimized
+                    className="h-8 w-8 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary)] text-xs font-bold text-white">
+                    {person.name[0]}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-[var(--color-text-dark)]">{person.name}</p>
+                  <p className="truncate text-xs text-gray-500">
+                    {person.nationality} · {person.residenceStatus}
+                  </p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

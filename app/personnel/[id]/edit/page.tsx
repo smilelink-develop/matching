@@ -79,7 +79,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         <div>
           <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">候補者詳細</h1>
           <p className="text-sm text-gray-500 mt-2">
-            候補者情報を「基本情報」「詳細情報」「内定後」に分けて管理します。
+            候補者情報を「基本情報」「詳細情報」「請求」に分けて管理します。
           </p>
         </div>
 

@@ -16,6 +16,19 @@ type DealSummary = {
   candidatesCount: number;
 };
 
+type InvoiceSummary = {
+  id: number;
+  personId: number | null;
+  personName: string | null;
+  dealId: number | null;
+  dealTitle: string | null;
+  invoiceDate: string | null;
+  invoiceAmount: string | null;
+  invoiceNumber: string | null;
+  invoiceStatus: string;
+  invoiceUrl: string | null;
+};
+
 type CompanyData = {
   id: number;
   externalId: string | null;
@@ -26,6 +39,7 @@ type CompanyData = {
   driveFolderUrl: string | null;
   notes: string | null;
   deals: DealSummary[];
+  invoices: InvoiceSummary[];
 };
 
 export default function CompanyDetailClient({ initialCompany }: { initialCompany: CompanyData }) {
@@ -260,8 +274,96 @@ export default function CompanyDetailClient({ initialCompany }: { initialCompany
           </div>
         </section>
       </div>
+
+      {/* 請求一覧 */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-text-dark)]">この企業への請求</h2>
+            <p className="mt-1 text-xs text-gray-500">{company.invoices.length} 件 (候補者/案件ごとに請求発行済)</p>
+          </div>
+          <Link href="/invoices?tab=companies" className="text-xs text-[var(--color-primary)] hover:underline">
+            請求管理を見る
+          </Link>
+        </div>
+        {company.invoices.length === 0 ? (
+          <p className="mt-4 rounded-2xl border border-dashed border-gray-200 px-4 py-10 text-center text-sm text-gray-400">
+            この企業への請求はまだありません
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
+              <thead>
+                <tr className="bg-[var(--color-light)] text-left text-xs font-semibold text-gray-600">
+                  <th className="px-3 py-2">ステータス</th>
+                  <th className="px-3 py-2">候補者</th>
+                  <th className="px-3 py-2">案件</th>
+                  <th className="px-3 py-2 text-right">請求額</th>
+                  <th className="px-3 py-2">請求日</th>
+                  <th className="px-3 py-2">請求書</th>
+                </tr>
+              </thead>
+              <tbody>
+                {company.invoices.map((invoice) => (
+                  <tr key={invoice.id} className="border-t border-gray-100">
+                    <td className="px-3 py-2">
+                      <span className={invoiceStatusBadge(invoice.invoiceStatus)}>{invoice.invoiceStatus}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {invoice.personId ? (
+                        <Link href={`/personnel/${invoice.personId}/edit`} className="text-[var(--color-primary)] hover:underline">
+                          {invoice.personName ?? "-"}
+                        </Link>
+                      ) : (
+                        invoice.personName ?? "-"
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-gray-600">
+                      {invoice.dealId ? (
+                        <Link href={`/companies/deals/${invoice.dealId}`} className="hover:underline">
+                          {invoice.dealTitle ?? "-"}
+                        </Link>
+                      ) : (
+                        invoice.dealTitle ?? "-"
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      {invoice.invoiceAmount ? `${parseInvoiceAmount(invoice.invoiceAmount).toLocaleString()}` : "-"}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-gray-500">
+                      {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString("ja-JP") : "-"}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {invoice.invoiceUrl ? (
+                        <a href={invoice.invoiceUrl} target="_blank" rel="noreferrer" className="text-[var(--color-primary)] underline">
+                          開く
+                        </a>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
+}
+
+function invoiceStatusBadge(status: string) {
+  if (status === "入金済み") return "rounded-full bg-[#DCFCE7] px-2.5 py-0.5 text-[11px] font-medium text-[#166534]";
+  if (status === "送付済み") return "rounded-full bg-[#DBEAFE] px-2.5 py-0.5 text-[11px] font-medium text-[#1D4ED8]";
+  if (status === "保留") return "rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-600";
+  return "rounded-full bg-[#FEF3C7] px-2.5 py-0.5 text-[11px] font-medium text-[#92400E]";
+}
+
+function parseInvoiceAmount(value: string | null) {
+  if (!value) return 0;
+  const cleaned = value.replace(/[^\d.-]/g, "");
+  return Number(cleaned) || 0;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {

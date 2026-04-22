@@ -23,6 +23,16 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
 
   if (!company) notFound();
 
+  // この企業に紐づく請求を取得
+  const invoices = await prisma.invoice.findMany({
+    where: { deal: { companyId: Number(id) } },
+    orderBy: [{ invoiceDate: "desc" }, { createdAt: "desc" }],
+    include: {
+      person: { select: { id: true, name: true } },
+      deal: { select: { id: true, title: true } },
+    },
+  });
+
   return (
     <div className="space-y-6 p-8">
       <CompanyDetailClient
@@ -44,6 +54,18 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
             deadline: deal.deadline?.toISOString() ?? null,
             ownerName: deal.owner?.name ?? null,
             candidatesCount: deal.candidates.length,
+          })),
+          invoices: invoices.map((invoice) => ({
+            id: invoice.id,
+            personId: invoice.person?.id ?? null,
+            personName: invoice.person?.name ?? null,
+            dealId: invoice.deal?.id ?? null,
+            dealTitle: invoice.deal?.title ?? null,
+            invoiceDate: invoice.invoiceDate?.toISOString() ?? null,
+            invoiceAmount: invoice.invoiceAmount,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceStatus: invoice.invoiceStatus,
+            invoiceUrl: invoice.invoiceUrl,
           })),
         }}
       />

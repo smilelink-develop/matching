@@ -68,6 +68,25 @@ function BroadcastIcon({ active }: { active: boolean }) {
   );
 }
 
+function InvoiceIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`h-5 w-5 ${active ? "text-white" : "text-white/70"}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+      <path d="M14 2v5h5" />
+      <path d="M12 11v8" />
+      <path d="M15 13h-4.5a1.5 1.5 0 1 0 0 3h3a1.5 1.5 0 1 1 0 3H9" />
+    </svg>
+  );
+}
+
 function SettingsIcon({ active }: { active: boolean }) {
   return (
     <svg
@@ -127,16 +146,16 @@ const NAV: NavItem[] = [
     ],
   },
   {
-    label: "内定後",
-    href: "/revenue",
-    icon: BroadcastIcon,
+    label: "請求",
+    href: "/invoices",
+    icon: InvoiceIcon,
     children: [
-      { label: "売上ダッシュボード", href: "/revenue" },
-      { label: "案件管理", href: "/companies/deals" },
       { label: "入社進捗", href: "/placements" },
-      { label: "請求", href: "/invoices" },
+      { label: "企業への請求", href: "/invoices?tab=companies" },
+      { label: "PAへの請求", href: "/invoices?tab=partners" },
     ],
   },
+  { label: "売上ダッシュボード", href: "/revenue", icon: BroadcastIcon },
   { label: "チャット", href: "/chat", icon: ChatIcon },
   { label: "設定", href: "/settings", icon: SettingsIcon },
 ];

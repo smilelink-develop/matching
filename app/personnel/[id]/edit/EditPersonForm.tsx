@@ -87,7 +87,7 @@ type DocumentInput = {
 const SECTION_ITEMS = [
   { id: "basic", label: "基本情報" },
   { id: "visa", label: "詳細情報" },
-  { id: "placement", label: "内定後" },
+  { id: "placement", label: "請求" },
 ] as const;
 
 type OtherQualificationEntry = { name: string; expiryDate: string };
