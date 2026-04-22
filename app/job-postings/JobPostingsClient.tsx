@@ -13,7 +13,7 @@ type JobPostingTemplate = {
   id: number;
   name: string;
   templateUrl: string;
-  driveFolderUrl: string;
+  driveFolderUrl: string | null;
 };
 
 type JobPostingDoc = {

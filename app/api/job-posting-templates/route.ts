@@ -21,14 +21,15 @@ export async function POST(req: Request) {
     const name = String(body.name ?? "").trim();
     const templateUrl = String(body.templateUrl ?? "").trim();
     const driveFolderUrl = String(body.driveFolderUrl ?? "").trim();
-    if (!name || !templateUrl || !driveFolderUrl) {
+    if (!name || !templateUrl) {
       return Response.json(
-        { ok: false, error: "テンプレート名、Docs URL、Drive URL を入力してください" },
+        { ok: false, error: "テンプレート名と Docs URL を入力してください" },
         { status: 400 }
       );
     }
+    // 保存先は案件に紐づく企業フォルダに自動保存するため driveFolderUrl は任意
     const template = await prisma.jobPostingTemplate.create({
-      data: { name, templateUrl, driveFolderUrl },
+      data: { name, templateUrl, driveFolderUrl: driveFolderUrl || null },
     });
     return Response.json({ ok: true, template });
   } catch (error) {

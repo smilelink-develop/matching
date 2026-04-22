@@ -377,7 +377,7 @@ model JobPostingTemplate {
   id              Int      @id @default(autoincrement())
   name            String
   templateUrl     String
-  driveFolderUrl  String
+  driveFolderUrl  String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
