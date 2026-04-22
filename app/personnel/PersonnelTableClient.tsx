@@ -67,6 +67,28 @@ export default function PersonnelTableClient({
   const [selectedColumns, setSelectedColumns] = useState<PersonnelColumnKey[]>(DEFAULT_PERSONNEL_COLUMNS);
   const [draftColumns, setDraftColumns] = useState<PersonnelColumnKey[]>(DEFAULT_PERSONNEL_COLUMNS);
   const [editingColumns, setEditingColumns] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredPersons = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return persons;
+    return persons.filter((person) => {
+      const haystack = [
+        person.name,
+        person.englishName,
+        person.nationality,
+        person.residenceStatus,
+        person.partnerName,
+        person.address,
+        person.phoneNumber,
+        person.currentJob,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [persons, searchTerm]);
 
   const orderedItems = useMemo(
     () => PERSONNEL_COLUMN_SECTIONS.flatMap((section) => section.items),
@@ -105,18 +127,30 @@ export default function PersonnelTableClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setDraftColumns(selectedColumns);
-            setEditingColumns((current) => !current);
-          }}
-          className="rounded-lg border border-[var(--color-secondary)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
-        >
-          表示項目を編集
-        </button>
-        {headerExtras}
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="名前・英語名・国籍・パートナー・住所で検索"
+        />
+        {searchTerm ? (
+          <span className="text-xs text-gray-500">
+            {filteredPersons.length} / {persons.length} 件
+          </span>
+        ) : null}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setDraftColumns(selectedColumns);
+              setEditingColumns((current) => !current);
+            }}
+            className="rounded-lg border border-[var(--color-secondary)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
+          >
+            表示項目を編集
+          </button>
+          {headerExtras}
+        </div>
       </div>
 
       {editingColumns ? (
@@ -181,7 +215,7 @@ export default function PersonnelTableClient({
             </tr>
           </thead>
           <tbody>
-            {persons.map((person) => (
+            {filteredPersons.map((person) => (
               <tr key={person.id} className="border-t border-gray-100 hover:bg-gray-50">
                 {appliedColumns.map((column, index) => (
                   <td key={column.key} className="px-4 py-3 text-gray-600">
@@ -203,6 +237,12 @@ export default function PersonnelTableClient({
               <tr>
                 <td colSpan={appliedColumns.length + 1} className="px-4 py-10 text-center text-gray-400">
                   候補者が登録されていません
+                </td>
+              </tr>
+            ) : filteredPersons.length === 0 ? (
+              <tr>
+                <td colSpan={appliedColumns.length + 1} className="px-4 py-10 text-center text-gray-400">
+                  「{searchTerm}」に一致する候補者が見つかりません
                 </td>
               </tr>
             ) : null}
@@ -386,5 +426,42 @@ function FolderIcon() {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+function SearchInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="relative w-full max-w-md">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </span>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? "検索..."}
+        className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-8 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-[11px] text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      ) : null}
+    </div>
   );
 }

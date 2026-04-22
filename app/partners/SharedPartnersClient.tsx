@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CHANNELS } from "@/lib/candidate-profile";
 
 type Partner = {
@@ -34,6 +34,19 @@ export default function SharedPartnersClient({
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState(emptyForm);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredPartners = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return partners;
+    return partners.filter((p) => {
+      const haystack = [p.name, p.country, p.contactName, p.notes, channelLabel(p.channel)]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [partners, searchTerm]);
 
   const submit = async () => {
     if (!form.name.trim()) {
@@ -145,9 +158,21 @@ export default function SharedPartnersClient({
       </section>
 
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">パートナー一覧</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-[var(--color-text-dark)]">
+            パートナー一覧
+            <span className="ml-2 text-xs font-normal text-gray-500">
+              {searchTerm ? `${filteredPartners.length} / ${partners.length} 件` : `${partners.length} 件`}
+            </span>
+          </h2>
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="名前・国・担当・メモで検索"
+          />
+        </div>
         <div className="mt-4 space-y-3 max-h-[calc(100vh-14rem)] overflow-y-auto pr-2">
-          {partners.map((partner) =>
+          {filteredPartners.map((partner) =>
             editingId === partner.id ? (
               <div key={partner.id} className="rounded-2xl border border-[var(--color-secondary)] bg-white p-4">
                 <div className="grid gap-3 md:grid-cols-2">
@@ -222,6 +247,10 @@ export default function SharedPartnersClient({
             <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
               まだパートナー情報がありません
             </p>
+          ) : filteredPartners.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
+              「{searchTerm}」に一致するパートナーが見つかりません
+            </p>
           ) : null}
         </div>
       </section>
@@ -266,3 +295,40 @@ function TrashIcon() {
 
 const INPUT =
   "w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30";
+
+function SearchInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="relative flex-1 min-w-[200px] max-w-xs">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </span>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? "検索..."}
+        className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-[11px] text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      ) : null}
+    </div>
+  );
+}

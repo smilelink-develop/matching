@@ -104,7 +104,7 @@ export default function PhotoPanel({
         ) : null}
       </div>
       {iconActions ? (
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">{iconActions}</div>
+        <div className="ml-auto flex shrink-0 items-center gap-3">{iconActions}</div>
       ) : null}
     </section>
   );

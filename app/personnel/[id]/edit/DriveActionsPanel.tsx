@@ -43,7 +43,7 @@ export default function DriveActionsPanel({
           target="_blank"
           rel="noreferrer"
           title="保管場所を開く"
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-secondary)] bg-white text-[var(--color-primary)] shadow-sm transition-transform hover:scale-110 hover:bg-[var(--color-light)]"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[var(--color-primary)] transition-transform hover:scale-110 hover:bg-[var(--color-light)]"
         >
           <FolderIcon />
         </a>
@@ -52,7 +52,7 @@ export default function DriveActionsPanel({
           type="button"
           onClick={() => void editUrl()}
           title="保管場所 未設定 (クリックで設定)"
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white text-gray-400 transition-transform hover:scale-110 hover:text-[var(--color-primary)]"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-gray-400 transition-transform hover:scale-110 hover:text-[var(--color-primary)]"
         >
           <FolderIcon />
         </button>
@@ -62,7 +62,7 @@ export default function DriveActionsPanel({
         type="button"
         onClick={() => void editUrl()}
         title="保管場所 URL を編集"
-        className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-secondary)] bg-white text-[var(--color-primary)] shadow-sm transition-transform hover:scale-110 hover:bg-[var(--color-light)]"
+        className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[var(--color-primary)] transition-transform hover:scale-110 hover:bg-[var(--color-light)]"
       >
         <EditIcon />
       </button>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAccount } from "@/lib/auth";
 import { compareExternalId, findExternalIdByName } from "@/lib/company-id-mapping";
+import CompaniesListClient from "./CompaniesListClient";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +23,12 @@ export default async function CompaniesPage() {
   // externalId (数値プレフィックス) で昇順。欠番は末尾
   const sorted = [...companies].sort((a, b) => compareExternalId(a.externalId, b.externalId));
 
-  const active = sorted.filter((company) => company.hiringStatus !== "停止");
-  const stopped = sorted.filter((company) => company.hiringStatus === "停止");
+  const active = sorted
+    .filter((company) => company.hiringStatus !== "停止")
+    .map(toRow);
+  const stopped = sorted
+    .filter((company) => company.hiringStatus === "停止")
+    .map(toRow);
 
   return (
     <div className="p-8 space-y-6">
@@ -40,21 +45,29 @@ export default async function CompaniesPage() {
         </Link>
       </div>
 
-      <CompaniesTable companies={active} emptyLabel="まだ企業情報が登録されていません" />
-
-      {stopped.length > 0 ? (
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 pt-2">
-            <h2 className="text-sm font-semibold text-gray-500">採用停止中</h2>
-            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-500">
-              {stopped.length} 件
-            </span>
-          </div>
-          <CompaniesTable companies={stopped} emptyLabel="停止中の企業はありません" muted />
-        </div>
-      ) : null}
+      <CompaniesListClient active={active} stopped={stopped} />
     </div>
   );
+}
+
+type RawCompany = {
+  id: number;
+  externalId: string | null;
+  name: string;
+  industry: string | null;
+  hiringStatus: string;
+  deals: { id: number }[];
+};
+
+function toRow(c: RawCompany) {
+  return {
+    id: c.id,
+    externalId: c.externalId,
+    name: c.name,
+    industry: c.industry,
+    hiringStatus: c.hiringStatus,
+    deals: c.deals,
+  };
 }
 
 // セッション内で 1 度だけ実行 (モジュールスコープのフラグ)
@@ -98,83 +111,4 @@ async function autoFillExternalIds() {
   } catch {
     // 一度失敗したら再試行しない (フラグは立てたまま)
   }
-}
-
-type CompanyRow = {
-  id: number;
-  externalId: string | null;
-  name: string;
-  industry: string | null;
-  hiringStatus: string;
-  deals: { id: number }[];
-};
-
-function CompaniesTable({
-  companies,
-  emptyLabel,
-  muted = false,
-}: {
-  companies: CompanyRow[];
-  emptyLabel: string;
-  muted?: boolean;
-}) {
-  return (
-    <div
-      className={`overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm ${
-        muted ? "opacity-80" : ""
-      }`}
-    >
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-[var(--color-light)] text-[var(--color-text-dark)]">
-            <th className="px-4 py-3 text-left font-semibold w-28">企業ID</th>
-            <th className="px-4 py-3 text-left font-semibold">企業名</th>
-            <th className="px-4 py-3 text-left font-semibold">業種</th>
-            <th className="px-4 py-3 text-left font-semibold">採用状況</th>
-            <th className="px-4 py-3 text-left font-semibold w-20">案件数</th>
-          </tr>
-        </thead>
-        <tbody>
-          {companies.map((company) => (
-            <tr key={company.id} className="border-t border-gray-100 hover:bg-gray-50">
-              <td className="p-0 font-mono text-[13px] text-[var(--color-primary)]">
-                <Link href={`/companies/${company.id}`} className="block px-4 py-3">
-                  {company.externalId ?? <span className="text-gray-300">未設定</span>}
-                </Link>
-              </td>
-              <td className="p-0 font-medium text-[var(--color-text-dark)]">
-                <Link href={`/companies/${company.id}`} className="block px-4 py-3">
-                  {company.name}
-                </Link>
-              </td>
-              <td className="p-0 text-gray-600">
-                <Link href={`/companies/${company.id}`} className="block px-4 py-3">
-                  {company.industry ?? "-"}
-                </Link>
-              </td>
-              <td className="p-0">
-                <Link href={`/companies/${company.id}`} className="block px-4 py-3">
-                  <span className="inline-block rounded-full bg-[var(--color-light)] px-2 py-0.5 text-xs font-medium text-[var(--color-primary)]">
-                    {company.hiringStatus}
-                  </span>
-                </Link>
-              </td>
-              <td className="p-0 text-gray-600">
-                <Link href={`/companies/${company.id}`} className="block px-4 py-3">
-                  {company.deals.length}件
-                </Link>
-              </td>
-            </tr>
-          ))}
-          {companies.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
-                {emptyLabel}
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
-    </div>
-  );
 }
