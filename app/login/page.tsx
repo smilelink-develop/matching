@@ -1,3 +1,4 @@
+import AdminLogo from "./AdminLogo";
 import LoginForm from "./LoginForm";
 
 export const dynamic = "force-dynamic";
@@ -13,14 +14,12 @@ export default function LoginPage() {
         <div className="relative w-full rounded-[32px] border border-white/10 bg-white/[0.07] p-8 shadow-[0_40px_120px_rgba(15,23,42,0.55)] backdrop-blur-xl">
           <div className="mb-8">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-xs font-bold tracking-[0.2em] text-white">
-                SM
-              </div>
+              <AdminLogo />
               <p className="text-[11px] font-semibold tracking-[0.32em] text-white/60">
                 SMILE MATCHING
               </p>
             </div>
-            <h1 className="mt-6 text-3xl font-semibold leading-[1.2]">
+            <h1 className="mt-7 text-4xl font-semibold leading-[1.15] tracking-tight">
               人材紹介ダッシュボードへ
               <br />
               ログイン

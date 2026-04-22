@@ -9,7 +9,6 @@ export default function LoginForm() {
   const [loginId, setLoginId] = useState("");
   const [passcode, setPasscode] = useState("");
   const [saving, setSaving] = useState(false);
-  const [adminClickCount, setAdminClickCount] = useState(0);
 
   const submit = async () => {
     if (!loginId.trim() || !passcode.trim()) {
@@ -35,31 +34,6 @@ export default function LoginForm() {
         return;
       }
 
-      window.location.href = result.nextPath || "/";
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAdminShortcut = async () => {
-    const next = adminClickCount + 1;
-    if (next < 3) {
-      setAdminClickCount(next);
-      return;
-    }
-    setAdminClickCount(0);
-    setSaving(true);
-    try {
-      const response = await fetch("/api/auth/admin-shortcut", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nextPath }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.ok) {
-        alert(result.error || "管理者ログインに失敗しました");
-        return;
-      }
       window.location.href = result.nextPath || "/";
     } finally {
       setSaving(false);
@@ -106,13 +80,6 @@ export default function LoginForm() {
           </svg>
         </span>
       </button>
-      {/* 管理者用ショートカット: 3回連続クリックで自動ログイン */}
-      <button
-        type="button"
-        onClick={() => void handleAdminShortcut()}
-        aria-label="管理者用ショートカット"
-        className="mx-auto mt-1 block h-4 w-12 rounded-full border border-white/10 bg-white/5 transition hover:bg-white/10"
-      />
     </div>
   );
 }
