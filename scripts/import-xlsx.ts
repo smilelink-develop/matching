@@ -329,9 +329,8 @@ async function main() {
           interviewCount: num(rec["面接人数"]) ?? 0,
           offerCount: num(rec["内定人数"]) ?? 0,
           contractCount: num(rec["成約人数"]) ?? 0,
-          notes: [s(rec["流入"]) && `流入: ${s(rec["流入"])}`, s(rec["入社状況"]) && `入社状況: ${s(rec["入社状況"])}`]
-            .filter(Boolean)
-            .join("\n") || null,
+          // 流入/入社状況 は候補者ごとに異なるので案件メモには含めない
+          notes: null,
         },
       });
       dealIdMap.set(externalId, deal.id);

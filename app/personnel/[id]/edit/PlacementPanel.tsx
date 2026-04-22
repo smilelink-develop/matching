@@ -294,7 +294,7 @@ export default function PlacementPanel({
                     ))}
                   </SelectField>
                   <TextField
-                    label="単価（万円）"
+                    label="単価（円）"
                     value={invoice.unitPrice ?? ""}
                     onChange={(v) => setInvoices((prev) => prev.map((i) => (i.id === invoice.id ? { ...i, unitPrice: v } : i)))}
                     onBlur={(v) => void patchInvoice(invoice.id, { unitPrice: v || null })}

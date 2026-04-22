@@ -250,9 +250,9 @@ export default function DealDetailClient({
         </div>
 
         {!editing ? (
-          currentDeal.notes ? (
+          sanitizeDealNotes(currentDeal.notes) ? (
             <p className="mt-5 rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4 text-sm leading-7 text-[var(--color-text-dark)]">
-              {currentDeal.notes}
+              {sanitizeDealNotes(currentDeal.notes)}
             </p>
           ) : null
         ) : (
@@ -281,10 +281,16 @@ export default function DealDetailClient({
                 ))}
               </select>
             </EditField>
-            <EditField label="単価">
+            <EditField label="単価 (円)">
               <div className="relative">
-                <input className={`${EDIT_INPUT} pr-12`} value={editForm.unitPrice} onChange={(e) => setEditForm((c) => ({ ...c, unitPrice: e.target.value }))} placeholder="45" />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">万円</span>
+                <input
+                  className={`${EDIT_INPUT} pr-10`}
+                  value={editForm.unitPrice}
+                  onChange={(e) => setEditForm((c) => ({ ...c, unitPrice: e.target.value }))}
+                  placeholder="450000"
+                  inputMode="numeric"
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">円</span>
               </div>
             </EditField>
             <EditField label="期限">
@@ -499,6 +505,17 @@ function priorityClass(priority: string) {
   return "rounded-full bg-[var(--color-light)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary)]";
 }
 
+// 案件メモに含まれる「流入:」「入社状況:」行は候補者情報なので、表示時に除外
+function sanitizeDealNotes(value: string | null) {
+  if (!value) return null;
+  const cleaned = value
+    .split(/\r?\n/)
+    .filter((line) => !/^(流入|入社状況)[:：]/.test(line.trim()))
+    .join("\n")
+    .trim();
+  return cleaned || null;
+}
+
 function statusClass(status: string) {
   if (status === "至急募集") return "rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[11px] font-medium text-[#B91C1C]";
   if (status === "募集中") return "rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-medium text-[#92400E]";
@@ -513,7 +530,16 @@ const EDIT_INPUT = INPUT;
 
 function formatUnitPrice(value: string | null) {
   if (!value) return "未設定";
-  return value.includes("万円") ? value : `${value}万円`;
+  // 旧データ互換: "45万円" は "450,000 円" に変換
+  const manMatch = value.match(/^(-?\d+(?:\.\d+)?)\s*万円$/);
+  if (manMatch) {
+    const yen = Math.round(Number(manMatch[1]) * 10000);
+    return `${yen.toLocaleString("ja-JP")} 円`;
+  }
+  if (value.includes("円")) return value;
+  const n = Number(value.replace(/,/g, ""));
+  if (Number.isFinite(n)) return `${n.toLocaleString("ja-JP")} 円`;
+  return `${value} 円`;
 }
 
 function CounterCell({

@@ -96,10 +96,16 @@ export default function NewDealClient({
             <option value="成約">成約</option>
           </select>
         </Field>
-        <Field label="単価">
+        <Field label="単価 (円)">
           <div className="relative">
-            <input className={`${INPUT} pr-12`} value={form.unitPrice} onChange={(e) => setForm((current) => ({ ...current, unitPrice: e.target.value }))} placeholder="45" />
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">万円</span>
+            <input
+              className={`${INPUT} pr-10`}
+              value={form.unitPrice}
+              onChange={(e) => setForm((current) => ({ ...current, unitPrice: e.target.value }))}
+              placeholder="450000"
+              inputMode="numeric"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">円</span>
           </div>
         </Field>
         <Field label="期限">

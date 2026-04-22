@@ -178,5 +178,13 @@ function priorityClass(priority: string) {
 
 function formatUnitPrice(value: string | null) {
   if (!value) return "単価未設定";
-  return value.includes("万円") ? value : `${value}万円`;
+  const manMatch = value.match(/^(-?\d+(?:\.\d+)?)\s*万円$/);
+  if (manMatch) {
+    const yen = Math.round(Number(manMatch[1]) * 10000);
+    return `${yen.toLocaleString("ja-JP")} 円`;
+  }
+  if (value.includes("円")) return value;
+  const n = Number(value.replace(/,/g, ""));
+  if (Number.isFinite(n)) return `${n.toLocaleString("ja-JP")} 円`;
+  return `${value} 円`;
 }
