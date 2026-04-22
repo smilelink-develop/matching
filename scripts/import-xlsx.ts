@@ -106,11 +106,11 @@ async function resolvePartnerByName(name: string | null): Promise<number | null>
 }
 
 // ---------- readers ----------
-function readSheet(filePath: string, sheetName: string): Record<string, unknown>[][] {
+function readSheet(filePath: string, sheetName: string): unknown[][] {
   const wb = XLSX.readFile(filePath, { cellDates: true });
   const ws = wb.Sheets[sheetName];
   if (!ws) return [];
-  return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as Record<string, unknown>[][];
+  return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as unknown[][];
 }
 
 function rowToRecord(headers: (string | null)[], row: unknown[]): Record<string, unknown> {
@@ -131,7 +131,7 @@ async function main() {
   console.log("\n== 企業マスタ ==");
   {
     const rows = readSheet(COMPANY_FILE, "企業マスタ");
-    const headerRow = (rows[0] ?? []) as (string | null)[];
+    const headerRow = (rows[0] ?? []) as unknown[];
     const headers = headerRow.map((h) => (h ? String(h).replace(/\s+/g, "").replace(/\n/g, "") : null));
     let imported = 0;
     for (let i = 1; i < rows.length; i++) {
@@ -168,7 +168,7 @@ async function main() {
   {
     const rows = readSheet(CANDIDATE_FILE, "DB");
     // R1 はタイトル、R2 がヘッダー、R3 以降がデータ
-    const headerRow = (rows[1] ?? []) as (string | null)[];
+    const headerRow = (rows[1] ?? []) as unknown[];
     const headers = headerRow.map((h) => (h ? String(h).replace(/\s+/g, "").replace(/\n/g, "") : null));
     let imported = 0;
     for (let i = 2; i < rows.length; i++) {
@@ -225,7 +225,7 @@ async function main() {
   {
     const rows = readSheet(CANDIDATE_FILE, "履歴書収集フォーム");
     // R1 がヘッダー、R2 は質問文 (スキップ)、R3 以降データ
-    const headerRow = (rows[0] ?? []) as (string | null)[];
+    const headerRow = (rows[0] ?? []) as unknown[];
     const headers = headerRow.map((h) => (h ? String(h).replace(/\s+/g, "").replace(/\n/g, "") : null));
     let merged = 0;
     for (let i = 2; i < rows.length; i++) {
@@ -297,7 +297,7 @@ async function main() {
   console.log("\n== 案件管理 ==");
   {
     const rows = readSheet(COMPANY_FILE, "案件管理");
-    const headerRow = (rows[0] ?? []) as (string | null)[];
+    const headerRow = (rows[0] ?? []) as unknown[];
     const headers = headerRow.map((h) => (h ? String(h).replace(/\s+/g, "").replace(/\n/g, "") : null));
     let imported = 0;
     for (let i = 1; i < rows.length; i++) {
@@ -343,7 +343,7 @@ async function main() {
   console.log("\n== 条件マスタ ==");
   {
     const rows = readSheet(COMPANY_FILE, "条件マスタ");
-    const headerRow = (rows[0] ?? []) as (string | null)[];
+    const headerRow = (rows[0] ?? []) as unknown[];
     const headers = headerRow.map((h) => (h ? String(h).replace(/\s+/g, "").replace(/\n/g, "") : null));
     let imported = 0;
     for (let i = 1; i < rows.length; i++) {
@@ -407,7 +407,7 @@ async function main() {
   console.log("\n== 請求管理 ==");
   {
     const rows = readSheet(COMPANY_FILE, "請求管理");
-    const headerRow = (rows[0] ?? []) as (string | null)[];
+    const headerRow = (rows[0] ?? []) as unknown[];
     const headers = headerRow.map((h) => (h ? String(h).replace(/\s+/g, "").replace(/\n/g, "") : null));
     let imported = 0;
     for (let i = 1; i < rows.length; i++) {
@@ -479,7 +479,7 @@ async function main() {
   console.log("\n== 内定者管理 ==");
   {
     const rows = readSheet(COMPANY_FILE, "内定者管理");
-    const headerRow = (rows[0] ?? []) as (string | null)[];
+    const headerRow = (rows[0] ?? []) as unknown[];
     const headers = headerRow.map((h) => (h ? String(h).replace(/\s+/g, "").replace(/\n/g, "") : null));
     let imported = 0;
     for (let i = 1; i < rows.length; i++) {
