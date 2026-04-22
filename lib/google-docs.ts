@@ -101,11 +101,14 @@ export async function createResumeDocumentFromTemplate({
   folderUrl,
   title,
   replacements,
+  photoUrl,
 }: {
   templateUrl: string;
   folderUrl: string;
   title: string;
   replacements: Record<string, string>;
+  /** {{顔写真}} 部分に挿入する画像の URL。http(s) の公開URL推奨 (data:/drive直リンク不可) */
+  photoUrl?: string | null;
 }) {
   const templateId = parseGoogleDocId(templateUrl);
   const folderId = parseGoogleDriveFolderId(folderUrl);
@@ -154,6 +157,22 @@ export async function createResumeDocumentFromTemplate({
     throw new Error("Google Docs の複製に失敗しました");
   }
 
+  // まず {{顔写真}} の位置を画像に置換できるよう、photoUrl が指定されていれば先に処理する
+  // text 置換の前に実行することで、テンプレ上の placeholder 文字列を目印にして位置を特定できる
+  if (photoUrl && /^https?:\/\//.test(photoUrl)) {
+    try {
+      await insertInlineImageAtPlaceholder({
+        docs,
+        documentId,
+        placeholder: "{{顔写真}}",
+        photoUrl,
+      });
+    } catch (error) {
+      // 画像挿入の失敗は履歴書作成全体をブロックしない (テキスト置換で空文字になるだけ)
+      console.warn("insertInlineImageAtPlaceholder failed:", error);
+    }
+  }
+
   const requests = Object.entries(replacements).map(([key, value]) => ({
     replaceAllText: {
       containsText: {
@@ -175,6 +194,93 @@ export async function createResumeDocumentFromTemplate({
     documentId,
     documentUrl: copied.data.webViewLink ?? `https://docs.google.com/document/d/${documentId}/edit`,
   };
+}
+
+type DocsClient = ReturnType<typeof google.docs>;
+
+/**
+ * Google Docs 内で指定の placeholder 文字列を見つけ、そこに画像を挿入する。
+ * placeholder テキストは削除してから画像が同じ位置に入る。
+ */
+async function insertInlineImageAtPlaceholder({
+  docs,
+  documentId,
+  placeholder,
+  photoUrl,
+}: {
+  docs: DocsClient;
+  documentId: string;
+  placeholder: string;
+  photoUrl: string;
+}) {
+  const doc = await docs.documents.get({ documentId });
+  const body = doc.data.body;
+  if (!body?.content) return;
+
+  type Hit = { startIndex: number; endIndex: number };
+  const hits: Hit[] = [];
+
+  const walkTextRuns = (elements: unknown[] | null | undefined) => {
+    if (!elements) return;
+    for (const el of elements as Record<string, unknown>[]) {
+      const paragraph = el.paragraph as { elements?: Record<string, unknown>[] } | undefined;
+      if (paragraph?.elements) {
+        for (const run of paragraph.elements) {
+          const tr = run.textRun as { content?: string } | undefined;
+          const start = typeof run.startIndex === "number" ? run.startIndex : null;
+          if (!tr?.content || start === null) continue;
+          let idx = 0;
+          while (true) {
+            const found = tr.content.indexOf(placeholder, idx);
+            if (found === -1) break;
+            hits.push({
+              startIndex: start + found,
+              endIndex: start + found + placeholder.length,
+            });
+            idx = found + placeholder.length;
+          }
+        }
+      }
+      const table = el.table as { tableRows?: Record<string, unknown>[] } | undefined;
+      if (table?.tableRows) {
+        for (const row of table.tableRows) {
+          const cells = row.tableCells as Record<string, unknown>[] | undefined;
+          if (!cells) continue;
+          for (const cell of cells) {
+            walkTextRuns((cell.content as unknown[]) ?? []);
+          }
+        }
+      }
+    }
+  };
+
+  walkTextRuns(body.content);
+
+  if (hits.length === 0) return;
+
+  // 後ろから処理しないと startIndex がずれる
+  hits.sort((a, b) => b.startIndex - a.startIndex);
+
+  for (const hit of hits) {
+    const requests: Record<string, unknown>[] = [
+      {
+        deleteContentRange: {
+          range: { startIndex: hit.startIndex, endIndex: hit.endIndex },
+        },
+      },
+      {
+        insertInlineImage: {
+          location: { index: hit.startIndex },
+          uri: photoUrl,
+          objectSize: {
+            height: { magnitude: 120, unit: "PT" },
+            width: { magnitude: 100, unit: "PT" },
+          },
+        },
+      },
+    ];
+    await docs.documents.batchUpdate({ documentId, requestBody: { requests } });
+  }
 }
 
 export function formatPersonIdPrefix(id: number) {

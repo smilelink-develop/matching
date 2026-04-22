@@ -81,11 +81,14 @@ export async function POST(req: Request) {
       },
       assetName,
     });
+    // 顔写真は http(s) の公開URL のみ Google Docs に挿入できる (data: URL は不可)
+    const photoUrl = person.photoUrl && /^https?:\/\//.test(person.photoUrl) ? person.photoUrl : null;
     const generated = await createResumeDocumentFromTemplate({
       templateUrl: template.templateUrl,
       folderUrl: folder.folderUrl,
       title: prefixedTitle,
       replacements: buildResumePlaceholders({ person }),
+      photoUrl,
     });
 
     const resume = await prisma.resumeDocument.create({

@@ -90,16 +90,29 @@ function asResumeLines(value: unknown) {
   return Array.isArray(value) ? (value as ResumeLine[]) : [];
 }
 
-function asWorkLines(value: unknown) {
+type WorkLine = { date: string; endDate: string; label: string; result: string };
+
+function asWorkLines(value: unknown): WorkLine[] {
   if (!Array.isArray(value)) return [];
   return value.map((line) => {
     const current = typeof line === "object" && line !== null ? (line as Record<string, unknown>) : {};
     return {
       date: valueOrBlank(String(current.startDate ?? current.date ?? "")),
+      endDate: valueOrBlank(String(current.endDate ?? "")),
       label: valueOrBlank(String(current.companyName ?? current.label ?? "")),
       result: valueOrBlank(String(current.reason ?? current.result ?? "")),
     };
   });
+}
+
+function mapWorkLine(lines: WorkLine[], index: number) {
+  const line = lines[index];
+  return {
+    date: valueOrBlank(line?.date),
+    endDate: valueOrBlank(line?.endDate),
+    label: valueOrBlank(line?.label),
+    result: valueOrBlank(line?.result),
+  };
 }
 
 export function buildResumePlaceholders(input: ResumeDocumentInput) {
@@ -120,9 +133,9 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     result: valueOrBlank(profile?.universityEndDate),
   };
   const education3 = mapLine(educationLines, 0);
-  const work1 = mapLine(workLines, 0);
-  const work2 = mapLine(workLines, 1);
-  const work3 = mapLine(workLines, 2);
+  const work1 = mapWorkLine(workLines, 0);
+  const work2 = mapWorkLine(workLines, 1);
+  const work3 = mapWorkLine(workLines, 2);
   const cert1 = {
     date: valueOrBlank(profile?.licenseExpiryDate),
     label: valueOrBlank(profile?.licenseName),
@@ -144,7 +157,8 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     作成日: new Intl.DateTimeFormat("ja-JP").format(new Date()),
     カタカナ名: valueOrBlank(person.name),
     英語名: valueOrBlank(onboarding?.englishName),
-    顔写真: person.name ? "写真あり" : "",
+    // {{顔写真}} は別ステップで画像挿入するため、ここでは空に置換して残骸を消す
+    顔写真: "",
     性別: valueOrBlank(profile?.gender),
     国籍: valueOrBlank(profile?.country) || valueOrBlank(person.nationality),
     生年月日: formatDateJapanese(onboarding?.birthDate),
@@ -161,6 +175,14 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     子供: valueOrBlank(profile?.childrenCount),
     就労ビザ: "",
     備考欄: valueOrBlank(profile?.traineeExperience),
+    // 高校 (単数形キー。テンプレ側で {{入学}} / {{卒業}} と書かれている分)
+    入学: education1.date,
+    卒業: education1.result,
+    // 大学 (単数形キー)
+    入学_大学: education2.date,
+    卒業_大学: education2.result,
+    大学名: education2.label,
+    // 互換用 (数字付きキー)
     入学1: education1.date,
     高校名: education1.label,
     卒業1: education1.result,
@@ -170,13 +192,17 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     入学3: education3.date,
     学校名3: education3.label,
     卒業3: education3.result,
+    // 職歴 (日付は入社/退社、会社名、退社理由ラベル)
     入社1: work1.date,
+    退社1: work1.endDate,
     会社名1: work1.label,
     退社1ラベル: work1.result,
     入社2: work2.date,
+    退社2: work2.endDate,
     会社名2: work2.label,
     退社2ラベル: work2.result,
     入社3: work3.date,
+    退社3: work3.endDate,
     会社名3: work3.label,
     退社3ラベル: work3.result,
     免許年: cert1.date,
