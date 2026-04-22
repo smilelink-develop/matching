@@ -19,9 +19,9 @@ function getPrismaInstance(): PrismaClient {
   const adapter = new PrismaPg({ connectionString });
   const client = new PrismaClient({ adapter });
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prismaInstance = client;
-  }
+  // 本番でも globalThis にキャッシュする (Railway の long-running Node プロセスで
+  // インスタンスが増え続けて TooManyConnections になるのを防ぐ)
+  globalForPrisma.prismaInstance = client;
 
   return client;
 }

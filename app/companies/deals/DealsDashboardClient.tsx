@@ -88,7 +88,7 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
                     draggable
                     onDragStart={() => setDraggingDealId(deal.id)}
                     onDragEnd={() => setDraggingDealId(null)}
-                    className="block rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4 transition hover:border-[var(--color-secondary)]"
+                    className={`block rounded-2xl border p-4 transition ${cardPriorityClass(deal.priority)}`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -159,9 +159,20 @@ function priorityLabel(priority: string) {
   }
 }
 
+function cardPriorityClass(priority: string) {
+  if (priority === "urgent")
+    return "border-[#FCA5A5] bg-[#FEF2F2] hover:border-[#EF4444]";
+  if (priority === "high")
+    return "border-[#FCD34D] bg-[#FFFBEB] hover:border-[#F59E0B]";
+  return "border-gray-200 bg-[var(--color-light)] hover:border-[var(--color-secondary)]";
+}
+
 function priorityClass(priority: string) {
-  if (priority === "urgent") return "rounded-full bg-[#FEE2E2] px-2 py-0.5 text-[11px] font-medium text-[#B91C1C]";
-  if (priority === "high") return "rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[11px] font-medium text-[#92400E]";
+  // 急ぎ: 濃い赤、高: オレンジ、通常: 表示しない想定だがフォールバック
+  if (priority === "urgent")
+    return "rounded-full bg-[#DC2626] px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm";
+  if (priority === "high")
+    return "rounded-full bg-[#F59E0B] px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm";
   return "rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--color-primary)]";
 }
 

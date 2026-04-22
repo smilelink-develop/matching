@@ -57,25 +57,46 @@ export default async function CompaniesPage() {
   );
 }
 
+// セッション内で 1 度だけ実行 (モジュールスコープのフラグ)
+let autoFillDone = false;
+
 async function autoFillExternalIds() {
-  const candidates = await prisma.company.findMany({
-    where: { externalId: null },
-    select: { id: true, name: true },
-  });
-  for (const company of candidates) {
-    const externalId = findExternalIdByName(company.name);
-    if (!externalId) continue;
-    // 既に他の企業が同じ externalId を使っていたらスキップ
-    const conflict = await prisma.company.findUnique({ where: { externalId } });
-    if (conflict) continue;
-    try {
-      await prisma.company.update({
-        where: { id: company.id },
-        data: { externalId },
-      });
-    } catch {
-      // 並列更新でぶつかっても無視
+  if (autoFillDone) return;
+  autoFillDone = true;
+  try {
+    const candidates = await prisma.company.findMany({
+      where: { externalId: null },
+      select: { id: true, name: true },
+    });
+    if (candidates.length === 0) return;
+
+    // 既に使われている externalId を一括取得して衝突チェック
+    const taken = new Set(
+      (
+        await prisma.company.findMany({
+          where: { externalId: { not: null } },
+          select: { externalId: true },
+        })
+      )
+        .map((c) => c.externalId)
+        .filter((v): v is string => !!v)
+    );
+
+    for (const company of candidates) {
+      const externalId = findExternalIdByName(company.name);
+      if (!externalId || taken.has(externalId)) continue;
+      try {
+        await prisma.company.update({
+          where: { id: company.id },
+          data: { externalId },
+        });
+        taken.add(externalId);
+      } catch {
+        // 並列更新などは無視
+      }
     }
+  } catch {
+    // 一度失敗したら再試行しない (フラグは立てたまま)
   }
 }
 

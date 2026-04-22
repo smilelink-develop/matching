@@ -492,8 +492,10 @@ function priorityLabel(priority: string) {
 }
 
 function priorityClass(priority: string) {
-  if (priority === "urgent") return "rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[11px] font-medium text-[#B91C1C]";
-  if (priority === "high") return "rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-medium text-[#92400E]";
+  if (priority === "urgent")
+    return "rounded-full bg-[#DC2626] px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm";
+  if (priority === "high")
+    return "rounded-full bg-[#F59E0B] px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm";
   return "rounded-full bg-[var(--color-light)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary)]";
 }
 
