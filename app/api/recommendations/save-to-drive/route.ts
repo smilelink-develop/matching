@@ -127,23 +127,29 @@ export async function POST(req: Request) {
 
     const date = new Date().toISOString().slice(0, 10);
     const safeTitle = deal.title.replace(/[\\/:*?"<>|]/g, "");
-    const fileName = `${date}_${safeTitle}_推薦リスト.csv`;
+    // Google Sheets として扱うので拡張子は付けない
+    const fileName = `${date}_${safeTitle}_推薦リスト`;
 
-    const buffer = Buffer.from(csv, "utf-8");
-    // googleapis expects a Readable or a string, pass Buffer via a simple stream
+    // BOM を外した素の CSV を Google Sheets の MIME にアップロード
+    // (BOM があると先頭セルに  が混入するため、ここでは付けない)
+    const csvWithoutBom = csv.startsWith("\uFEFF") ? csv.slice(1) : csv;
+    const buffer = Buffer.from(csvWithoutBom, "utf-8");
     const { Readable } = await import("node:stream");
     const created = await drive.files.create({
       supportsAllDrives: true,
       requestBody: {
         name: fileName,
         parents: [folder.folderId!],
-        mimeType: "text/csv",
+        // Drive 側の最終 MIME: Google スプレッドシート
+        mimeType: "application/vnd.google-apps.spreadsheet",
       },
       media: {
+        // アップロードする実データは CSV。requestBody.mimeType との差で
+        // Drive が自動で Sheets へ変換する。
         mimeType: "text/csv",
         body: Readable.from(buffer),
       },
-      fields: "id,webViewLink,name",
+      fields: "id,webViewLink,name,mimeType",
     });
 
     return Response.json({
