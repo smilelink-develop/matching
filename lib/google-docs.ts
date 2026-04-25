@@ -226,6 +226,8 @@ function buildResumeEmptyRowGroups(): { guard: string; rowMarkers: string[] }[] 
     { guard: "大学名", rowMarkers: ["大学名", "入学_大学", "卒業_大学"] },
     // 免許も name 空なら 1 行ごと削除
     { guard: "免許", rowMarkers: ["免許", "免許年"] },
+    // 日本語検定も値が空なら専用行を削除
+    { guard: "日本語検定", rowMarkers: ["日本語検定", "日本語検定取得日"] },
   ];
   for (let i = 1; i <= RESUME_MAX_WORKS; i++) {
     groups.push({

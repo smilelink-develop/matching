@@ -154,16 +154,10 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     works.push(w);
   }
 
-  // 資格: 最大 N 件 (1=免許, 2=日本語検定, 3=その他資格, 4以降は certifications JSON)
+  // 資格: 最大 N 件 (1=その他資格, 2以降は certifications JSON)
+  // 免許は {{免許}} / {{免許年}}、日本語検定は {{日本語検定}} / {{日本語検定取得日}}
+  // にそれぞれ独立した placeholder で出すので、資格行には含めない
   const certs: { date: string; label: string }[] = [];
-  certs.push({
-    date: valueOrBlank(profile?.licenseExpiryDate),
-    label: valueOrBlank(profile?.licenseName),
-  });
-  certs.push({
-    date: valueOrBlank(profile?.japaneseLevelDate),
-    label: valueOrBlank(profile?.japaneseLevel),
-  });
   certs.push({
     date: valueOrBlank(profile?.otherQualificationExpiryDate),
     label: valueOrBlank(profile?.otherQualificationName),
@@ -191,6 +185,9 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     ビザの種類: valueOrBlank(profile?.visaType) || valueOrBlank(person.residenceStatus),
     在留資格: valueOrBlank(person.residenceStatus),
     在留資格の有効期限: valueOrBlank(profile?.visaExpiryDate),
+    // 日本語検定は資格行ではなく独立した placeholder
+    日本語検定: valueOrBlank(profile?.japaneseLevel),
+    日本語検定取得日: valueOrBlank(profile?.japaneseLevelDate),
     配偶者: valueOrBlank(profile?.spouseStatus),
     子供数: valueOrBlank(profile?.childrenCount),
     子供: valueOrBlank(profile?.childrenCount),
