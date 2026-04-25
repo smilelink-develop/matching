@@ -1119,7 +1119,7 @@
       "japaneseLevel": "JFT - Basic A2",
       "traineeExperience": null,
       "preferenceNote": null,
-      "field": null
+      "field": "介護"
     },
     {
       "id": 72,
@@ -1423,7 +1423,7 @@
       "japaneseLevel": "JFT - Basic A2",
       "traineeExperience": null,
       "preferenceNote": null,
-      "field": null
+      "field": "介護"
     },
     {
       "id": 88,
@@ -1442,7 +1442,7 @@
       "japaneseLevel": "JFT - Basic A2",
       "traineeExperience": null,
       "preferenceNote": null,
-      "field": null
+      "field": "介護"
     },
     {
       "id": 89,
@@ -1499,7 +1499,7 @@
       "japaneseLevel": "JLPT N4",
       "traineeExperience": "はい",
       "preferenceNote": null,
-      "field": null
+      "field": "工業製品製造業"
     },
     {
       "id": 92,
@@ -1543,7 +1543,7 @@
       "id": 94,
       "englishName": "PHAM THI MAI",
       "katakanaName": "ファン　テイ　マイ",
-      "partner": null,
+      "partner": "JVS",
       "nationality": "ベトナム",
       "residenceStatus": "技能実習生",
       "birthDate": "2004-04-08",
@@ -1592,6 +1592,82 @@
       "gender": "男性",
       "visaExpiryDate": "2026-03-24",
       "japaneseLevel": "未取得",
+      "traineeExperience": null,
+      "preferenceNote": null,
+      "field": "建設"
+    },
+    {
+      "id": 97,
+      "englishName": "ARINDAH FIBRIANTI",
+      "katakanaName": "アリンダー　フィブリアンティ",
+      "partner": "YORISOI日本語学校",
+      "nationality": "インドネシア",
+      "residenceStatus": "特定技能1号",
+      "birthDate": "2005-02-20",
+      "postalCode": "８９７－１１２４",
+      "prefecture": "鹿児島県",
+      "address": "鹿児島県南さつま市加世田宮原７０８番地",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/19YZmdeIyNNUkxRioTzNBvqhsULwGDcmi",
+      "gender": "女性",
+      "visaExpiryDate": "2026-10-16",
+      "japaneseLevel": "JFT - Basic A2",
+      "traineeExperience": "いいえ",
+      "preferenceNote": null,
+      "field": "ビルクリーニング"
+    },
+    {
+      "id": 98,
+      "englishName": "WYNE CHIT",
+      "katakanaName": "ワインチッ",
+      "partner": "MHR",
+      "nationality": "ベトナム",
+      "residenceStatus": "特定技能1号",
+      "birthDate": "2003-02-11",
+      "postalCode": "901-2205",
+      "prefecture": "沖縄県",
+      "address": "沖縄県 宜野湾市 赤道2丁目12番18-206号",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/1nMYV0ggScY2jmN_0bK8idaDn0mHuKnn-",
+      "gender": "女性",
+      "visaExpiryDate": "2027-01-19",
+      "japaneseLevel": "JLPT N2",
+      "traineeExperience": "いいえ",
+      "preferenceNote": null,
+      "field": "外食業"
+    },
+    {
+      "id": 99,
+      "englishName": "TRUONG NGOC TRAM",
+      "katakanaName": "チュオン　ゴック　チャム",
+      "partner": "THANH GIANG",
+      "nationality": "ベトナム",
+      "residenceStatus": "技能実習生",
+      "birthDate": "1995-12-07",
+      "postalCode": null,
+      "prefecture": "北海道",
+      "address": "北海道虻田郡倶知安町南10条東１丁目1番地2M1Oハイツ202",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/1cNMKs__4mVGc-2MbeChZ0x1hMkpwuthS",
+      "gender": "女性",
+      "visaExpiryDate": "2026-08-27",
+      "japaneseLevel": "JLPT N4",
+      "traineeExperience": null,
+      "preferenceNote": null,
+      "field": "ビルクリーニング"
+    },
+    {
+      "id": 100,
+      "englishName": "ELSA AYU DESPITA",
+      "katakanaName": "エルサ　アユ　デスピタ",
+      "partner": null,
+      "nationality": "インドネシア",
+      "residenceStatus": "技能実習生",
+      "birthDate": "2003-12-06",
+      "postalCode": "100-1511",
+      "prefecture": "東京都",
+      "address": "東京都八丈島八丈町三根5392 (リ-ドパ-クホテル＆リゾート)",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/1u8p0BGocz3GTjz5kD91Pw3Z9P-RD_w8J",
+      "gender": "女性",
+      "visaExpiryDate": "2026-07-03",
+      "japaneseLevel": "JLPT N3",
       "traineeExperience": null,
       "preferenceNote": null,
       "field": null
@@ -5087,6 +5163,154 @@
       ],
       "photoUrl": "https://drive.google.com/open?id=1lNV5sv80GfvuM8o8xT0kKjal3jxTIWt5",
       "driveFolderUrl": "https://drive.google.com/drive/folders/1Rixj5X1eluQMupOmxVpHrZ1cw4OZVshA"
+    },
+    "アリンダー　フィブリアンティ": {
+      "katakanaName": "アリンダー　フィブリアンティ",
+      "englishName": "ARINDAH FIBRIANTI",
+      "birthDate": "2005-02-20",
+      "gender": "女性",
+      "spouseStatus": "いいえ",
+      "childrenCount": "0人",
+      "postalCode": null,
+      "address": "鹿児島県南さつま市加世田宮原７０８番地",
+      "phoneNumber": null,
+      "email": null,
+      "highSchoolName": "SMAN 2 KUTOREJO　高校",
+      "highSchoolStartDate": "２０２０年７月",
+      "highSchoolEndDate": "２０２３年６月",
+      "licenseName": null,
+      "licenseExpiryDate": null,
+      "qualification1": null,
+      "qualificationDate1": null,
+      "motivation": "ビルクリーニングの仕事に興味があるんですが、 清潔な環境を作ることにやりがいを感じます。責任を持って丁寧に働き、長く貢献したいです。",
+      "selfIntroduction": "初めまして、私はアリンダー　フィブリアンティと申します。\n私はコツコツ真面目に働けるところです。農業の仕事で体力と忍耐力を身につけました。\n清掃の仕事でも、この経験を活かして、丁寧で安定した作業を続けていきたいと思っています。まだ学ぶことも多いですが、早く仕事を覚えて、会社に貢献できるように頑張ります。",
+      "japanPurpose": "私が日本に来た目的は、スキルを習得し、長期的に成長することです。日本の規律ある職場環境に魅力を感じています。そのような環境の中で責任感と仕事のスキルを高め、同時に家族の経済状況も改善していきたいと考えています。",
+      "currentJob": "現在、私は農業分野で働いています。仕事内容は、花、野菜、タバコの植え付けと収穫、そして顧客からの注文品の準備などです。",
+      "retirementReason": "転職を希望する理由は、今の会社では残業が認められていないことと、より安定した長期的な分野でキャリアを築きたいからです。また、農業で培った体力と持久力を活かして、ビルクリーニング業務のスキルを向上させたいと考えています。",
+      "workExperiences": [
+        {
+          "companyName": "PT SURYA PLAST INDONESIA（プラスチック製家庭用品メーカー）インドネシア",
+          "startDate": "２０２４年７月",
+          "endDate": "２０２４年１２月",
+          "reason": ""
+        },
+        {
+          "companyName": "PT BONDVAST INDOSUKSES（屋外用家具や家庭用品を製造するメーカー）インドネシア",
+          "startDate": "２０２５年１月",
+          "endDate": "２０２５年１０月",
+          "reason": ""
+        },
+        {
+          "companyName": "有限会社六田農園　農業（特定技能１号として）",
+          "startDate": "２０２５年１０月",
+          "endDate": "現在に至る",
+          "reason": ""
+        }
+      ],
+      "photoUrl": "https://drive.google.com/open?id=12VOMjdtd1aP_wcS7VlmY15wV_8dWzJV-",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/19YZmdeIyNNUkxRioTzNBvqhsULwGDcmi"
+    },
+    "ワインチッ": {
+      "katakanaName": "ワインチッ",
+      "englishName": "WYNE CHIT",
+      "birthDate": "2003-02-11",
+      "gender": "女性",
+      "spouseStatus": "いいえ",
+      "childrenCount": "0人",
+      "postalCode": null,
+      "address": "沖縄県 宜野湾市 赤道2丁目12番18-206号",
+      "phoneNumber": null,
+      "email": null,
+      "highSchoolName": "Myinmu高校",
+      "highSchoolStartDate": "2018年6月",
+      "highSchoolEndDate": "2020年3月",
+      "licenseName": null,
+      "licenseExpiryDate": null,
+      "qualification1": null,
+      "qualificationDate1": null,
+      "motivation": "皆さんと協力して成長していきたいと思い、。新しいことを学びながらお客様に喜んでい\nただけるサービスを提供できるよう努力したいと考えています。いろいろな年代のお客様\nに長い間愛されているお店だと知りました。温かくて落ち着いた雰囲気の中で、ゆっくり\n食事ができるところがすてきだと思いました。また、丁寧な接客でお客様を笑顔にしてい\nるところに魅力を感じました。私は、飲食店の仕事は料理を出すだけではなく、「また来\nたい」と思ってもらえるサースが大切だと思います。こちらで働きながら、接客の力やコ\nミュニケーション能力をもっと伸ばしたいです。そして、忙しい時でも周りの人と協力し\nながら、責任を持って働けるスタッフになりたいです。いつも笑顔を大切にして、お店の\n一員として頑張りたいと思い、志望しました。",
+      "selfIntroduction": "長所は長い時間働けることです。短所は暗いのが怖いこと\nです。",
+      "japanPurpose": "なし",
+      "currentJob": "外食業",
+      "retirementReason": "現在の会社で、毎日同じ仕事をやっているので、自分のスキルをアップできないと思っているからです。",
+      "workExperiences": [
+        {
+          "companyName": "【日本】富士産業会社 （特定技能1号として）",
+          "startDate": "2025年2月",
+          "endDate": "",
+          "reason": ""
+        }
+      ],
+      "photoUrl": "https://drive.google.com/open?id=1IaXJnwYUeBZTwIvpMLJu5BJ-fbq4cRBr",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/1nMYV0ggScY2jmN_0bK8idaDn0mHuKnn-"
+    },
+    "チュオン　ゴック　チャム": {
+      "katakanaName": "チュオン　ゴック　チャム",
+      "englishName": "TRUONG NGOC TRAM",
+      "birthDate": "1995-12-07",
+      "gender": "女性",
+      "spouseStatus": "いいえ",
+      "childrenCount": "0人",
+      "postalCode": null,
+      "address": "北海道虻田郡倶知安町南10条東１丁目1番地2M1Oハイツ202",
+      "phoneNumber": null,
+      "email": null,
+      "highSchoolName": "QUOC VAN CAN THO 高等学校",
+      "highSchoolStartDate": "2010年9月",
+      "highSchoolEndDate": "2013年6月",
+      "licenseName": null,
+      "licenseExpiryDate": null,
+      "qualification1": "https://drive.google.com/open?id=1Z6o8NSBHVkAgWtB-NKfiwjxwfAJJXKiE",
+      "qualificationDate1": null,
+      "motivation": "貴社のホームページを拝見し、社員の成長を大切にされている会社だと感じました。また、外国人でも内容を理解できるように英語が使用されている点から、非常に現代的で良い会社だと感じて応募させて頂きました。",
+      "selfIntroduction": "はじめまして、ちゃむと申します。出身ベトナムです。日本に実習生としてきました。現在北海道に住んでいます。よろしくお願いいたします。",
+      "japanPurpose": "日本で働きたい理由は、専門的な環境で実務経験を積みながら、自身のスキルを高め、長期的なキャリアを築きたいと考えているためです。",
+      "currentJob": "今までいろいろなところを清掃しています。病院、文化センター、市役所などを清掃しています。",
+      "retirementReason": "現在の職場でも多くのことを学びましたが、これまで様々な場所で清掃の仕事をしてきた経験を活かし、さらに成長するために、より専門的な環境で働きたいと考え、転職を希望いたしました。",
+      "workExperiences": [
+        {
+          "companyName": "協和総合管理株式会社",
+          "startDate": "2023年8月",
+          "endDate": "現在至る",
+          "reason": ""
+        }
+      ],
+      "photoUrl": "https://drive.google.com/open?id=1E6cihRrApk4amh8n_1V9E3o1miLq1yqy",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/1cNMKs__4mVGc-2MbeChZ0x1hMkpwuthS"
+    },
+    "エルサ　アユ　デスピタ": {
+      "katakanaName": "エルサ　アユ　デスピタ",
+      "englishName": "ELSA AYU DESPITA",
+      "birthDate": "2003-12-06",
+      "gender": "女性",
+      "spouseStatus": "いいえ",
+      "childrenCount": "0人",
+      "postalCode": null,
+      "address": "東京都八丈島八丈町三根5392 (リ-ドパ-クホテル＆リゾート)",
+      "phoneNumber": "070-9299-3653",
+      "email": "prasticadespita@gmail.com",
+      "highSchoolName": "Sekolah Menengah Kejuruan (SMK)",
+      "highSchoolStartDate": "2019年6月",
+      "highSchoolEndDate": "2022年6月",
+      "licenseName": null,
+      "licenseExpiryDate": null,
+      "qualification1": "https://drive.google.com/open?id=11znktQqbb1GCweW2ljdC1X-yuI-YJ7IS",
+      "qualificationDate1": null,
+      "motivation": "Saya melamar di perusahaan ini karena saya melihat komitmen perusahaan dalam memberikan pelayanan berkualitas kepada tamu sangat sesuai dengan nilai kerja saya. Selain itu, saya juga ingin mengembangkan kemampuan saya di industri perhotelan dan percaya bahwa perusahaan ini dapat memberikan kesempatan belajar dan berkembang yang baik.",
+      "selfIntroduction": "Perkenalkan, nama saya Elsa Ayu Despita. Saya berasal dari Indonesia dan saat ini berdomisili di Tokyo. Saya memiliki pengalaman dalam pekerjaan yang berhubungan dengan pelayanan dan memiliki minat besar di industri perhotelan. Saya terbiasa bekerja dengan disiplin, ramah kepada tamu, dan mampu bekerja dalam tim. Ke depan, saya ingin terus berkembang dan memberikan kontribusi positif bagi perusahaan.",
+      "japanPurpose": "Alasan saya pergi ke Jepang adalah karena saya tertarik dengan budaya kerja yang disiplin dan standar pelayanan yang tinggi. Saya ingin mendapatkan pengalaman kerja internasional, meningkatkan kemampuan bahasa Jepang, serta mengembangkan keterampilan saya di bidang perhotelan agar ke depannya bisa menjadi tenaga kerja yang lebih profesional.",
+      "currentJob": "Saya bekerja di bidang perhotelan, khususnya di bagian shukuhaku (housekeeping), restoran, dan front office.\nDi bagian housekeeping, saya bertanggung jawab membersihkan kamar, melakukan bed making, serta melipat handuk sesuai standar hotel.\nSelain itu, saya juga bekerja sebagai staff restoran, melayani tamu, menerima permintaan, dan mengantarkan pesanan dengan baik.\nSaya juga memiliki pengalaman di front office, yaitu menangani proses check-in dan check-out serta membantu menyelesaikan keluhan tamu selama menginap.",
+      "retirementReason": "Karena kontrak magang saya akan berakhir, jadi  saya ingin mencari kesempatan kerja baru untuk mengembangkan skill, bahasa dan karier saya.",
+      "workExperiences": [
+        {
+          "companyName": "リードパークリゾート八丈島",
+          "startDate": "2023年8月",
+          "endDate": "2026年7月",
+          "reason": ""
+        }
+      ],
+      "photoUrl": "https://drive.google.com/open?id=1oYRU9PiQV987RGAK5A2tHDbBO8ic5zvW",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/1u8p0BGocz3GTjz5kD91Pw3Z9P-RD_w8J"
     }
   }
 }
