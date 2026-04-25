@@ -33,6 +33,8 @@ export default function SettingsClient({
     calendarLabel: string;
     fixedQuestions: FixedQuestionSetting[];
     recommendationColumns: string[];
+    monthlyOfferTarget: number | null;
+    monthlyRevenueTarget: number | null;
   };
   currentAccount: {
     id: number;
@@ -55,6 +57,36 @@ export default function SettingsClient({
   const [recommendationColumns, setRecommendationColumns] = useState<string[]>(initialSettings.recommendationColumns);
   const [recommendationColumnsOpen, setRecommendationColumnsOpen] = useState(false);
   const [savingRecommendationColumns, setSavingRecommendationColumns] = useState(false);
+  const [monthlyOfferTarget, setMonthlyOfferTarget] = useState<string>(
+    initialSettings.monthlyOfferTarget != null ? String(initialSettings.monthlyOfferTarget) : ""
+  );
+  const [monthlyRevenueTarget, setMonthlyRevenueTarget] = useState<string>(
+    initialSettings.monthlyRevenueTarget != null ? String(initialSettings.monthlyRevenueTarget) : ""
+  );
+  const [monthlyTargetOpen, setMonthlyTargetOpen] = useState(false);
+  const [savingMonthlyTarget, setSavingMonthlyTarget] = useState(false);
+
+  const saveMonthlyTarget = async () => {
+    setSavingMonthlyTarget(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          monthlyOfferTarget: monthlyOfferTarget.trim() === "" ? null : Number(monthlyOfferTarget.replace(/[,\s]/g, "")),
+          monthlyRevenueTarget: monthlyRevenueTarget.trim() === "" ? null : Number(monthlyRevenueTarget.replace(/[,\s]/g, "")),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        alert(`保存失敗: ${data.error}`);
+        return;
+      }
+      alert("月次目標を保存しました");
+    } finally {
+      setSavingMonthlyTarget(false);
+    }
+  };
   const [accountsOpen, setAccountsOpen] = useState(false);
   const [resumeTemplatesOpen, setResumeTemplatesOpen] = useState(false);
   const [resumeTemplates, setResumeTemplates] = useState<ResumeTemplate[]>(initialResumeTemplates);
@@ -502,6 +534,43 @@ export default function SettingsClient({
           </div>
         </div>
       </SectionCard>
+
+      {isAdmin && (
+        <SectionCard
+          title="月次目標"
+          description="売上ダッシュボードのゲージで使う、その月の内定数と売上の目標値を設定します。"
+          open={monthlyTargetOpen}
+          onToggle={() => setMonthlyTargetOpen((current) => !current)}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="月の内定数 目標 (件)">
+              <input
+                className={INPUT}
+                type="number"
+                min={0}
+                value={monthlyOfferTarget}
+                onChange={(e) => setMonthlyOfferTarget(e.target.value)}
+                placeholder="例: 5"
+              />
+            </Field>
+            <Field label="月の売上 目標 (円)">
+              <input
+                className={INPUT}
+                type="number"
+                min={0}
+                value={monthlyRevenueTarget}
+                onChange={(e) => setMonthlyRevenueTarget(e.target.value)}
+                placeholder="例: 1500000"
+              />
+            </Field>
+          </div>
+          <div className="mt-4">
+            <ActionButton onClick={saveMonthlyTarget} disabled={savingMonthlyTarget}>
+              {savingMonthlyTarget ? "保存中..." : "目標を保存"}
+            </ActionButton>
+          </div>
+        </SectionCard>
+      )}
 
       {isAdmin && (
         <SectionCard

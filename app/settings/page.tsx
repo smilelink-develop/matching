@@ -39,6 +39,8 @@ export default async function SettingsPage() {
           ...settings,
           fixedQuestions: coreSettings.fixedQuestions,
           recommendationColumns: coreSettings.recommendationColumns,
+          monthlyOfferTarget: coreSettings.monthlyOfferTarget,
+          monthlyRevenueTarget: coreSettings.monthlyRevenueTarget,
         }}
         accounts={accounts}
         resumeTemplates={resumeTemplates.map((template) => ({

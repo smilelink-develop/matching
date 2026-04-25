@@ -20,7 +20,7 @@ export default function PersonPicker({
   persons,
   selectedId,
   onSelect,
-  placeholder = "名前・英語名・国籍・在留資格で検索",
+  placeholder = "ID・名前・英語名・国籍・在留資格で検索",
   className,
 }: {
   persons: PersonOption[];
@@ -39,6 +39,12 @@ export default function PersonPicker({
     const q = query.trim().toLowerCase();
     if (!q) return persons;
     return persons.filter((p) => {
+      const idStr = String(p.id);
+      const idPadded = idStr.padStart(4, "0");
+      // 完全一致 (0001 / 1) と前方部分一致 (00 → 0001..0099 等) で ID 検索
+      if (idStr === q || idPadded === q || idStr.startsWith(q) || idPadded.startsWith(q)) {
+        return true;
+      }
       const hay = [p.name, p.englishName, p.nationality, p.residenceStatus]
         .filter(Boolean)
         .join(" ")
@@ -62,7 +68,14 @@ export default function PersonPicker({
   const displayValue = open
     ? query
     : selected
-    ? [selected.name, selected.nationality, selected.residenceStatus].filter(Boolean).join(" / ")
+    ? [
+        String(selected.id).padStart(4, "0"),
+        selected.name,
+        selected.nationality,
+        selected.residenceStatus,
+      ]
+        .filter(Boolean)
+        .join(" / ")
     : query;
 
   return (
@@ -126,6 +139,9 @@ export default function PersonPicker({
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[var(--color-text-dark)]">
+                    <span className="mr-2 font-mono text-[11px] text-[var(--color-primary)]">
+                      {String(person.id).padStart(4, "0")}
+                    </span>
                     {person.name}
                     {person.englishName ? <span className="ml-2 text-xs text-gray-400">{person.englishName}</span> : null}
                   </p>

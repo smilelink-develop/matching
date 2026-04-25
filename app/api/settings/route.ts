@@ -25,6 +25,8 @@ export async function GET() {
         calendarLabel: accountSettings?.calendarLabel ?? "",
         fixedQuestions: normalizeFixedQuestions(coreSettings?.fixedQuestions),
         recommendationColumns: sanitizeRecommendationColumns(coreSettings?.recommendationColumns),
+        monthlyOfferTarget: coreSettings?.monthlyOfferTarget ?? null,
+        monthlyRevenueTarget: coreSettings?.monthlyRevenueTarget ?? null,
       },
       currentAccount: account,
     });
@@ -50,6 +52,14 @@ export async function PATCH(req: Request) {
       body.recommendationColumns !== undefined
         ? sanitizeRecommendationColumns(body.recommendationColumns)
         : undefined;
+    function toIntOrNull(value: unknown): number | null | undefined {
+      if (value === undefined) return undefined;
+      if (value === null || value === "" ) return null;
+      const n = Number(String(value).replace(/[,\s]/g, ""));
+      return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
+    }
+    const nextMonthlyOfferTarget = toIntOrNull(body.monthlyOfferTarget);
+    const nextMonthlyRevenueTarget = toIntOrNull(body.monthlyRevenueTarget);
 
     const accountSettings = await prisma.appSettings.upsert({
       where: { accountId: account.id },
@@ -67,7 +77,10 @@ export async function PATCH(req: Request) {
     });
 
     if (
-      (nextFixedQuestions !== undefined || nextRecommendationColumns !== undefined) &&
+      (nextFixedQuestions !== undefined ||
+        nextRecommendationColumns !== undefined ||
+        nextMonthlyOfferTarget !== undefined ||
+        nextMonthlyRevenueTarget !== undefined) &&
       account.role === "admin"
     ) {
       await prisma.coreSettings.upsert({
@@ -78,11 +91,23 @@ export async function PATCH(req: Request) {
           ...(nextRecommendationColumns !== undefined
             ? { recommendationColumns: nextRecommendationColumns }
             : {}),
+          ...(nextMonthlyOfferTarget !== undefined
+            ? { monthlyOfferTarget: nextMonthlyOfferTarget }
+            : {}),
+          ...(nextMonthlyRevenueTarget !== undefined
+            ? { monthlyRevenueTarget: nextMonthlyRevenueTarget }
+            : {}),
         },
         update: {
           ...(nextFixedQuestions !== undefined ? { fixedQuestions: nextFixedQuestions } : {}),
           ...(nextRecommendationColumns !== undefined
             ? { recommendationColumns: nextRecommendationColumns }
+            : {}),
+          ...(nextMonthlyOfferTarget !== undefined
+            ? { monthlyOfferTarget: nextMonthlyOfferTarget }
+            : {}),
+          ...(nextMonthlyRevenueTarget !== undefined
+            ? { monthlyRevenueTarget: nextMonthlyRevenueTarget }
             : {}),
         },
       });
@@ -99,6 +124,8 @@ export async function PATCH(req: Request) {
         calendarLabel: accountSettings.calendarLabel ?? "",
         fixedQuestions: normalizeFixedQuestions(coreSettings?.fixedQuestions),
         recommendationColumns: sanitizeRecommendationColumns(coreSettings?.recommendationColumns),
+        monthlyOfferTarget: coreSettings?.monthlyOfferTarget ?? null,
+        monthlyRevenueTarget: coreSettings?.monthlyRevenueTarget ?? null,
       },
     });
   } catch (e) {

@@ -64,5 +64,7 @@ export async function getCoreSettings() {
   return {
     fixedQuestions: normalizeFixedQuestions(settings?.fixedQuestions),
     recommendationColumns: sanitizeRecommendationColumns(settings?.recommendationColumns),
+    monthlyOfferTarget: settings?.monthlyOfferTarget ?? null,
+    monthlyRevenueTarget: settings?.monthlyRevenueTarget ?? null,
   };
 }

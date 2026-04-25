@@ -51,9 +51,13 @@ function monthKey(isoOrDate: string | Date) {
 export default function RevenueDashboard({
   initialDeals,
   initialInvoices,
+  monthlyOfferTarget,
+  monthlyRevenueTarget,
 }: {
   initialDeals: DealRow[];
   initialInvoices: InvoiceRow[];
+  monthlyOfferTarget: number | null;
+  monthlyRevenueTarget: number | null;
 }) {
   const today = new Date();
   const thirtyDaysAgo = new Date(today);
@@ -254,13 +258,12 @@ export default function RevenueDashboard({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-base font-semibold text-[var(--color-text-dark)]">月別 売上 / 内定 / 成約</h2>
-            <p className="text-xs text-gray-500">縦軸の目盛は自動スケール</p>
-          </div>
-          <MonthlyChart data={monthly} />
-        </div>
+        <MonthlyTargetCard
+          monthlyOfferTarget={monthlyOfferTarget}
+          monthlyRevenueTarget={monthlyRevenueTarget}
+          invoices={initialInvoices}
+          deals={initialDeals}
+        />
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -303,6 +306,200 @@ export default function RevenueDashboard({
           </table>
         </div>
       </section>
+    </div>
+  );
+}
+
+function MonthlyTargetCard({
+  monthlyOfferTarget,
+  monthlyRevenueTarget,
+  invoices,
+  deals,
+}: {
+  monthlyOfferTarget: number | null;
+  monthlyRevenueTarget: number | null;
+  invoices: InvoiceRow[];
+  deals: DealRow[];
+}) {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth(); // 0-based
+  const monthLabel = `${year}年${month + 1}月`;
+  // 月初〜月末
+  const monthStart = new Date(year, month, 1);
+  const nextMonth = new Date(year, month + 1, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+  const remainingDays = Math.max(0, lastDayOfMonth - today.getDate());
+
+  // 当月の売上 (請求日が当月の請求合計、なければ作成日)
+  const revenue = invoices.reduce((sum, inv) => {
+    const ref = inv.invoiceDate ?? inv.createdAt;
+    if (!ref) return sum;
+    const d = new Date(ref);
+    if (d >= monthStart && d < nextMonth) {
+      return sum + parseNumber(inv.invoiceAmount);
+    }
+    return sum;
+  }, 0);
+
+  // 当月の内定数 (Deal.acceptedAt が当月にあるものを内定発生として扱う、
+  // データがない場合は createdAt をフォールバック)
+  const offers = deals.reduce((sum, d) => {
+    const ref = d.acceptedAt ?? d.createdAt;
+    if (!ref) return sum;
+    const date = new Date(ref);
+    if (date >= monthStart && date < nextMonth) {
+      return sum + (d.offerCount ?? 0);
+    }
+    return sum;
+  }, 0);
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">{monthLabel} 目標達成率</h2>
+        <p className="text-xs text-gray-500">残り {remainingDays} 日</p>
+      </div>
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <Tachometer
+          label="内定数"
+          unit="件"
+          value={offers}
+          target={monthlyOfferTarget}
+          format={(n) => n.toLocaleString()}
+        />
+        <Tachometer
+          label="売上"
+          unit="円"
+          value={revenue}
+          target={monthlyRevenueTarget}
+          format={(n) => n.toLocaleString()}
+        />
+      </div>
+      {!monthlyOfferTarget || !monthlyRevenueTarget ? (
+        <p className="mt-4 text-xs text-gray-500">
+          目標値が未設定です。
+          <a href="/settings" className="ml-1 text-[var(--color-primary)] underline">
+            設定 → 月次目標
+          </a>{" "}
+          から登録してください。
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * 半円タコメーター。中央に %、下に「実績 / 目標」。
+ * value=0 → 左 (赤)、target=100% → 右 (緑)
+ */
+function Tachometer({
+  label,
+  unit,
+  value,
+  target,
+  format,
+}: {
+  label: string;
+  unit: string;
+  value: number;
+  target: number | null;
+  format?: (n: number) => string;
+}) {
+  const fmt = format ?? ((n: number) => String(n));
+  const ratio = target && target > 0 ? Math.min(value / target, 1) : 0;
+  const percent = target && target > 0 ? Math.round((value / target) * 100) : null;
+
+  // 半円ジオメトリ
+  const radius = 80;
+  const cx = 100;
+  const cy = 100;
+  const strokeWidth = 18;
+  const startAngle = Math.PI; // 180° (left)
+  const endAngle = 0; // 0° (right)
+  const angle = startAngle + (endAngle - startAngle) * ratio;
+
+  const polarToCartesian = (a: number) => ({
+    x: cx + radius * Math.cos(a),
+    y: cy - radius * Math.sin(a),
+  });
+  const start = polarToCartesian(startAngle);
+  const end = polarToCartesian(angle);
+  const fullEnd = polarToCartesian(endAngle);
+  const largeArc = ratio > 0.5 ? 1 : 0;
+
+  const arcPath = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+  const fullArcPath = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${radius} ${radius} 0 1 1 ${fullEnd.x.toFixed(2)} ${fullEnd.y.toFixed(2)}`;
+
+  // 針
+  const needleLength = radius - 6;
+  const needleEnd = {
+    x: cx + needleLength * Math.cos(angle),
+    y: cy - needleLength * Math.sin(angle),
+  };
+
+  // 達成率に応じて色
+  const fillColor = percent === null ? "#9CA3AF" : percent >= 100 ? "#16A34A" : percent >= 70 ? "#2E5E4E" : percent >= 40 ? "#F59E0B" : "#DC2626";
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-[var(--color-light)] p-4">
+      <div className="flex items-baseline justify-between">
+        <p className="text-sm font-semibold text-[var(--color-text-dark)]">{label}</p>
+        <p className="text-xs text-gray-500">単位: {unit}</p>
+      </div>
+      <svg viewBox="0 0 200 120" className="mt-2 w-full">
+        {/* 背景アーク */}
+        <path
+          d={fullArcPath}
+          fill="none"
+          stroke="#E5E7EB"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+        />
+        {/* 達成アーク */}
+        {ratio > 0 ? (
+          <path
+            d={arcPath}
+            fill="none"
+            stroke={fillColor}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+        ) : null}
+        {/* 針 */}
+        <line
+          x1={cx}
+          y1={cy}
+          x2={needleEnd.x}
+          y2={needleEnd.y}
+          stroke={fillColor}
+          strokeWidth={3}
+          strokeLinecap="round"
+        />
+        <circle cx={cx} cy={cy} r={6} fill={fillColor} />
+        {/* 中央 % */}
+        <text
+          x={cx}
+          y={cy - 18}
+          textAnchor="middle"
+          className="fill-[var(--color-text-dark)]"
+          style={{ fontSize: "26px", fontWeight: 700 }}
+        >
+          {percent !== null ? `${percent}%` : "—"}
+        </text>
+      </svg>
+      <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
+        <span>
+          実績{" "}
+          <span className="text-sm font-bold text-[var(--color-text-dark)]">
+            {fmt(value)}
+          </span>{" "}
+          {unit}
+        </span>
+        <span className="text-gray-500">
+          目標 {target != null ? `${fmt(target)} ${unit}` : "未設定"}
+        </span>
+      </div>
     </div>
   );
 }

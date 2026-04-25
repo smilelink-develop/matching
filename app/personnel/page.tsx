@@ -37,7 +37,8 @@ export default async function PersonnelPage() {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
+    // ID 降順 (新しい候補者ほど上)
+    orderBy: { id: "desc" },
   });
 
   return (

@@ -9,8 +9,17 @@ type Deal = {
   candidateCount: number;
 };
 
-export default function RecommendationsClient({ deals }: { deals: Deal[] }) {
-  const [dealId, setDealId] = useState(deals[0]?.id ? String(deals[0].id) : "");
+export default function RecommendationsClient({
+  deals,
+  lockedDealId,
+}: {
+  deals: Deal[];
+  /** 指定すると案件選択 UI を出さず、このIDで固定 */
+  lockedDealId?: number;
+}) {
+  const [dealId, setDealId] = useState(
+    lockedDealId ? String(lockedDealId) : deals[0]?.id ? String(deals[0].id) : ""
+  );
   const [stageFilter, setStageFilter] = useState<string>("接続済み");
   const [downloading, setDownloading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -75,16 +84,22 @@ export default function RecommendationsClient({ deals }: { deals: Deal[] }) {
 
   return (
     <section className="rounded-3xl border border-[var(--color-secondary)] bg-white p-6 shadow-sm">
-      <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto]">
-        <Field label="案件">
-          <select className={INPUT} value={dealId} onChange={(e) => setDealId(e.target.value)}>
-            {deals.map((deal) => (
-              <option key={deal.id} value={deal.id}>
-                {deal.companyName} / {deal.title} ({deal.candidateCount}名)
-              </option>
-            ))}
-          </select>
-        </Field>
+      <div
+        className={`grid gap-4 ${
+          lockedDealId ? "md:grid-cols-[1fr_auto]" : "md:grid-cols-[1fr_1fr_auto]"
+        }`}
+      >
+        {!lockedDealId ? (
+          <Field label="案件">
+            <select className={INPUT} value={dealId} onChange={(e) => setDealId(e.target.value)}>
+              {deals.map((deal) => (
+                <option key={deal.id} value={deal.id}>
+                  {deal.companyName} / {deal.title} ({deal.candidateCount}名)
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
         <Field label="対象ステージ">
           <select className={INPUT} value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}>
             <option value="接続済み">接続済みのみ</option>
@@ -113,12 +128,6 @@ export default function RecommendationsClient({ deals }: { deals: Deal[] }) {
           </button>
         </div>
       </div>
-
-      <p className="mt-4 text-xs text-gray-500">
-        出力列の構成 → 「ID / 進捗 / (設定で選んだ項目…) / 備考」<br />
-        進捗 列は Drive 保存時に「応募 / 面接結果待ち / 内定 / 辞退 / 不合格」のドロップダウンが付きます。<br />
-        出力する候補者情報は <a href="/settings" className="text-[var(--color-primary)] underline">設定 → 推薦リストの出力項目</a> で変更できます。
-      </p>
     </section>
   );
 }

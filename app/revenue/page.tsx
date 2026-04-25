@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAccount } from "@/lib/auth";
+import { getCoreSettings } from "@/lib/app-settings";
 import RevenueDashboard from "./RevenueDashboard";
 
 export const dynamic = "force-dynamic";
 
 export default async function RevenuePage() {
   await requireCurrentAccount();
+  const coreSettings = await getCoreSettings();
   const [deals, invoices] = await Promise.all([
     prisma.deal.findMany({
       select: {
@@ -65,6 +67,8 @@ export default async function RevenuePage() {
         companyName: invoice.deal?.company?.name ?? null,
         personName: invoice.person?.name ?? null,
       }))}
+      monthlyOfferTarget={coreSettings.monthlyOfferTarget}
+      monthlyRevenueTarget={coreSettings.monthlyRevenueTarget}
     />
   );
 }

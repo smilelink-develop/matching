@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { SSW_INDUSTRIES } from "@/lib/company-options";
 import PersonPicker from "@/app/components/PersonPicker";
 import PersonAvatar from "@/app/components/PersonAvatar";
+import RecommendationsClient from "@/app/recommendations/RecommendationsClient";
 
 const CANDIDATE_COLUMNS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "不合格"] as const;
 
@@ -103,6 +104,7 @@ export default function DealDetailClient({
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [recommendationOpen, setRecommendationOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     title: deal.title,
     field: deal.field ?? SSW_INDUSTRIES[0],
@@ -269,6 +271,13 @@ export default function DealDetailClient({
             <Link href={`/companies/${currentDeal.company.id}`} className="self-start rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50">
               企業詳細へ戻る
             </Link>
+            <button
+              type="button"
+              onClick={() => setRecommendationOpen(true)}
+              className="self-start rounded-lg bg-[var(--color-primary)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+            >
+              推薦リスト作成
+            </button>
             {!editing ? (
               <button
                 type="button"
@@ -457,6 +466,46 @@ export default function DealDetailClient({
         })}
         </div>
       </section>
+
+      {recommendationOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-3xl rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-primary)]">
+                  推薦リスト作成
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--color-text-dark)]">
+                  {currentDeal.company.name} / {currentDeal.title}
+                </h3>
+                <p className="mt-1 text-xs text-gray-500">
+                  この案件の候補者から推薦リストを生成します。CSV ダウンロードまたは企業フォルダへ Drive 保存できます。
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecommendationOpen(false)}
+                className="rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-500 hover:bg-gray-50"
+              >
+                閉じる
+              </button>
+            </div>
+            <div className="mt-5">
+              <RecommendationsClient
+                deals={[
+                  {
+                    id: currentDeal.id,
+                    title: currentDeal.title,
+                    companyName: currentDeal.company.name,
+                    candidateCount: candidates.length,
+                  },
+                ]}
+                lockedDealId={currentDeal.id}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
