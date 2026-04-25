@@ -111,7 +111,17 @@ export async function POST(req: Request) {
       : null;
 
     const { master, formByKana } = loadMaster();
-    const targets = targetIds ? master.filter((m) => targetIds.includes(m.id)) : master;
+    // 英語名でも form を引けるようにインデックスを構築
+    const formByEnglish = new Map<string, FormRow>();
+    for (const [, row] of Object.entries(formByKana)) {
+      const en = row.englishName?.trim();
+      if (en) formByEnglish.set(en.toUpperCase(), row);
+    }
+
+    // master に居る ID + master に居なくても DB に居る ID (form だけでも補完したい)
+    const targets: Array<MasterRow | { id: number }> = targetIds
+      ? targetIds.map((id) => master.find((m) => m.id === id) ?? { id })
+      : master;
 
     const log: string[] = [];
     let updated = 0;
@@ -138,6 +148,8 @@ export async function POST(req: Request) {
     const byId = new Map(existing.map((p) => [p.id, p]));
 
     for (const row of targets) {
+      // row は MasterRow か bare {id} のいずれか
+      const masterRow: Partial<MasterRow> = "katakanaName" in row ? row : {};
       const person = byId.get(row.id);
       if (!person) {
         notFound++;
@@ -146,11 +158,10 @@ export async function POST(req: Request) {
       }
 
       // sync-candidates-from-drive で入る仮プレースホルダ。これらは「空」として扱う
-      // (本物の xlsx 値で上書きしてよい)
       const PERSON_PLACEHOLDER: Record<string, string[]> = {
         nationality: ["不明", "未設定"],
-        residenceStatus: ["技能実習"], // 仮設定値。xlsx に値があれば優先する
-        channel: ["LINE"],             // 仮設定値
+        residenceStatus: ["技能実習"],
+        channel: ["LINE"],
       };
       const isEffectivelyEmpty = (key: string, current: unknown) => {
         if (current === null || current === undefined || current === "") return true;
@@ -162,7 +173,7 @@ export async function POST(req: Request) {
       };
 
       // master シートからの基本情報
-      const partnerId = await resolvePartnerId(row.partner);
+      const partnerId = await resolvePartnerId(masterRow.partner ?? null);
       const personUpdate: Record<string, unknown> = {};
       const setIfEmpty = (key: keyof typeof person, value: unknown) => {
         if (value === null || value === undefined || value === "") return;
@@ -171,34 +182,59 @@ export async function POST(req: Request) {
           personUpdate[key] = value;
         }
       };
+
+      // 履歴書フォーム (form) を、master のカタカナ→英語→現在の name の順で解決
+      const kanaForLookup = masterRow.katakanaName ?? person.name;
+      let formMatch: FormRow | undefined;
+      if (kanaForLookup && formByKana[kanaForLookup]) formMatch = formByKana[kanaForLookup];
+      if (!formMatch && kanaForLookup) {
+        const partial = Object.entries(formByKana).find(
+          ([k]) =>
+            k && (k.startsWith(kanaForLookup.slice(0, 3)) || kanaForLookup.startsWith(k.slice(0, 3)))
+        );
+        if (partial) formMatch = partial[1];
+      }
+      // 英語名で form をフォールバック検索 (master に居ないが form に英語名がある人向け)
+      const englishForLookup =
+        masterRow.englishName ?? person.onboarding?.englishName ?? person.name;
+      if (!formMatch && englishForLookup) {
+        const fromEnglish = formByEnglish.get(englishForLookup.trim().toUpperCase());
+        if (fromEnglish) formMatch = fromEnglish;
+      }
+
+      // form から取れた英語名/カタカナ名も master が無い時のフォールバックに使う
+      const effectiveKatakana = masterRow.katakanaName ?? formMatch?.katakanaName ?? null;
+      const effectiveEnglish =
+        masterRow.englishName ?? formMatch?.englishName ?? person.onboarding?.englishName ?? null;
+
       // Person.name はカタカナ名が正。
       // - 現在の name が空 → カタカナ名 (なければ英語名) を入れる
       // - 現在の name が英語名と一致 (sync-from-drive の仮値) → カタカナ名で上書き
-      if (row.katakanaName) {
+      if (effectiveKatakana) {
         const englishMatchesCurrent =
-          row.englishName && person.name && person.name.trim() === row.englishName.trim();
+          effectiveEnglish && person.name && person.name.trim() === effectiveEnglish.trim();
         if (overwrite || !person.name || englishMatchesCurrent) {
-          personUpdate.name = row.katakanaName;
+          personUpdate.name = effectiveKatakana;
         }
-      } else if (row.englishName && !person.name) {
-        personUpdate.name = row.englishName;
+      } else if (effectiveEnglish && !person.name) {
+        personUpdate.name = effectiveEnglish;
       }
-      setIfEmpty("nationality", normalizeNationality(row.nationality));
-      setIfEmpty("residenceStatus", normalizeResidenceStatus(row.residenceStatus));
+      setIfEmpty("nationality", normalizeNationality(masterRow.nationality ?? null));
+      setIfEmpty("residenceStatus", normalizeResidenceStatus(masterRow.residenceStatus ?? null));
       if (partnerId !== null && (overwrite || person.partnerId === null)) {
         personUpdate.partnerId = partnerId;
       }
-      if (row.driveFolderUrl && (overwrite || !person.driveFolderUrl)) {
-        personUpdate.driveFolderUrl = row.driveFolderUrl;
+      if (masterRow.driveFolderUrl && (overwrite || !person.driveFolderUrl)) {
+        personUpdate.driveFolderUrl = masterRow.driveFolderUrl;
       }
-      // photoUrl は backfill-photos で別途扱うのでここでは触らない
 
       if (Object.keys(personUpdate).length > 0) {
         await prisma.person.update({ where: { id: person.id }, data: personUpdate });
       }
 
       // onboarding (基本住所等)
-      const address = [row.prefecture, row.address].filter(Boolean).join(" ").trim() || null;
+      const address =
+        [masterRow.prefecture, masterRow.address].filter(Boolean).join(" ").trim() || null;
       const onboarding = person.onboarding;
       const onboardingUpdate: Record<string, unknown> = {};
       const setOnboardingIfEmpty = (key: string, value: unknown) => {
@@ -208,10 +244,13 @@ export async function POST(req: Request) {
           onboardingUpdate[key] = value;
         }
       };
-      setOnboardingIfEmpty("englishName", row.englishName);
-      setOnboardingIfEmpty("birthDate", row.birthDate);
-      setOnboardingIfEmpty("address", address);
-      setOnboardingIfEmpty("postalCode", row.postalCode);
+      setOnboardingIfEmpty("englishName", masterRow.englishName ?? formMatch?.englishName);
+      setOnboardingIfEmpty("birthDate", masterRow.birthDate ?? formMatch?.birthDate);
+      setOnboardingIfEmpty(
+        "address",
+        address || formMatch?.address || null
+      );
+      setOnboardingIfEmpty("postalCode", masterRow.postalCode ?? formMatch?.postalCode);
 
       // resumeProfile (基本情報の続き + master の派生)
       const resume = person.resumeProfile;
@@ -223,44 +262,39 @@ export async function POST(req: Request) {
           resumeUpdate[key] = value;
         }
       };
-      setResumeIfEmpty("gender", row.gender);
-      setResumeIfEmpty("country", normalizeNationality(row.nationality));
-      setResumeIfEmpty("visaType", normalizeResidenceStatus(row.residenceStatus));
-      setResumeIfEmpty("visaExpiryDate", row.visaExpiryDate);
-      setResumeIfEmpty("japaneseLevel", row.japaneseLevel);
-      setResumeIfEmpty("traineeExperience", row.traineeExperience);
-      if (row.preferenceNote) {
-        setResumeIfEmpty("preferenceNote", `現職の手取り額: ${row.preferenceNote}`);
+      setResumeIfEmpty("gender", masterRow.gender ?? formMatch?.gender);
+      setResumeIfEmpty("country", normalizeNationality(masterRow.nationality ?? null));
+      setResumeIfEmpty("visaType", normalizeResidenceStatus(masterRow.residenceStatus ?? null));
+      setResumeIfEmpty("visaExpiryDate", masterRow.visaExpiryDate);
+      setResumeIfEmpty("japaneseLevel", masterRow.japaneseLevel);
+      setResumeIfEmpty("traineeExperience", masterRow.traineeExperience);
+      if (masterRow.preferenceNote) {
+        setResumeIfEmpty("preferenceNote", `現職の手取り額: ${masterRow.preferenceNote}`);
       }
-      if (row.field) {
-        setResumeIfEmpty("remarks", `分野: ${row.field}`);
+      if (masterRow.field) {
+        setResumeIfEmpty("remarks", `分野: ${masterRow.field}`);
       }
 
-      // 履歴書フォーム (カタカナ名で照合) からの追加情報
-      const kanaForLookup = row.katakanaName ?? person.name;
-      const formKey = Array.from(Object.keys(formByKana)).find(
-        (k) => k && kanaForLookup && (k === kanaForLookup || k.includes(kanaForLookup.slice(0, 3)))
-      );
-      const form = formKey ? formByKana[formKey] : null;
-      if (form) {
-        setOnboardingIfEmpty("phoneNumber", form.phoneNumber);
-        setIfEmpty("email", form.email);
-        setResumeIfEmpty("spouseStatus", form.spouseStatus);
-        setResumeIfEmpty("childrenCount", form.childrenCount);
-        setResumeIfEmpty("highSchoolName", form.highSchoolName);
-        setResumeIfEmpty("highSchoolStartDate", form.highSchoolStartDate);
-        setResumeIfEmpty("highSchoolEndDate", form.highSchoolEndDate);
-        setResumeIfEmpty("licenseName", form.licenseName);
-        setResumeIfEmpty("licenseExpiryDate", form.licenseExpiryDate);
-        setResumeIfEmpty("otherQualificationName", form.qualification1);
-        setResumeIfEmpty("otherQualificationExpiryDate", form.qualificationDate1);
-        setResumeIfEmpty("motivation", form.motivation);
-        setResumeIfEmpty("selfIntroduction", form.selfIntroduction);
-        setResumeIfEmpty("japanPurpose", form.japanPurpose);
-        setResumeIfEmpty("currentJob", form.currentJob);
-        setResumeIfEmpty("retirementReason", form.retirementReason);
-        if (form.workExperiences && form.workExperiences.length > 0) {
-          setResumeIfEmpty("workExperiences", form.workExperiences);
+      // 履歴書フォーム (英語名 or カタカナ名で照合) からの追加情報
+      if (formMatch) {
+        setOnboardingIfEmpty("phoneNumber", formMatch.phoneNumber);
+        setIfEmpty("email", formMatch.email);
+        setResumeIfEmpty("spouseStatus", formMatch.spouseStatus);
+        setResumeIfEmpty("childrenCount", formMatch.childrenCount);
+        setResumeIfEmpty("highSchoolName", formMatch.highSchoolName);
+        setResumeIfEmpty("highSchoolStartDate", formMatch.highSchoolStartDate);
+        setResumeIfEmpty("highSchoolEndDate", formMatch.highSchoolEndDate);
+        setResumeIfEmpty("licenseName", formMatch.licenseName);
+        setResumeIfEmpty("licenseExpiryDate", formMatch.licenseExpiryDate);
+        setResumeIfEmpty("otherQualificationName", formMatch.qualification1);
+        setResumeIfEmpty("otherQualificationExpiryDate", formMatch.qualificationDate1);
+        setResumeIfEmpty("motivation", formMatch.motivation);
+        setResumeIfEmpty("selfIntroduction", formMatch.selfIntroduction);
+        setResumeIfEmpty("japanPurpose", formMatch.japanPurpose);
+        setResumeIfEmpty("currentJob", formMatch.currentJob);
+        setResumeIfEmpty("retirementReason", formMatch.retirementReason);
+        if (formMatch.workExperiences && formMatch.workExperiences.length > 0) {
+          setResumeIfEmpty("workExperiences", formMatch.workExperiences);
         }
       }
 
@@ -309,7 +343,7 @@ export async function POST(req: Request) {
         log.push(`= id=${row.id}: 既に揃っているのでスキップ`);
       } else {
         updated++;
-        log.push(`✅ id=${row.id} ${row.katakanaName ?? row.englishName ?? ""}: ${total} 項目を補完`);
+        log.push(`✅ id=${row.id} ${effectiveKatakana ?? effectiveEnglish ?? ""}: ${total} 項目を補完`);
       }
     }
 
