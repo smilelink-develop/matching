@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import CloseButton from "@/app/components/CloseButton";
+import DealPicker from "@/app/components/DealPicker";
 
 type Deal = {
   id: number;
@@ -95,18 +97,12 @@ export default function JobPostingsClient({
           <div className="mt-5 space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <Field label="1. 案件を選択">
-                <select
-                  className={INPUT}
-                  value={form.dealId}
-                  onChange={(e) => setForm((current) => ({ ...current, dealId: e.target.value }))}
-                >
-                  <option value="">案件を選択</option>
-                  {deals.map((deal) => (
-                    <option key={deal.id} value={deal.id}>
-                      {deal.companyName} / {deal.title}
-                    </option>
-                  ))}
-                </select>
+                <DealPicker
+                  deals={deals}
+                  selectedId={form.dealId}
+                  onSelect={(id) => setForm((current) => ({ ...current, dealId: id }))}
+                  placeholder="会社名・案件名で検索"
+                />
               </Field>
               <Field label="2. テンプレートを選択">
                 <select
@@ -426,13 +422,7 @@ function JobPostingUploadModal({
               候補者の情報取込と同じように、元ファイルを読み取って求人票を作成します。
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-500 hover:bg-gray-50"
-          >
-            閉じる
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         <div className="mt-5 rounded-2xl border border-[var(--color-secondary)] bg-[var(--color-light)] px-4 py-3 text-sm text-gray-600">
@@ -538,15 +528,7 @@ function JobPostingUploadModal({
             >
               ファイル選択に戻る
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            >
-              閉じる
-            </button>
-          )}
+          ) : null}
           {stage === "upload" ? (
             <button
               type="button"

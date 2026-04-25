@@ -212,7 +212,7 @@ export default function PersonnelTableClient({
                   {column.label}
                 </th>
               ))}
-              <th className="w-20 px-4 py-3 text-center font-semibold">保管場所</th>
+              <th className="w-24 whitespace-nowrap px-3 py-3 text-center font-semibold">保管場所</th>
             </tr>
           </thead>
           <tbody>

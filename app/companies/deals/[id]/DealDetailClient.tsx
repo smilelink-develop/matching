@@ -7,6 +7,7 @@ import { SSW_INDUSTRIES } from "@/lib/company-options";
 import PersonPicker from "@/app/components/PersonPicker";
 import PersonAvatar from "@/app/components/PersonAvatar";
 import RecommendationsClient from "@/app/recommendations/RecommendationsClient";
+import CloseButton from "@/app/components/CloseButton";
 
 const CANDIDATE_COLUMNS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "不合格"] as const;
 
@@ -482,13 +483,7 @@ export default function DealDetailClient({
                   この案件の候補者から推薦リストを生成します。CSV ダウンロードまたは企業フォルダへ Drive 保存できます。
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setRecommendationOpen(false)}
-                className="rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-500 hover:bg-gray-50"
-              >
-                閉じる
-              </button>
+              <CloseButton onClick={() => setRecommendationOpen(false)} />
             </div>
             <div className="mt-5">
               <RecommendationsClient

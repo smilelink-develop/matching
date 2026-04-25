@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import CloseButton from "@/app/components/CloseButton";
 
 type IncomingFile = {
   id: string;
@@ -300,13 +301,7 @@ function ExtractModal({
             <h3 className="text-base font-semibold text-[var(--color-text-dark)]">書類から自動入力</h3>
             <p className="mt-0.5 text-xs text-gray-500">{personName} さんの候補者情報を AI 抽出します</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-          >
-            閉じる
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">

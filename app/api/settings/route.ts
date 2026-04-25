@@ -5,6 +5,7 @@ import {
 } from "@/lib/app-settings";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 import { sanitizeRecommendationColumns } from "@/lib/recommendation-columns";
+import { sanitizeMonthlyTargets } from "@/lib/monthly-targets";
 
 export async function GET() {
   try {
@@ -27,6 +28,7 @@ export async function GET() {
         recommendationColumns: sanitizeRecommendationColumns(coreSettings?.recommendationColumns),
         monthlyOfferTarget: coreSettings?.monthlyOfferTarget ?? null,
         monthlyRevenueTarget: coreSettings?.monthlyRevenueTarget ?? null,
+        monthlyTargets: sanitizeMonthlyTargets(coreSettings?.monthlyTargets),
       },
       currentAccount: account,
     });
@@ -60,6 +62,8 @@ export async function PATCH(req: Request) {
     }
     const nextMonthlyOfferTarget = toIntOrNull(body.monthlyOfferTarget);
     const nextMonthlyRevenueTarget = toIntOrNull(body.monthlyRevenueTarget);
+    const nextMonthlyTargets =
+      body.monthlyTargets !== undefined ? sanitizeMonthlyTargets(body.monthlyTargets) : undefined;
 
     const accountSettings = await prisma.appSettings.upsert({
       where: { accountId: account.id },
@@ -80,7 +84,8 @@ export async function PATCH(req: Request) {
       (nextFixedQuestions !== undefined ||
         nextRecommendationColumns !== undefined ||
         nextMonthlyOfferTarget !== undefined ||
-        nextMonthlyRevenueTarget !== undefined) &&
+        nextMonthlyRevenueTarget !== undefined ||
+        nextMonthlyTargets !== undefined) &&
       account.role === "admin"
     ) {
       await prisma.coreSettings.upsert({
@@ -97,6 +102,7 @@ export async function PATCH(req: Request) {
           ...(nextMonthlyRevenueTarget !== undefined
             ? { monthlyRevenueTarget: nextMonthlyRevenueTarget }
             : {}),
+          ...(nextMonthlyTargets !== undefined ? { monthlyTargets: nextMonthlyTargets } : {}),
         },
         update: {
           ...(nextFixedQuestions !== undefined ? { fixedQuestions: nextFixedQuestions } : {}),
@@ -109,6 +115,7 @@ export async function PATCH(req: Request) {
           ...(nextMonthlyRevenueTarget !== undefined
             ? { monthlyRevenueTarget: nextMonthlyRevenueTarget }
             : {}),
+          ...(nextMonthlyTargets !== undefined ? { monthlyTargets: nextMonthlyTargets } : {}),
         },
       });
     }
@@ -126,6 +133,7 @@ export async function PATCH(req: Request) {
         recommendationColumns: sanitizeRecommendationColumns(coreSettings?.recommendationColumns),
         monthlyOfferTarget: coreSettings?.monthlyOfferTarget ?? null,
         monthlyRevenueTarget: coreSettings?.monthlyRevenueTarget ?? null,
+        monthlyTargets: sanitizeMonthlyTargets(coreSettings?.monthlyTargets),
       },
     });
   } catch (e) {

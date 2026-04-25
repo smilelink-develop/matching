@@ -60,11 +60,13 @@ export async function getCoreSettings() {
 
   // 動的 import で循環参照を避ける (lib/recommendation-columns には Prisma 依存なし)
   const { sanitizeRecommendationColumns } = await import("@/lib/recommendation-columns");
+  const { sanitizeMonthlyTargets } = await import("@/lib/monthly-targets");
 
   return {
     fixedQuestions: normalizeFixedQuestions(settings?.fixedQuestions),
     recommendationColumns: sanitizeRecommendationColumns(settings?.recommendationColumns),
     monthlyOfferTarget: settings?.monthlyOfferTarget ?? null,
     monthlyRevenueTarget: settings?.monthlyRevenueTarget ?? null,
+    monthlyTargets: sanitizeMonthlyTargets(settings?.monthlyTargets),
   };
 }

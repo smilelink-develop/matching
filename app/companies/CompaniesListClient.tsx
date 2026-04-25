@@ -101,7 +101,7 @@ function CompaniesTable({
             <th className="px-4 py-3 text-left font-semibold">業種</th>
             <th className="px-4 py-3 text-left font-semibold">採用状況</th>
             <th className="px-4 py-3 text-left font-semibold w-20">案件数</th>
-            <th className="w-20 px-4 py-3 text-center font-semibold">保管場所</th>
+            <th className="w-24 whitespace-nowrap px-3 py-3 text-center font-semibold">保管場所</th>
           </tr>
         </thead>
         <tbody>

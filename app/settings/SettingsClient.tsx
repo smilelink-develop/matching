@@ -35,6 +35,7 @@ export default function SettingsClient({
     recommendationColumns: string[];
     monthlyOfferTarget: number | null;
     monthlyRevenueTarget: number | null;
+    monthlyTargets: { month: string; offer: number | null; revenue: number | null }[];
   };
   currentAccount: {
     id: number;
@@ -57,32 +58,78 @@ export default function SettingsClient({
   const [recommendationColumns, setRecommendationColumns] = useState<string[]>(initialSettings.recommendationColumns);
   const [recommendationColumnsOpen, setRecommendationColumnsOpen] = useState(false);
   const [savingRecommendationColumns, setSavingRecommendationColumns] = useState(false);
-  const [monthlyOfferTarget, setMonthlyOfferTarget] = useState<string>(
-    initialSettings.monthlyOfferTarget != null ? String(initialSettings.monthlyOfferTarget) : ""
-  );
-  const [monthlyRevenueTarget, setMonthlyRevenueTarget] = useState<string>(
-    initialSettings.monthlyRevenueTarget != null ? String(initialSettings.monthlyRevenueTarget) : ""
-  );
+  type MonthlyTargetRow = { month: string; offer: string; revenue: string };
+  const toRow = (t: { month: string; offer: number | null; revenue: number | null }): MonthlyTargetRow => ({
+    month: t.month,
+    offer: t.offer != null ? String(t.offer) : "",
+    revenue: t.revenue != null ? String(t.revenue) : "",
+  });
+  const initialRows: MonthlyTargetRow[] =
+    initialSettings.monthlyTargets.length > 0
+      ? initialSettings.monthlyTargets.map(toRow)
+      : initialSettings.monthlyOfferTarget != null || initialSettings.monthlyRevenueTarget != null
+        ? [
+            {
+              month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
+              offer:
+                initialSettings.monthlyOfferTarget != null ? String(initialSettings.monthlyOfferTarget) : "",
+              revenue:
+                initialSettings.monthlyRevenueTarget != null ? String(initialSettings.monthlyRevenueTarget) : "",
+            },
+          ]
+        : [];
+  const [monthlyTargetRows, setMonthlyTargetRows] = useState<MonthlyTargetRow[]>(initialRows);
   const [monthlyTargetOpen, setMonthlyTargetOpen] = useState(false);
   const [savingMonthlyTarget, setSavingMonthlyTarget] = useState(false);
 
+  const addMonthlyTargetRow = () => {
+    // 既存行の最終月の次月をデフォルトに、無ければ当月
+    const last = monthlyTargetRows[monthlyTargetRows.length - 1];
+    let defaultMonth: string;
+    if (last) {
+      const [y, m] = last.month.split("-").map(Number);
+      const next = new Date(y, m, 1); // m は 1-based のまま渡すと翌月になる
+      defaultMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+    } else {
+      const now = new Date();
+      defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    }
+    setMonthlyTargetRows((current) => [...current, { month: defaultMonth, offer: "", revenue: "" }]);
+  };
+
+  const updateMonthlyTargetRow = (index: number, patch: Partial<MonthlyTargetRow>) => {
+    setMonthlyTargetRows((current) =>
+      current.map((row, i) => (i === index ? { ...row, ...patch } : row))
+    );
+  };
+
+  const removeMonthlyTargetRow = (index: number) => {
+    setMonthlyTargetRows((current) => current.filter((_, i) => i !== index));
+  };
+
   const saveMonthlyTarget = async () => {
+    // 空の月は除外、月の重複もまとめる
+    const seen = new Set<string>();
+    const cleaned = monthlyTargetRows
+      .filter((r) => /^\d{4}-(0[1-9]|1[0-2])$/.test(r.month) && !seen.has(r.month) && (seen.add(r.month) || true))
+      .map((r) => ({
+        month: r.month,
+        offer: r.offer.trim() === "" ? null : Number(r.offer.replace(/[,\s]/g, "")),
+        revenue: r.revenue.trim() === "" ? null : Number(r.revenue.replace(/[,\s]/g, "")),
+      }));
     setSavingMonthlyTarget(true);
     try {
       const res = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          monthlyOfferTarget: monthlyOfferTarget.trim() === "" ? null : Number(monthlyOfferTarget.replace(/[,\s]/g, "")),
-          monthlyRevenueTarget: monthlyRevenueTarget.trim() === "" ? null : Number(monthlyRevenueTarget.replace(/[,\s]/g, "")),
-        }),
+        body: JSON.stringify({ monthlyTargets: cleaned }),
       });
       const data = await res.json();
       if (!data.ok) {
         alert(`保存失敗: ${data.error}`);
         return;
       }
-      alert("月次目標を保存しました");
+      alert(`月次目標を保存しました (${cleaned.length} 件)`);
     } finally {
       setSavingMonthlyTarget(false);
     }
@@ -538,36 +585,77 @@ export default function SettingsClient({
       {isAdmin && (
         <SectionCard
           title="月次目標"
-          description="売上ダッシュボードのゲージで使う、その月の内定数と売上の目標値を設定します。"
+          description="売上ダッシュボードのゲージで使う、月ごとの内定数と売上の目標値を積み上げで管理します。"
           open={monthlyTargetOpen}
           onToggle={() => setMonthlyTargetOpen((current) => !current)}
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="月の内定数 目標 (件)">
-              <input
-                className={INPUT}
-                type="number"
-                min={0}
-                value={monthlyOfferTarget}
-                onChange={(e) => setMonthlyOfferTarget(e.target.value)}
-                placeholder="例: 5"
-              />
-            </Field>
-            <Field label="月の売上 目標 (円)">
-              <input
-                className={INPUT}
-                type="number"
-                min={0}
-                value={monthlyRevenueTarget}
-                onChange={(e) => setMonthlyRevenueTarget(e.target.value)}
-                placeholder="例: 1500000"
-              />
-            </Field>
-          </div>
-          <div className="mt-4">
-            <ActionButton onClick={saveMonthlyTarget} disabled={savingMonthlyTarget}>
-              {savingMonthlyTarget ? "保存中..." : "目標を保存"}
-            </ActionButton>
+          <div className="space-y-3">
+            {monthlyTargetRows.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
+                まだ目標が設定されていません。「+ 月を追加」から作成してください。
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <div className="hidden grid-cols-[140px_1fr_1fr_40px] gap-2 px-2 text-[11px] font-medium text-gray-500 md:grid">
+                  <span>月</span>
+                  <span>内定数 目標 (件)</span>
+                  <span>売上 目標 (円)</span>
+                  <span></span>
+                </div>
+                {monthlyTargetRows.map((row, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-[1fr_1fr_1fr_36px] gap-2 rounded-xl border border-gray-200 bg-white p-2 md:grid-cols-[140px_1fr_1fr_40px]"
+                  >
+                    <input
+                      className={INPUT}
+                      type="month"
+                      value={row.month}
+                      onChange={(e) => updateMonthlyTargetRow(index, { month: e.target.value })}
+                    />
+                    <input
+                      className={INPUT}
+                      type="number"
+                      min={0}
+                      value={row.offer}
+                      onChange={(e) => updateMonthlyTargetRow(index, { offer: e.target.value })}
+                      placeholder="例: 5"
+                    />
+                    <input
+                      className={INPUT}
+                      type="number"
+                      min={0}
+                      value={row.revenue}
+                      onChange={(e) => updateMonthlyTargetRow(index, { revenue: e.target.value })}
+                      placeholder="例: 1500000"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeMonthlyTargetRow(index)}
+                      title="この月を削除"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={addMonthlyTargetRow}
+                className="rounded-lg border border-[var(--color-secondary)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
+              >
+                + 月を追加
+              </button>
+              <ActionButton onClick={saveMonthlyTarget} disabled={savingMonthlyTarget}>
+                {savingMonthlyTarget ? "保存中..." : "目標を保存"}
+              </ActionButton>
+            </div>
+            <p className="text-[11px] text-gray-500">
+              該当月の目標が無い場合は、それより前で最も新しい月の目標が引き継がれます (繰り越し)。
+            </p>
           </div>
         </SectionCard>
       )}

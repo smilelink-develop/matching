@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import CloseButton from "@/app/components/CloseButton";
 
 export type CustomQuestion = {
   id: number;
@@ -369,13 +370,7 @@ function FormBuilderModal({ onClose }: { onClose: () => void }) {
             <h3 className="text-base font-semibold text-[var(--color-text-dark)]">入力フォーム作成</h3>
             <p className="mt-0.5 text-xs text-gray-500">{personName} に送る入力フォームを組み立てます</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-          >
-            閉じる
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import CloseButton from "@/app/components/CloseButton";
 
 export type JobPostingRow = {
   id: number;
@@ -236,13 +237,7 @@ function AIImportModal({
             <h3 className="text-base font-semibold text-[var(--color-text-dark)]">AI で求人票を取り込む</h3>
             <p className="mt-0.5 text-xs text-gray-500">他社の求人票 PDF/画像から項目を抽出して、この案件の求人票として登録します</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-          >
-            閉じる
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">

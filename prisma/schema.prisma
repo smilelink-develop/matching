@@ -298,9 +298,11 @@ model CoreSettings {
   fixedQuestions         Json?
   // 推薦リスト出力で使うカラムキー (lib/recommendation-columns.ts の RECOMMENDATION_COLUMN_OPTIONS の key)
   recommendationColumns  Json?
-  // 月ごとの目標 (内定数 / 売上)。ダッシュボードのゲージで使う
+  // 月ごとの目標 (内定数 / 売上)。後方互換のための既定値、新しい monthlyTargets が無い場合のフォールバック
   monthlyOfferTarget     Int?
-  monthlyRevenueTarget   Int?    // 円
+  monthlyRevenueTarget   Int?
+  // 月ごとの目標履歴。形式: [{ month: "2026-04", offer: 5, revenue: 1500000 }, ...]
+  monthlyTargets         Json?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }

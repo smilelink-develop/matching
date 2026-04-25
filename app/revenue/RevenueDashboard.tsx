@@ -53,11 +53,13 @@ export default function RevenueDashboard({
   initialInvoices,
   monthlyOfferTarget,
   monthlyRevenueTarget,
+  monthlyTargets,
 }: {
   initialDeals: DealRow[];
   initialInvoices: InvoiceRow[];
   monthlyOfferTarget: number | null;
   monthlyRevenueTarget: number | null;
+  monthlyTargets: { month: string; offer: number | null; revenue: number | null }[];
 }) {
   const today = new Date();
   const thirtyDaysAgo = new Date(today);
@@ -261,6 +263,7 @@ export default function RevenueDashboard({
         <MonthlyTargetCard
           monthlyOfferTarget={monthlyOfferTarget}
           monthlyRevenueTarget={monthlyRevenueTarget}
+          monthlyTargets={monthlyTargets}
           invoices={initialInvoices}
           deals={initialDeals}
         />
@@ -313,11 +316,13 @@ export default function RevenueDashboard({
 function MonthlyTargetCard({
   monthlyOfferTarget,
   monthlyRevenueTarget,
+  monthlyTargets,
   invoices,
   deals,
 }: {
   monthlyOfferTarget: number | null;
   monthlyRevenueTarget: number | null;
+  monthlyTargets: { month: string; offer: number | null; revenue: number | null }[];
   invoices: InvoiceRow[];
   deals: DealRow[];
 }) {
@@ -330,6 +335,16 @@ function MonthlyTargetCard({
   const nextMonth = new Date(year, month + 1, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
   const remainingDays = Math.max(0, lastDayOfMonth - today.getDate());
+
+  // 月の目標は monthlyTargets[当月] を最優先、無ければ直近過去月、それも無ければレガシー単一値
+  const currentMonthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const exact = monthlyTargets.find((t) => t.month === currentMonthKey);
+  const carry = !exact
+    ? [...monthlyTargets].filter((t) => t.month <= currentMonthKey).pop()
+    : null;
+  const activeTarget = exact ?? carry ?? null;
+  const offerTarget = activeTarget?.offer ?? monthlyOfferTarget;
+  const revenueTarget = activeTarget?.revenue ?? monthlyRevenueTarget;
 
   // 当月の売上 (請求日が当月の請求合計、なければ作成日)
   const revenue = invoices.reduce((sum, inv) => {
@@ -365,24 +380,28 @@ function MonthlyTargetCard({
           label="内定数"
           unit="件"
           value={offers}
-          target={monthlyOfferTarget}
+          target={offerTarget}
           format={(n) => n.toLocaleString()}
         />
         <Tachometer
           label="売上"
           unit="円"
           value={revenue}
-          target={monthlyRevenueTarget}
+          target={revenueTarget}
           format={(n) => n.toLocaleString()}
         />
       </div>
-      {!monthlyOfferTarget || !monthlyRevenueTarget ? (
+      {!offerTarget || !revenueTarget ? (
         <p className="mt-4 text-xs text-gray-500">
-          目標値が未設定です。
+          {currentMonthKey} の目標値が未設定です。
           <a href="/settings" className="ml-1 text-[var(--color-primary)] underline">
             設定 → 月次目標
           </a>{" "}
           から登録してください。
+        </p>
+      ) : carry ? (
+        <p className="mt-4 text-[11px] text-gray-500">
+          {carry.month} の目標を繰り越しています。当月分を設定するには 設定 → 月次目標 から「+ 月を追加」してください。
         </p>
       ) : null}
     </div>

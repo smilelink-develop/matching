@@ -41,6 +41,7 @@ export default async function SettingsPage() {
           recommendationColumns: coreSettings.recommendationColumns,
           monthlyOfferTarget: coreSettings.monthlyOfferTarget,
           monthlyRevenueTarget: coreSettings.monthlyRevenueTarget,
+          monthlyTargets: coreSettings.monthlyTargets,
         }}
         accounts={accounts}
         resumeTemplates={resumeTemplates.map((template) => ({

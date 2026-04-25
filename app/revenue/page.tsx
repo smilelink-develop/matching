@@ -69,6 +69,7 @@ export default async function RevenuePage() {
       }))}
       monthlyOfferTarget={coreSettings.monthlyOfferTarget}
       monthlyRevenueTarget={coreSettings.monthlyRevenueTarget}
+      monthlyTargets={coreSettings.monthlyTargets}
     />
   );
 }
