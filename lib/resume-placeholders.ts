@@ -137,12 +137,15 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
   };
   const education3 = mapLine(educationLines, 0);
 
-  // 職歴: 最大 10 件まで対応 (テンプレ側に枠を 10 個並べてもらえれば
-  // データが空の枠は履歴書生成時に行ごと自動削除される)
-  const works: ReturnType<typeof mapWorkLine>[] = [];
-  for (let i = 0; i < 10; i++) works.push(mapWorkLine(workLines, i));
+  // テンプレで使う最大件数 (テンプレ側の枠数と合わせる)
+  const MAX_WORKS = 4;
+  const MAX_CERTS = 4;
 
-  // 資格: 最大 10 件まで対応 (1〜3 は単独フィールド、4 以降は certifications JSON)
+  // 職歴: 最大 N 件 (テンプレに枠を並べてもらい、空の枠は行ごと自動削除)
+  const works: ReturnType<typeof mapWorkLine>[] = [];
+  for (let i = 0; i < MAX_WORKS; i++) works.push(mapWorkLine(workLines, i));
+
+  // 資格: 最大 N 件 (1=免許, 2=日本語検定, 3=その他資格, 4以降は certifications JSON)
   const certs: { date: string; label: string }[] = [];
   certs.push({
     date: valueOrBlank(profile?.licenseExpiryDate),
@@ -156,7 +159,8 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     date: valueOrBlank(profile?.otherQualificationExpiryDate),
     label: valueOrBlank(profile?.otherQualificationName),
   });
-  for (let i = 0; i < 7; i++) {
+  const remainingCerts = Math.max(0, MAX_CERTS - certs.length);
+  for (let i = 0; i < remainingCerts; i++) {
     const line = mapLine(certLines, i);
     certs.push({ date: line.date, label: line.label });
   }

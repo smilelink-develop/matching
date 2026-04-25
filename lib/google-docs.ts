@@ -216,17 +216,22 @@ type DocsClient = ReturnType<typeof google.docs>;
  *  - 「職歴 N」の 2 行目に {{退社Nラベル}}、1 行目に {{会社名N}} を書く
  * → 会社名N が空なら、職歴N の 2 行 (会社名N を含む行、退社Nラベル を含む行) が同時に削除される
  */
-// 各人の項目数 (職歴・資格) は大きくバラつくので、テンプレに最大 10 件分の枠を
+// 各人の項目数 (職歴・資格) は大きくバラつくので、テンプレに最大 N 件分の枠を
 // 置いてもらい、データが空の枠は履歴書生成時に「行ごと消す」設計にしている。
+export const RESUME_MAX_WORKS = 4;
+export const RESUME_MAX_CERTS = 4;
+
 function buildResumeEmptyRowGroups(): { guard: string; rowMarkers: string[] }[] {
   const groups: { guard: string; rowMarkers: string[] }[] = [
     { guard: "大学名", rowMarkers: ["大学名", "入学_大学", "卒業_大学"] },
   ];
-  for (let i = 1; i <= 10; i++) {
+  for (let i = 1; i <= RESUME_MAX_WORKS; i++) {
     groups.push({
       guard: `会社名${i}`,
       rowMarkers: [`会社名${i}`, `入社${i}`, `退社${i}`, `退社${i}ラベル`],
     });
+  }
+  for (let i = 1; i <= RESUME_MAX_CERTS; i++) {
     groups.push({
       guard: `資格${i}`,
       rowMarkers: [`資格${i}`, `資格年${i}`],
