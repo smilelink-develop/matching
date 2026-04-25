@@ -60,27 +60,37 @@ function isImage(mime: string | null | undefined) {
   return (mime ?? "").startsWith("image/");
 }
 
+function isPdf(mime: string | null | undefined) {
+  return mime === "application/pdf";
+}
+
 function nameHasAny(name: string, keywords: string[]) {
   const lower = name.toLowerCase();
   return keywords.some((kw) => lower.includes(kw.toLowerCase()));
 }
 
-/** 画像ファイル群から「顔写真」と思しきものを最優先で選ぶ */
+/**
+ * 画像ファイル群から「顔写真」と思しきものを最優先で選ぶ。
+ * PDF も「顔写真キーワードを含むファイル名」のものだけ候補に入れる
+ * (Drive thumbnail エンドポイントは PDF の 1 ページ目を画像として返すので
+ * '0089_顔写真.pdf' のようなスキャンも表示できる)
+ */
 function pickPhotoFile(files: DriveFile[]): DriveFile | null {
-  const images = files.filter((f) => isImage(f.mimeType));
-  if (images.length === 0) return null;
-
-  // 顔写真キーワードを含み、除外キーワードを含まない画像を最優先
-  const explicit = images.find(
-    (f) => nameHasAny(f.name ?? "", PHOTO_KEYWORDS) && !nameHasAny(f.name ?? "", PHOTO_EXCLUDE)
+  const explicitPhotos = files.filter(
+    (f) =>
+      (isImage(f.mimeType) || isPdf(f.mimeType)) &&
+      nameHasAny(f.name ?? "", PHOTO_KEYWORDS) &&
+      !nameHasAny(f.name ?? "", PHOTO_EXCLUDE)
   );
-  if (explicit) return explicit;
+  if (explicitPhotos.length > 0) return explicitPhotos[0];
 
-  // 除外キーワードを含まない画像を次点
-  const safe = images.find((f) => !nameHasAny(f.name ?? "", PHOTO_EXCLUDE));
-  if (safe) return safe;
+  // 顔写真キーワード無しの画像 (除外キーワードに当たらないもの) を次点
+  const safeImages = files.filter(
+    (f) => isImage(f.mimeType) && !nameHasAny(f.name ?? "", PHOTO_EXCLUDE)
+  );
+  if (safeImages.length > 0) return safeImages[0];
 
-  // 全部に除外キーワードが含まれている場合は何も選ばない (在留カード等を選ぶよりはマシ)
+  // 全部除外対象なら何も選ばない (在留カード等を誤選択するよりマシ)
   return null;
 }
 
@@ -89,13 +99,14 @@ const FOLDER_MIME = "application/vnd.google-apps.folder";
 /**
  * フォルダ内のすべての項目 (ファイル + サブフォルダ) を再帰的に列挙する。
  * 候補者フォルダの中にさらにフォルダが切られているケースに対応。
+ * PDF も顔写真候補として収集する (ファイル名で「顔写真」を含むものはスキャンの可能性大)。
  */
-async function listAllImages(
+async function listAllPhotoCandidates(
   drive: drive_v3.Drive,
   rootFolderId: string,
-  maxDepth = 2
-): Promise<{ images: DriveFile[]; visited: number }> {
-  const images: DriveFile[] = [];
+  maxDepth = 3
+): Promise<{ files: DriveFile[]; visited: number }> {
+  const files: DriveFile[] = [];
   let visited = 0;
   const queue: { id: string; depth: number }[] = [{ id: rootFolderId, depth: 0 }];
 
@@ -114,12 +125,12 @@ async function listAllImages(
         if (depth < maxDepth && file.id) {
           queue.push({ id: file.id, depth: depth + 1 });
         }
-      } else if (isImage(file.mimeType)) {
-        images.push(file);
+      } else if (isImage(file.mimeType) || isPdf(file.mimeType)) {
+        files.push(file);
       }
     }
   }
-  return { images, visited };
+  return { files, visited };
 }
 
 export const runtime = "nodejs";
@@ -186,12 +197,12 @@ export async function POST(req: Request) {
           skipped++;
           continue;
         }
-        // 候補者フォルダ + サブフォルダを再帰的に走査
-        const { images, visited } = await listAllImages(drive, folderId, 2);
-        const photo = pickPhotoFile(images);
+        // 候補者フォルダ + サブフォルダを再帰的に走査 (深さ 3 まで)
+        const { files: imageOrPdfFiles, visited } = await listAllPhotoCandidates(drive, folderId, 3);
+        const photo = pickPhotoFile(imageOrPdfFiles);
         if (!photo?.id) {
           log.push(
-            `⚠️ id=${person.id} ${person.name}: 顔写真候補なし (走査フォルダ ${visited}, 画像 ${images.length})`
+            `⚠️ id=${person.id} ${person.name}: 顔写真候補なし (走査フォルダ ${visited}, 候補ファイル ${imageOrPdfFiles.length})`
           );
           skipped++;
           continue;
