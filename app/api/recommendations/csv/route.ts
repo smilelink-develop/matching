@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
-import { calculateAge } from "@/lib/candidate-profile";
+import { sanitizeRecommendationColumns } from "@/lib/recommendation-columns";
+import {
+  buildRecommendationCellValue,
+  getRecommendationColumnLabel,
+} from "@/lib/recommendation-row";
 
 function csvEscape(value: unknown): string {
   if (value === null || value === undefined) return "";
@@ -9,16 +13,6 @@ function csvEscape(value: unknown): string {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;
-}
-
-function calcYearsSince(startDate: string | null | undefined): string {
-  if (!startDate) return "";
-  const start = new Date(startDate);
-  if (Number.isNaN(start.getTime())) return "";
-  const diffMs = Date.now() - start.getTime();
-  const years = diffMs / (1000 * 60 * 60 * 24 * 365.25);
-  if (years < 0) return "";
-  return years.toFixed(1);
 }
 
 export async function GET(req: Request) {
@@ -31,75 +25,49 @@ export async function GET(req: Request) {
       return new Response("dealId is required", { status: 400 });
     }
 
-    const candidates = await prisma.dealCandidate.findMany({
-      where: {
-        dealId,
-        ...(stage === "all" ? {} : { stage }),
-      },
-      include: {
-        person: {
-          include: {
-            onboarding: true,
-            resumeProfile: true,
-            resumeDocuments: { orderBy: { createdAt: "desc" }, take: 1 },
+    const [candidates, settings] = await Promise.all([
+      prisma.dealCandidate.findMany({
+        where: {
+          dealId,
+          ...(stage === "all" ? {} : { stage }),
+        },
+        include: {
+          person: {
+            include: {
+              onboarding: true,
+              resumeProfile: true,
+              partner: { select: { name: true } },
+              resumeDocuments: { orderBy: { createdAt: "desc" }, take: 1 },
+            },
           },
         },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.coreSettings.findUnique({ where: { id: 1 } }),
+    ]);
 
+    const userColumns = sanitizeRecommendationColumns(settings?.recommendationColumns);
+
+    // 固定列: ID + 進捗 (左) + 設定列 + 備考 (右)
     const header = [
       "ID",
-      "追加日付",
-      "候補者名",
-      "カタカナ名",
-      "状況",
-      "性別",
-      "年齢",
-      "国籍",
-      "在留資格",
-      "現住所",
-      "生年月日",
-      "ビザ期限",
-      "特定技能経過年数",
-      "実習経験有無",
-      "日本語レベル",
-      "現職の手取り額",
-      "履歴書",
-      "書類フォルダ",
+      "進捗",
+      ...userColumns.map((key) => getRecommendationColumnLabel(key)),
+      "備考",
     ];
 
     const rows = candidates.map((candidate) => {
-      const p = candidate.person;
-      const onboarding = p.onboarding;
-      const resume = p.resumeProfile;
-      const latestResume = p.resumeDocuments[0] ?? null;
-      const sswYears = p.residenceStatus?.includes("特定技能")
-        ? calcYearsSince(resume?.visaType ? resume?.visaExpiryDate : null) || ""
-        : "";
-      return [
-        p.id,
-        candidate.createdAt.toISOString().slice(0, 10),
-        onboarding?.englishName ?? "",
-        p.name,
-        candidate.stage,
-        resume?.gender ?? "",
-        calculateAge(onboarding?.birthDate ?? null) || "",
-        p.nationality,
-        p.residenceStatus,
-        onboarding?.address ?? "",
-        onboarding?.birthDate ?? "",
-        resume?.visaExpiryDate ?? "",
-        sswYears,
-        resume?.traineeExperience ?? "",
-        resume?.japaneseLevel ?? "",
-        resume?.preferenceNote ?? "",
-        latestResume?.documentUrl ?? "",
-        p.driveFolderUrl ?? "",
-      ].map(csvEscape).join(",");
+      const cells: (string | number)[] = [
+        candidate.person.id,
+        "", // 進捗 (Sheets 上で選択)
+      ];
+      for (const key of userColumns) {
+        cells.push(buildRecommendationCellValue(candidate, key));
+      }
+      cells.push(""); // 備考
+      return cells.map(csvEscape).join(",");
     });
 
-    // BOM を付けて Excel の文字化け回避
     const csv = "\uFEFF" + [header.map(csvEscape).join(","), ...rows].join("\n");
 
     return new Response(csv, {

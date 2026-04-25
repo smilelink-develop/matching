@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from "react";
 import type { FixedQuestionSetting } from "@/lib/app-settings";
+import {
+  RECOMMENDATION_COLUMN_OPTIONS,
+  type RecommendationColumnKey,
+} from "@/lib/recommendation-columns";
 
 type AccountSummary = {
   id: number;
@@ -28,6 +32,7 @@ export default function SettingsClient({
     calendarEmbedUrl: string;
     calendarLabel: string;
     fixedQuestions: FixedQuestionSetting[];
+    recommendationColumns: string[];
   };
   currentAccount: {
     id: number;
@@ -47,6 +52,9 @@ export default function SettingsClient({
   const [savingQuestions, setSavingQuestions] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [fixedQuestionsOpen, setFixedQuestionsOpen] = useState(false);
+  const [recommendationColumns, setRecommendationColumns] = useState<string[]>(initialSettings.recommendationColumns);
+  const [recommendationColumnsOpen, setRecommendationColumnsOpen] = useState(false);
+  const [savingRecommendationColumns, setSavingRecommendationColumns] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
   const [resumeTemplatesOpen, setResumeTemplatesOpen] = useState(false);
   const [resumeTemplates, setResumeTemplates] = useState<ResumeTemplate[]>(initialResumeTemplates);
@@ -61,6 +69,32 @@ export default function SettingsClient({
   const [savingPasscodeId, setSavingPasscodeId] = useState<number | null>(null);
 
   const accountRows = useMemo(() => accounts.filter((account) => account.id !== currentAccount.id), [accounts, currentAccount.id]);
+
+  const toggleRecommendationColumn = (key: string) => {
+    setRecommendationColumns((current) =>
+      current.includes(key) ? current.filter((c) => c !== key) : [...current, key]
+    );
+  };
+
+  const saveRecommendationColumns = async () => {
+    setSavingRecommendationColumns(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recommendationColumns }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        alert(`保存失敗: ${data.error}`);
+        return;
+      }
+      setRecommendationColumns(data.settings.recommendationColumns ?? recommendationColumns);
+      alert("推薦リストの出力項目を保存しました");
+    } finally {
+      setSavingRecommendationColumns(false);
+    }
+  };
 
   const saveCalendar = async () => {
     setSavingCalendar(true);
@@ -468,6 +502,65 @@ export default function SettingsClient({
           </div>
         </div>
       </SectionCard>
+
+      {isAdmin && (
+        <SectionCard
+          title="推薦リストの出力項目"
+          description="推薦リスト (Drive 保存 / CSV ダウンロード) で出力するカラムを選びます。ID / 進捗 / 備考 は固定で必ず出ます。"
+          open={recommendationColumnsOpen}
+          onToggle={() => setRecommendationColumnsOpen((current) => !current)}
+        >
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4">
+              <p className="text-xs text-gray-500">
+                チェックを入れた項目が、案件ごとに作成される推薦リストの列として候補者情報から自動入力されます。
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                {RECOMMENDATION_COLUMN_OPTIONS.map((option) => {
+                  const checked = recommendationColumns.includes(option.key);
+                  return (
+                    <label
+                      key={option.key}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm cursor-pointer ${
+                        checked
+                          ? "border-[var(--color-primary)] bg-white"
+                          : "border-gray-200 bg-white hover:bg-[var(--color-light)]"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleRecommendationColumn(option.key)}
+                        className="accent-[var(--color-primary)]"
+                      />
+                      <span className="text-[var(--color-text-dark)]">{option.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-[11px] text-gray-500">
+                  選択中: {recommendationColumns.length} 項目
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setRecommendationColumns(
+                      RECOMMENDATION_COLUMN_OPTIONS.map((c) => c.key as RecommendationColumnKey)
+                    )
+                  }
+                  className="text-xs text-[var(--color-primary)] hover:underline"
+                >
+                  全部選択
+                </button>
+              </div>
+            </div>
+            <ActionButton onClick={saveRecommendationColumns} disabled={savingRecommendationColumns}>
+              {savingRecommendationColumns ? "保存中..." : "出力項目を保存"}
+            </ActionButton>
+          </div>
+        </SectionCard>
+      )}
 
       {isAdmin && (
         <SectionCard

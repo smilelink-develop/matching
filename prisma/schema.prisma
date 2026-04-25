@@ -294,10 +294,12 @@ model AppSettings {
 }
 
 model CoreSettings {
-  id             Int      @id
-  fixedQuestions Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                     Int      @id
+  fixedQuestions         Json?
+  // 推薦リスト出力で使うカラムキー (lib/recommendation-columns.ts の RECOMMENDATION_COLUMN_OPTIONS の key)
+  recommendationColumns  Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }
 
 model OnboardingFormTemplate {

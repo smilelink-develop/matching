@@ -115,8 +115,9 @@ export default function RecommendationsClient({ deals }: { deals: Deal[] }) {
       </div>
 
       <p className="mt-4 text-xs text-gray-500">
-        出力される列: ID / 追加日付 / 候補者名 / カタカナ名 / 状況 / 性別 / 年齢 / 国籍 / 在留資格 / 現住所 /
-        生年月日 / ビザ期限 / 特定技能経過年数 / 実習経験有無 / 日本語レベル / 現職の手取り額 / 履歴書 / 書類フォルダ
+        出力列の構成 → 「ID / 進捗 / (設定で選んだ項目…) / 備考」<br />
+        進捗 列は Drive 保存時に「応募 / 面接結果待ち / 内定 / 辞退 / 不合格」のドロップダウンが付きます。<br />
+        出力する候補者情報は <a href="/settings" className="text-[var(--color-primary)] underline">設定 → 推薦リストの出力項目</a> で変更できます。
       </p>
     </section>
   );

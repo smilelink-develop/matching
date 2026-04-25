@@ -4,6 +4,7 @@ import {
   normalizeFixedQuestions,
 } from "@/lib/app-settings";
 import { AuthError, requireApiAccount } from "@/lib/auth";
+import { sanitizeRecommendationColumns } from "@/lib/recommendation-columns";
 
 export async function GET() {
   try {
@@ -23,6 +24,7 @@ export async function GET() {
         calendarEmbedUrl: accountSettings?.calendarEmbedUrl ?? "",
         calendarLabel: accountSettings?.calendarLabel ?? "",
         fixedQuestions: normalizeFixedQuestions(coreSettings?.fixedQuestions),
+        recommendationColumns: sanitizeRecommendationColumns(coreSettings?.recommendationColumns),
       },
       currentAccount: account,
     });
@@ -44,6 +46,10 @@ export async function PATCH(req: Request) {
       typeof body.calendarLabel === "string" ? body.calendarLabel.trim() : undefined;
     const nextFixedQuestions =
       body.fixedQuestions !== undefined ? normalizeFixedQuestions(body.fixedQuestions) : undefined;
+    const nextRecommendationColumns =
+      body.recommendationColumns !== undefined
+        ? sanitizeRecommendationColumns(body.recommendationColumns)
+        : undefined;
 
     const accountSettings = await prisma.appSettings.upsert({
       where: { accountId: account.id },
@@ -60,15 +66,24 @@ export async function PATCH(req: Request) {
       },
     });
 
-    if (nextFixedQuestions !== undefined && account.role === "admin") {
+    if (
+      (nextFixedQuestions !== undefined || nextRecommendationColumns !== undefined) &&
+      account.role === "admin"
+    ) {
       await prisma.coreSettings.upsert({
         where: { id: 1 },
         create: {
           id: 1,
           fixedQuestions: nextFixedQuestions ?? DEFAULT_FIXED_QUESTIONS,
+          ...(nextRecommendationColumns !== undefined
+            ? { recommendationColumns: nextRecommendationColumns }
+            : {}),
         },
         update: {
-          fixedQuestions: nextFixedQuestions,
+          ...(nextFixedQuestions !== undefined ? { fixedQuestions: nextFixedQuestions } : {}),
+          ...(nextRecommendationColumns !== undefined
+            ? { recommendationColumns: nextRecommendationColumns }
+            : {}),
         },
       });
     }
@@ -83,6 +98,7 @@ export async function PATCH(req: Request) {
         calendarEmbedUrl: accountSettings.calendarEmbedUrl ?? "",
         calendarLabel: accountSettings.calendarLabel ?? "",
         fixedQuestions: normalizeFixedQuestions(coreSettings?.fixedQuestions),
+        recommendationColumns: sanitizeRecommendationColumns(coreSettings?.recommendationColumns),
       },
     });
   } catch (e) {

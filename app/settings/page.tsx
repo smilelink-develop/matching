@@ -38,6 +38,7 @@ export default async function SettingsPage() {
         initialSettings={{
           ...settings,
           fixedQuestions: coreSettings.fixedQuestions,
+          recommendationColumns: coreSettings.recommendationColumns,
         }}
         accounts={accounts}
         resumeTemplates={resumeTemplates.map((template) => ({

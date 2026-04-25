@@ -58,7 +58,11 @@ export async function getCoreSettings() {
     where: { id: 1 },
   });
 
+  // 動的 import で循環参照を避ける (lib/recommendation-columns には Prisma 依存なし)
+  const { sanitizeRecommendationColumns } = await import("@/lib/recommendation-columns");
+
   return {
     fixedQuestions: normalizeFixedQuestions(settings?.fixedQuestions),
+    recommendationColumns: sanitizeRecommendationColumns(settings?.recommendationColumns),
   };
 }

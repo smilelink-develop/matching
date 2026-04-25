@@ -1,7 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
-import { calculateAge } from "@/lib/candidate-profile";
 import { ensureCompanyDriveFolder } from "@/lib/google-docs";
+import {
+  RECOMMENDATION_PROGRESS_OPTIONS,
+  sanitizeRecommendationColumns,
+} from "@/lib/recommendation-columns";
+import {
+  buildRecommendationCellValue,
+  getRecommendationColumnLabel,
+} from "@/lib/recommendation-row";
 import { google } from "googleapis";
 
 function csvEscape(value: unknown): string {
@@ -23,78 +30,51 @@ export async function POST(req: Request) {
       return Response.json({ ok: false, error: "dealId が必要です" }, { status: 400 });
     }
 
-    const deal = await prisma.deal.findUnique({
-      where: { id: dealId },
-      include: { company: true },
-    });
+    const [deal, candidates, settings] = await Promise.all([
+      prisma.deal.findUnique({
+        where: { id: dealId },
+        include: { company: true },
+      }),
+      prisma.dealCandidate.findMany({
+        where: {
+          dealId,
+          ...(stage === "all" ? {} : { stage }),
+        },
+        include: {
+          person: {
+            include: {
+              onboarding: true,
+              resumeProfile: true,
+              partner: { select: { name: true } },
+              resumeDocuments: { orderBy: { createdAt: "desc" }, take: 1 },
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.coreSettings.findUnique({ where: { id: 1 } }),
+    ]);
+
     if (!deal) {
       return Response.json({ ok: false, error: "案件が見つかりません" }, { status: 404 });
     }
 
-    const candidates = await prisma.dealCandidate.findMany({
-      where: {
-        dealId,
-        ...(stage === "all" ? {} : { stage }),
-      },
-      include: {
-        person: {
-          include: {
-            onboarding: true,
-            resumeProfile: true,
-            resumeDocuments: { orderBy: { createdAt: "desc" }, take: 1 },
-          },
-        },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    const userColumns = sanitizeRecommendationColumns(settings?.recommendationColumns);
 
+    // 固定 + 設定列構成: ID + 進捗 + (設定列…) + 備考
     const header = [
       "ID",
-      "追加日付",
-      "候補者名",
-      "カタカナ名",
-      "状況",
-      "性別",
-      "年齢",
-      "国籍",
-      "在留資格",
-      "現住所",
-      "生年月日",
-      "ビザ期限",
-      "特定技能経過年数",
-      "実習経験有無",
-      "日本語レベル",
-      "現職の手取り額",
-      "履歴書",
-      "書類フォルダ",
+      "進捗",
+      ...userColumns.map((key) => getRecommendationColumnLabel(key)),
+      "備考",
     ];
     const rows = candidates.map((candidate) => {
-      const p = candidate.person;
-      const onboarding = p.onboarding;
-      const resume = p.resumeProfile;
-      const latestResume = p.resumeDocuments[0] ?? null;
-      return [
-        p.id,
-        candidate.createdAt.toISOString().slice(0, 10),
-        onboarding?.englishName ?? "",
-        p.name,
-        candidate.stage,
-        resume?.gender ?? "",
-        calculateAge(onboarding?.birthDate ?? null) || "",
-        p.nationality,
-        p.residenceStatus,
-        onboarding?.address ?? "",
-        onboarding?.birthDate ?? "",
-        resume?.visaExpiryDate ?? "",
-        "",
-        resume?.traineeExperience ?? "",
-        resume?.japaneseLevel ?? "",
-        resume?.preferenceNote ?? "",
-        latestResume?.documentUrl ?? "",
-        p.driveFolderUrl ?? "",
-      ].map(csvEscape).join(",");
+      const cells: (string | number)[] = [candidate.person.id, ""];
+      for (const key of userColumns) cells.push(buildRecommendationCellValue(candidate, key));
+      cells.push("");
+      return cells.map(csvEscape).join(",");
     });
-    const csv = "\uFEFF" + [header.map(csvEscape).join(","), ...rows].join("\n");
+    const csv = [header.map(csvEscape).join(","), ...rows].join("\n");
 
     // 企業フォルダを確保
     const folder = await ensureCompanyDriveFolder({
@@ -102,8 +82,6 @@ export async function POST(req: Request) {
       externalId: deal.company.externalId,
       companyName: deal.company.name,
     });
-
-    // 企業に driveFolderUrl が未設定だったら今回見つけたものを保存
     if (!deal.company.driveFolderUrl) {
       await prisma.company.update({
         where: { id: deal.company.id },
@@ -111,7 +89,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // CSV をアップロード
+    // Google API 認証 (Drive + Sheets)
     const authKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim();
     const authEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
     if (!authKey || !authEmail) {
@@ -120,37 +98,106 @@ export async function POST(req: Request) {
     const auth = new google.auth.JWT({
       email: authEmail,
       key: authKey.replace(/\\n/g, "\n"),
-      scopes: ["https://www.googleapis.com/auth/drive"],
+      scopes: [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/spreadsheets",
+      ],
     });
     await auth.authorize();
     const drive = google.drive({ version: "v3", auth });
+    const sheets = google.sheets({ version: "v4", auth });
 
     const date = new Date().toISOString().slice(0, 10);
     const safeTitle = deal.title.replace(/[\\/:*?"<>|]/g, "");
-    // Google Sheets として扱うので拡張子は付けない
     const fileName = `${date}_${safeTitle}_推薦リスト`;
 
-    // BOM を外した素の CSV を Google Sheets の MIME にアップロード
-    // (BOM があると先頭セルに  が混入するため、ここでは付けない)
-    const csvWithoutBom = csv.startsWith("\uFEFF") ? csv.slice(1) : csv;
-    const buffer = Buffer.from(csvWithoutBom, "utf-8");
+    // CSV を Sheets として変換アップロード
+    const buffer = Buffer.from(csv, "utf-8");
     const { Readable } = await import("node:stream");
     const created = await drive.files.create({
       supportsAllDrives: true,
       requestBody: {
         name: fileName,
         parents: [folder.folderId!],
-        // Drive 側の最終 MIME: Google スプレッドシート
         mimeType: "application/vnd.google-apps.spreadsheet",
       },
       media: {
-        // アップロードする実データは CSV。requestBody.mimeType との差で
-        // Drive が自動で Sheets へ変換する。
         mimeType: "text/csv",
         body: Readable.from(buffer),
       },
       fields: "id,webViewLink,name,mimeType",
     });
+
+    const spreadsheetId = created.data.id;
+
+    // 進捗列に dropdown (data validation) を追加
+    if (spreadsheetId) {
+      try {
+        const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: "sheets(properties(sheetId,title))" });
+        const firstSheet = meta.data.sheets?.[0]?.properties;
+        if (firstSheet?.sheetId !== undefined && firstSheet?.sheetId !== null) {
+          const progressColumnIndex = 1; // ID(0), 進捗(1)
+          const numRows = rows.length + 1; // header + data
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+              requests: [
+                {
+                  setDataValidation: {
+                    range: {
+                      sheetId: firstSheet.sheetId,
+                      startRowIndex: 1, // skip header
+                      endRowIndex: numRows,
+                      startColumnIndex: progressColumnIndex,
+                      endColumnIndex: progressColumnIndex + 1,
+                    },
+                    rule: {
+                      condition: {
+                        type: "ONE_OF_LIST",
+                        values: RECOMMENDATION_PROGRESS_OPTIONS.map((v) => ({ userEnteredValue: v })),
+                      },
+                      strict: false,
+                      showCustomUi: true,
+                    },
+                  },
+                },
+                // 1行目を太字 + 中央寄せ
+                {
+                  repeatCell: {
+                    range: {
+                      sheetId: firstSheet.sheetId,
+                      startRowIndex: 0,
+                      endRowIndex: 1,
+                    },
+                    cell: {
+                      userEnteredFormat: {
+                        textFormat: { bold: true },
+                        horizontalAlignment: "CENTER",
+                        backgroundColor: { red: 0.94, green: 0.97, blue: 0.95 },
+                      },
+                    },
+                    fields: "userEnteredFormat(textFormat,horizontalAlignment,backgroundColor)",
+                  },
+                },
+                // 1行目を固定
+                {
+                  updateSheetProperties: {
+                    properties: {
+                      sheetId: firstSheet.sheetId,
+                      gridProperties: { frozenRowCount: 1 },
+                    },
+                    fields: "gridProperties.frozenRowCount",
+                  },
+                },
+              ],
+            },
+          });
+        }
+      } catch (sheetsError) {
+        // dropdown 追加に失敗しても保存自体は成功扱いにする
+        console.warn("recommendations Sheets validation failed:", sheetsError);
+      }
+    }
 
     return Response.json({
       ok: true,
