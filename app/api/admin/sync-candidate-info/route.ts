@@ -117,6 +117,18 @@ export async function POST(req: Request) {
     let updated = 0;
     let skipped = 0;
     let notFound = 0;
+    let missingFromMaster = 0;
+
+    // 指定 ID で master.json に無いものを最初に通知 (元の xlsx に居ない)
+    if (targetIds) {
+      const masterIds = new Set(master.map((m) => m.id));
+      for (const id of targetIds) {
+        if (!masterIds.has(id)) {
+          missingFromMaster++;
+          log.push(`⚠️ id=${id}: data/candidates-master.json に該当行がありません (xlsx の master シートに居ない)`);
+        }
+      }
+    }
 
     // 既存 Person を一括取得
     const existing = await prisma.person.findMany({
@@ -133,13 +145,29 @@ export async function POST(req: Request) {
         continue;
       }
 
+      // sync-candidates-from-drive で入る仮プレースホルダ。これらは「空」として扱う
+      // (本物の xlsx 値で上書きしてよい)
+      const PERSON_PLACEHOLDER: Record<string, string[]> = {
+        nationality: ["不明", "未設定"],
+        residenceStatus: ["技能実習"], // 仮設定値。xlsx に値があれば優先する
+        channel: ["LINE"],             // 仮設定値
+      };
+      const isEffectivelyEmpty = (key: string, current: unknown) => {
+        if (current === null || current === undefined || current === "") return true;
+        const placeholders = PERSON_PLACEHOLDER[key];
+        if (placeholders && typeof current === "string" && placeholders.includes(current)) {
+          return true;
+        }
+        return false;
+      };
+
       // master シートからの基本情報
       const partnerId = await resolvePartnerId(row.partner);
       const personUpdate: Record<string, unknown> = {};
       const setIfEmpty = (key: keyof typeof person, value: unknown) => {
         if (value === null || value === undefined || value === "") return;
         const current = person[key];
-        if (overwrite || !current) {
+        if (overwrite || isEffectivelyEmpty(key as string, current)) {
           personUpdate[key] = value;
         }
       };
@@ -278,6 +306,8 @@ export async function POST(req: Request) {
       ok: true,
       summary: {
         total: targets.length,
+        requestedIds: targetIds?.length ?? null,
+        missingFromMaster,
         updated,
         skipped,
         notFound,
