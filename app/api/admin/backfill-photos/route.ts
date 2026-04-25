@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAdmin } from "@/lib/auth";
-import { google } from "googleapis";
+import { google, type drive_v3 } from "googleapis";
 import { findFolderByPrefix, formatPersonIdPrefix, parseGoogleDriveFolderId } from "@/lib/google-docs";
 
 const DEFAULT_PERSON_ROOT_FOLDER_URL =
@@ -27,14 +27,99 @@ async function makeDrive() {
   return google.drive({ version: "v3", auth });
 }
 
-type DriveFile = { id?: string | null; name?: string | null; mimeType?: string | null };
+type DriveFile = {
+  id?: string | null;
+  name?: string | null;
+  mimeType?: string | null;
+};
 
-function pickPhotoFile(files: DriveFile[]) {
-  const images = files.filter((f) => (f.mimeType ?? "").startsWith("image/"));
+const PHOTO_KEYWORDS = ["顔写真", "顔", "プロフィール", "profile", "photo", "face"];
+// 在留カード/パスポート/履歴書/PDF など「顔写真ではない」候補を除外
+const PHOTO_EXCLUDE = [
+  "在留",
+  "カード",
+  "card",
+  "パスポート",
+  "passport",
+  "履歴書",
+  "resume",
+  "免許",
+  "license",
+  "卒業",
+  "diploma",
+  "賃貸",
+  "saving",
+  "banking",
+  "通帳",
+  "申請",
+  "結果",
+  "保険",
+];
+
+function isImage(mime: string | null | undefined) {
+  return (mime ?? "").startsWith("image/");
+}
+
+function nameHasAny(name: string, keywords: string[]) {
+  const lower = name.toLowerCase();
+  return keywords.some((kw) => lower.includes(kw.toLowerCase()));
+}
+
+/** 画像ファイル群から「顔写真」と思しきものを最優先で選ぶ */
+function pickPhotoFile(files: DriveFile[]): DriveFile | null {
+  const images = files.filter((f) => isImage(f.mimeType));
   if (images.length === 0) return null;
-  const byKeyword = (kw: string) =>
-    images.find((f) => (f.name ?? "").toLowerCase().includes(kw.toLowerCase()));
-  return byKeyword("顔写真") || byKeyword("photo") || byKeyword("face") || images[0];
+
+  // 顔写真キーワードを含み、除外キーワードを含まない画像を最優先
+  const explicit = images.find(
+    (f) => nameHasAny(f.name ?? "", PHOTO_KEYWORDS) && !nameHasAny(f.name ?? "", PHOTO_EXCLUDE)
+  );
+  if (explicit) return explicit;
+
+  // 除外キーワードを含まない画像を次点
+  const safe = images.find((f) => !nameHasAny(f.name ?? "", PHOTO_EXCLUDE));
+  if (safe) return safe;
+
+  // 全部に除外キーワードが含まれている場合は何も選ばない (在留カード等を選ぶよりはマシ)
+  return null;
+}
+
+const FOLDER_MIME = "application/vnd.google-apps.folder";
+
+/**
+ * フォルダ内のすべての項目 (ファイル + サブフォルダ) を再帰的に列挙する。
+ * 候補者フォルダの中にさらにフォルダが切られているケースに対応。
+ */
+async function listAllImages(
+  drive: drive_v3.Drive,
+  rootFolderId: string,
+  maxDepth = 2
+): Promise<{ images: DriveFile[]; visited: number }> {
+  const images: DriveFile[] = [];
+  let visited = 0;
+  const queue: { id: string; depth: number }[] = [{ id: rootFolderId, depth: 0 }];
+
+  while (queue.length > 0) {
+    const { id, depth } = queue.shift()!;
+    visited++;
+    const res = await drive.files.list({
+      q: `'${id}' in parents and trashed = false`,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: "files(id, name, mimeType)",
+      pageSize: 100,
+    });
+    for (const file of res.data.files ?? []) {
+      if (file.mimeType === FOLDER_MIME) {
+        if (depth < maxDepth && file.id) {
+          queue.push({ id: file.id, depth: depth + 1 });
+        }
+      } else if (isImage(file.mimeType)) {
+        images.push(file);
+      }
+    }
+  }
+  return { images, visited };
 }
 
 export const runtime = "nodejs";
@@ -45,11 +130,22 @@ export async function POST(req: Request) {
     await requireApiAdmin();
     const url = new URL(req.url);
     const overwrite = url.searchParams.get("overwrite") === "1";
+    // ?ids=75,79 のように特定の候補者だけ強制更新するためのフィルタ
+    const idsParam = url.searchParams.get("ids");
+    const targetIds = idsParam
+      ? idsParam
+          .split(",")
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isFinite(n))
+      : null;
 
     const drive = await makeDrive();
-    // driveFolderUrl が無い候補者も対象 (ルートフォルダから ID プレフィックスで検索する)
     const persons = await prisma.person.findMany({
-      where: overwrite ? {} : { photoUrl: null },
+      where: targetIds
+        ? { id: { in: targetIds } }
+        : overwrite
+          ? {}
+          : { photoUrl: null },
       select: { id: true, name: true, driveFolderUrl: true, photoUrl: true },
       orderBy: { id: "asc" },
     });
@@ -58,14 +154,13 @@ export async function POST(req: Request) {
       process.env.GOOGLE_CANDIDATE_FILES_FOLDER_URL?.trim() || DEFAULT_PERSON_ROOT_FOLDER_URL;
 
     const log: string[] = [];
-    let found = 0;
+    let foundCount = 0;
     let updated = 0;
     let skipped = 0;
     let error = 0;
 
     for (const person of persons) {
       try {
-        // driveFolderUrl があればそれ、無ければ候補者ルートから ID プレフィックスでフォルダ検索
         let folderId = person.driveFolderUrl ? parseGoogleDriveFolderId(person.driveFolderUrl) : null;
         let resolvedFolderUrl = person.driveFolderUrl;
         if (!folderId) {
@@ -81,7 +176,6 @@ export async function POST(req: Request) {
           }
           folderId = found.folderId;
           resolvedFolderUrl = found.folderUrl;
-          // 同時に Person.driveFolderUrl も保存しておく
           await prisma.person.update({
             where: { id: person.id },
             data: { driveFolderUrl: resolvedFolderUrl },
@@ -92,29 +186,25 @@ export async function POST(req: Request) {
           skipped++;
           continue;
         }
-        const res = await drive.files.list({
-          q: `'${folderId}' in parents and trashed = false`,
-          supportsAllDrives: true,
-          includeItemsFromAllDrives: true,
-          fields: "files(id, name, mimeType)",
-          pageSize: 50,
-        });
-        const files = res.data.files ?? [];
-        const photo = pickPhotoFile(files);
+        // 候補者フォルダ + サブフォルダを再帰的に走査
+        const { images, visited } = await listAllImages(drive, folderId, 2);
+        const photo = pickPhotoFile(images);
         if (!photo?.id) {
-          log.push(`id=${person.id} ${person.name}: 画像なし (ファイル数 ${files.length})`);
+          log.push(
+            `⚠️ id=${person.id} ${person.name}: 顔写真候補なし (走査フォルダ ${visited}, 画像 ${images.length})`
+          );
           skipped++;
           continue;
         }
         const photoUrl = `https://drive.google.com/thumbnail?id=${photo.id}&sz=w400`;
         if (person.photoUrl === photoUrl) {
-          log.push(`id=${person.id} ${person.name}: 既に設定済み`);
-          found++;
+          log.push(`= id=${person.id} ${person.name}: 既に同じ写真 (${photo.name})`);
+          foundCount++;
           continue;
         }
         await prisma.person.update({ where: { id: person.id }, data: { photoUrl } });
         log.push(`✅ id=${person.id} ${person.name} ← ${photo.name}`);
-        found++;
+        foundCount++;
         updated++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : "error";
@@ -125,13 +215,13 @@ export async function POST(req: Request) {
 
     return Response.json({
       ok: true,
-      summary: { total: persons.length, found, updated, skipped, error },
+      summary: { total: persons.length, found: foundCount, updated, skipped, error },
       log,
     });
-  } catch (error) {
+  } catch (err) {
     return Response.json(
-      { ok: false, error: error instanceof Error ? error.message : "error" },
-      { status: error instanceof AuthError ? error.status : 500 }
+      { ok: false, error: err instanceof Error ? err.message : "error" },
+      { status: err instanceof AuthError ? err.status : 500 }
     );
   }
 }
