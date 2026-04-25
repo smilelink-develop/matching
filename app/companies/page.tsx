@@ -56,6 +56,7 @@ type RawCompany = {
   name: string;
   industry: string | null;
   hiringStatus: string;
+  driveFolderUrl: string | null;
   deals: { id: number }[];
 };
 
@@ -66,6 +67,7 @@ function toRow(c: RawCompany) {
     name: c.name,
     industry: c.industry,
     hiringStatus: c.hiringStatus,
+    driveFolderUrl: c.driveFolderUrl,
     deals: c.deals,
   };
 }

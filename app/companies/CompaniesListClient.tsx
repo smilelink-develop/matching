@@ -9,6 +9,7 @@ export type CompanyRow = {
   name: string;
   industry: string | null;
   hiringStatus: string;
+  driveFolderUrl: string | null;
   deals: { id: number }[];
 };
 
@@ -100,6 +101,7 @@ function CompaniesTable({
             <th className="px-4 py-3 text-left font-semibold">業種</th>
             <th className="px-4 py-3 text-left font-semibold">採用状況</th>
             <th className="px-4 py-3 text-left font-semibold w-20">案件数</th>
+            <th className="w-20 px-4 py-3 text-center font-semibold">保管場所</th>
           </tr>
         </thead>
         <tbody>
@@ -132,11 +134,18 @@ function CompaniesTable({
                   {company.deals.length}件
                 </Link>
               </td>
+              <td className="px-4 py-3 text-center">
+                <CompanyDriveCell
+                  companyId={company.id}
+                  companyName={company.name}
+                  driveFolderUrl={company.driveFolderUrl}
+                />
+              </td>
             </tr>
           ))}
           {companies.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+              <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
                 {emptyLabel}
               </td>
             </tr>
@@ -144,6 +153,82 @@ function CompaniesTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function CompanyDriveCell({
+  companyId,
+  companyName,
+  driveFolderUrl,
+}: {
+  companyId: number;
+  companyName: string;
+  driveFolderUrl: string | null;
+}) {
+  const [url, setUrl] = useState(driveFolderUrl);
+
+  const assignUrl = async () => {
+    const input = prompt(
+      `「${companyName}」の Drive フォルダ URL を入力してください`,
+      url ?? "https://drive.google.com/drive/folders/"
+    );
+    if (input === null) return;
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    const response = await fetch(`/api/companies/${companyId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driveFolderUrl: trimmed }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      alert(result.error || "Drive フォルダの登録に失敗しました");
+      return;
+    }
+    setUrl(trimmed);
+  };
+
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        title="Drive フォルダを開く (右クリックで URL を変更)"
+        onClick={(event) => event.stopPropagation()}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          void assignUrl();
+        }}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-secondary)] bg-[var(--color-light)] text-[var(--color-primary)] hover:bg-white"
+      >
+        <FolderIcon />
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void assignUrl()}
+      title="Drive フォルダ URL を設定"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white text-gray-400 hover:border-[var(--color-secondary)] hover:text-[var(--color-primary)]"
+    >
+      <FolderIcon />
+    </button>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l1.4 1.8c.2.25.5.4.82.4H18.5A2.5 2.5 0 0 1 21 9.7v7.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5v-10Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

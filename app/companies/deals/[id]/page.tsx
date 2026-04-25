@@ -79,6 +79,8 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               interviewCount: deal.interviewCount,
               offerCount: deal.offerCount,
               contractCount: deal.contractCount,
+              declineCount: deal.declineCount,
+              rejectCount: deal.rejectCount,
               notes: deal.notes,
               candidates: deal.candidates.map((candidate) => ({
                 id: candidate.id,

@@ -206,6 +206,7 @@ export default function PersonnelTableClient({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--color-light)] text-[var(--color-text-dark)]">
+              <th className="w-20 px-3 py-3 text-left font-semibold">ID</th>
               {appliedColumns.map((column) => (
                 <th key={column.key} className="px-4 py-3 text-left font-semibold">
                   {column.label}
@@ -217,6 +218,11 @@ export default function PersonnelTableClient({
           <tbody>
             {filteredPersons.map((person) => (
               <tr key={person.id} className="border-t border-gray-100 hover:bg-gray-50">
+                <td className="p-0 font-mono text-[12.5px] text-[var(--color-primary)]">
+                  <Link href={`/personnel/${person.id}/edit`} className="block px-3 py-3">
+                    {String(person.id).padStart(4, "0")}
+                  </Link>
+                </td>
                 {appliedColumns.map((column, index) => (
                   <td key={column.key} className="px-4 py-3 text-gray-600">
                     <Link href={`/personnel/${person.id}/edit`} className="block -mx-4 -my-3 px-4 py-3">
@@ -235,13 +241,13 @@ export default function PersonnelTableClient({
             ))}
             {persons.length === 0 ? (
               <tr>
-                <td colSpan={appliedColumns.length + 1} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={appliedColumns.length + 2} className="px-4 py-10 text-center text-gray-400">
                   候補者が登録されていません
                 </td>
               </tr>
             ) : filteredPersons.length === 0 ? (
               <tr>
-                <td colSpan={appliedColumns.length + 1} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={appliedColumns.length + 2} className="px-4 py-10 text-center text-gray-400">
                   「{searchTerm}」に一致する候補者が見つかりません
                 </td>
               </tr>
@@ -267,8 +273,11 @@ function renderColumn(person: PersonRow, key: PersonnelColumnKey, isFirst: boole
             className="h-10 w-10 rounded-xl object-cover"
           />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white">
-            {person.name[0]}
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-[var(--color-light)] text-[var(--color-primary)]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
           </div>
         )}
         <span className={isFirst ? "font-medium text-[var(--color-text-dark)]" : ""}>{person.name}</span>

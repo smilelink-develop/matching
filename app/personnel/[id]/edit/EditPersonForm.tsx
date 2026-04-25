@@ -446,14 +446,7 @@ export default function EditPersonForm({
                   ))}
                 </select>
               </Field>
-              <Field label="在留資格">
-                <select className={INPUT} value={form.residenceStatus} onChange={(event) => setValue("residenceStatus", event.target.value)}>
-                  {RESIDENCE_STATUSES.map((status) => (
-                    <option key={status}>{status}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="メールアドレス" className="md:col-span-2">
+              <Field label="メールアドレス">
                 <input className={INPUT} type="email" value={form.email} onChange={(event) => setValue("email", event.target.value)} placeholder="example@email.com" />
               </Field>
             </div>

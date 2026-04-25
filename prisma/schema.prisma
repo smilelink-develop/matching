@@ -363,7 +363,9 @@ model Deal {
   recommendedCount Int      @default(0)
   interviewCount   Int      @default(0)
   offerCount       Int      @default(0)
-  contractCount    Int      @default(0)
+  contractCount    Int      @default(0) // 旧: 成約 (UI 上は廃止、データは互換維持)
+  declineCount     Int      @default(0) // 内定辞退
+  rejectCount      Int      @default(0) // 不合格
   notes        String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt

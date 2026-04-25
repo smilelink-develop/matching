@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-const STATUS_COLUMNS = ["至急募集", "募集中", "面接中", "成約"] as const;
+// 「募集中」をデフォルトの主要カラムとして左端に、「至急募集」をその右に
+const STATUS_COLUMNS = ["募集中", "至急募集", "面接中", "成約"] as const;
 
 type Deal = {
   id: number;
@@ -92,8 +93,9 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--color-text-dark)]">{deal.title}</p>
-                        <p className="mt-1 text-xs text-gray-500">{deal.companyName}</p>
+                        {/* 企業名をメイン、案件名をサブで表示 (入れ替え) */}
+                        <p className="text-sm font-semibold text-[var(--color-text-dark)]">{deal.companyName}</p>
+                        <p className="mt-1 text-xs text-gray-500">{deal.title}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         {deal.priority && deal.priority !== "normal" ? (

@@ -60,6 +60,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       interviewCount?: number;
       offerCount?: number;
       contractCount?: number;
+      declineCount?: number;
+      rejectCount?: number;
       notes?: string | null;
     } = {};
 
@@ -76,6 +78,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.interviewCount !== undefined) updateData.interviewCount = Math.max(0, Number(body.interviewCount));
     if (body.offerCount !== undefined) updateData.offerCount = Math.max(0, Number(body.offerCount));
     if (body.contractCount !== undefined) updateData.contractCount = Math.max(0, Number(body.contractCount));
+    if (body.declineCount !== undefined) updateData.declineCount = Math.max(0, Number(body.declineCount));
+    if (body.rejectCount !== undefined) updateData.rejectCount = Math.max(0, Number(body.rejectCount));
     if (body.notes !== undefined) updateData.notes = String(body.notes ?? "").trim() || null;
 
     const deal = await prisma.deal.update({

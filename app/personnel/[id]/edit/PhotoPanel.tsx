@@ -78,8 +78,11 @@ export default function PhotoPanel({
           className="h-20 w-20 shrink-0 rounded-2xl border border-gray-200 object-cover shadow-sm"
         />
       ) : (
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)] text-2xl font-bold text-white shadow-sm">
-          {(personName.trim()[0] ?? "人").toUpperCase()}
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-[var(--color-light)] text-[var(--color-primary)] shadow-sm">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+          </svg>
         </div>
       )}
       <div className="min-w-0 flex-1 space-y-1.5">

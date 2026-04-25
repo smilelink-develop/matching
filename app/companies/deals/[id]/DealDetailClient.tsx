@@ -7,7 +7,36 @@ import { useMemo, useState } from "react";
 import { SSW_INDUSTRIES } from "@/lib/company-options";
 import PersonPicker from "@/app/components/PersonPicker";
 
-const CANDIDATE_COLUMNS = ["接続済み", "事前面談済み", "推薦済み", "内定済み"] as const;
+const CANDIDATE_COLUMNS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "不合格"] as const;
+
+// カンバン各カラムの色分け (見やすさのため緑系のグラデーション + 不合格は赤系)
+const COLUMN_COLOR: Record<string, { border: string; head: string; tile: string }> = {
+  接続済み: {
+    border: "border-[#BFDBFE]",
+    head: "bg-[#DBEAFE] text-[#1D4ED8]",
+    tile: "bg-[#EFF6FF] border-[#BFDBFE] hover:border-[#60A5FA]",
+  },
+  事前面談済み: {
+    border: "border-[#C7D2FE]",
+    head: "bg-[#E0E7FF] text-[#4338CA]",
+    tile: "bg-[#EEF2FF] border-[#C7D2FE] hover:border-[#818CF8]",
+  },
+  推薦済み: {
+    border: "border-[#FDE68A]",
+    head: "bg-[#FEF3C7] text-[#92400E]",
+    tile: "bg-[#FFFBEB] border-[#FDE68A] hover:border-[#F59E0B]",
+  },
+  内定済み: {
+    border: "border-[#BBF7D0]",
+    head: "bg-[#DCFCE7] text-[#166534]",
+    tile: "bg-[#F0FDF4] border-[#BBF7D0] hover:border-[#22C55E]",
+  },
+  不合格: {
+    border: "border-[#FECACA]",
+    head: "bg-[#FEE2E2] text-[#B91C1C]",
+    tile: "bg-[#FEF2F2] border-[#FECACA] hover:border-[#EF4444]",
+  },
+};
 const STATUS_OPTIONS = ["至急募集", "募集中", "面接中", "成約"] as const;
 const PRIORITY_OPTIONS = [
   { value: "normal", label: "通常" },
@@ -45,6 +74,8 @@ type DealDetail = {
   interviewCount: number;
   offerCount: number;
   contractCount: number;
+  declineCount: number;
+  rejectCount: number;
   notes: string | null;
   candidates: CandidateCard[];
 };
@@ -98,7 +129,7 @@ export default function DealDetailClient({
   };
 
   const updateCounter = async (
-    key: "requiredCount" | "recommendedCount" | "interviewCount" | "offerCount" | "contractCount",
+    key: "requiredCount" | "recommendedCount" | "interviewCount" | "offerCount" | "contractCount" | "declineCount" | "rejectCount",
     next: number,
   ) => {
     const clamped = Math.max(0, Math.floor(next));
@@ -324,42 +355,25 @@ export default function DealDetailClient({
         )}
       </section>
 
+      {/* 人数カウンター */}
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-[var(--color-text-dark)]">人数カウンター</h2>
-          <p className="text-xs text-gray-500">上下矢印で即時更新されます</p>
+          <p className="text-xs text-gray-500">上下矢印で即時更新</p>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <CounterCell
-            label="募集"
-            value={currentDeal.requiredCount}
-            onChange={(next) => void updateCounter("requiredCount", next)}
-          />
-          <CounterCell
-            label="推薦"
-            value={currentDeal.recommendedCount}
-            onChange={(next) => void updateCounter("recommendedCount", next)}
-          />
-          <CounterCell
-            label="面接"
-            value={currentDeal.interviewCount}
-            onChange={(next) => void updateCounter("interviewCount", next)}
-          />
-          <CounterCell
-            label="内定"
-            value={currentDeal.offerCount}
-            onChange={(next) => void updateCounter("offerCount", next)}
-          />
-          <CounterCell
-            label="成約"
-            value={currentDeal.contractCount}
-            onChange={(next) => void updateCounter("contractCount", next)}
-          />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <CounterCell label="募集" value={currentDeal.requiredCount} onChange={(n) => void updateCounter("requiredCount", n)} />
+          <CounterCell label="推薦" value={currentDeal.recommendedCount} onChange={(n) => void updateCounter("recommendedCount", n)} />
+          <CounterCell label="面接" value={currentDeal.interviewCount} onChange={(n) => void updateCounter("interviewCount", n)} />
+          <CounterCell label="内定" value={currentDeal.offerCount} onChange={(n) => void updateCounter("offerCount", n)} />
+          <CounterCell label="内定辞退" value={currentDeal.declineCount} onChange={(n) => void updateCounter("declineCount", n)} tone="amber" />
+          <CounterCell label="不合格" value={currentDeal.rejectCount} onChange={(n) => void updateCounter("rejectCount", n)} tone="red" />
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-end gap-3">
+      {/* 候補者追加 + カンバン (一つの島) */}
+      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-end gap-3 border-b border-gray-100 pb-4">
           <div className="min-w-[260px] flex-1">
             <label className="mb-1.5 block text-sm font-medium text-[var(--color-text-dark)]">候補者を追加</label>
             <PersonPicker
@@ -377,11 +391,11 @@ export default function DealDetailClient({
             {adding ? "追加中..." : "候補者を追加"}
           </button>
         </div>
-      </section>
 
-      <div className="grid gap-5 xl:grid-cols-4">
+        <div className="mt-4 grid gap-4 lg:grid-cols-5">
         {CANDIDATE_COLUMNS.map((column) => {
           const columnCandidates = candidates.filter((candidate) => candidate.stage === column);
+          const colors = COLUMN_COLOR[column] ?? COLUMN_COLOR["接続済み"];
           return (
             <section
               key={column}
@@ -393,22 +407,22 @@ export default function DealDetailClient({
                   setDraggingCandidateId(null);
                 }
               }}
-              className="flex max-h-[calc(100vh-16rem)] flex-col rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+              className={`flex max-h-[calc(100vh-18rem)] flex-col rounded-2xl border ${colors.border} bg-white p-3`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-[var(--color-text-dark)]">{column}</h3>
-                <span className="rounded-full bg-[var(--color-light)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary)]">
+              <div className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 ${colors.head}`}>
+                <h3 className="text-sm font-semibold">{column}</h3>
+                <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-semibold">
                   {columnCandidates.length}名
                 </span>
               </div>
-              <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
+              <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
                 {columnCandidates.map((candidate) => (
                   <div
                     key={candidate.id}
                     draggable
                     onDragStart={() => setDraggingCandidateId(candidate.id)}
                     onDragEnd={() => setDraggingCandidateId(null)}
-                    className="rounded-2xl border border-gray-200 bg-[var(--color-light)] p-4"
+                    className={`rounded-2xl border p-3 transition ${colors.tile}`}
                   >
                     <div className="flex items-start gap-3">
                       {candidate.person.photoUrl ? (
@@ -421,8 +435,11 @@ export default function DealDetailClient({
                           className="h-11 w-11 rounded-xl object-cover"
                         />
                       ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-primary)] text-sm font-bold text-white">
-                          {candidate.person.name[0]}
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-[var(--color-primary)]">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 21a8 8 0 0 1 16 0" />
+                          </svg>
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
@@ -441,7 +458,7 @@ export default function DealDetailClient({
                   </div>
                 ))}
                 {columnCandidates.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
+                  <div className="rounded-2xl border border-dashed border-gray-200 px-3 py-6 text-center text-xs text-gray-400">
                     候補者なし
                   </div>
                 ) : null}
@@ -449,7 +466,8 @@ export default function DealDetailClient({
             </section>
           );
         })}
-      </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -540,14 +558,22 @@ function CounterCell({
   label,
   value,
   onChange,
+  tone = "default",
 }: {
   label: string;
   value: number;
   onChange: (next: number) => void;
+  tone?: "default" | "amber" | "red";
 }) {
+  const toneClass =
+    tone === "red"
+      ? "border-[#FECACA] bg-[#FEF2F2] text-[#B91C1C]"
+      : tone === "amber"
+      ? "border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]"
+      : "border-gray-200 bg-white text-[var(--color-text-dark)]";
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
-      <p className="text-sm font-semibold text-[var(--color-text-dark)]">{label}</p>
+    <div className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${toneClass}`}>
+      <p className="text-sm font-semibold">{label}</p>
       <div className="flex items-center gap-1">
         <button
           type="button"
