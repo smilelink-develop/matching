@@ -171,7 +171,18 @@ export async function POST(req: Request) {
           personUpdate[key] = value;
         }
       };
-      setIfEmpty("name", row.katakanaName ?? row.englishName);
+      // Person.name はカタカナ名が正。
+      // - 現在の name が空 → カタカナ名 (なければ英語名) を入れる
+      // - 現在の name が英語名と一致 (sync-from-drive の仮値) → カタカナ名で上書き
+      if (row.katakanaName) {
+        const englishMatchesCurrent =
+          row.englishName && person.name && person.name.trim() === row.englishName.trim();
+        if (overwrite || !person.name || englishMatchesCurrent) {
+          personUpdate.name = row.katakanaName;
+        }
+      } else if (row.englishName && !person.name) {
+        personUpdate.name = row.englishName;
+      }
       setIfEmpty("nationality", normalizeNationality(row.nationality));
       setIfEmpty("residenceStatus", normalizeResidenceStatus(row.residenceStatus));
       if (partnerId !== null && (overwrite || person.partnerId === null)) {
