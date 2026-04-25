@@ -150,15 +150,25 @@ export async function POST(req: Request) {
           .filter((n) => Number.isFinite(n))
       : null;
 
+    // ?limit=20&offset=0 で分割処理 (Railway の HTTP タイムアウトを避ける)
+    // 1 人につき Drive API を数回叩くので 20 人前後ずつが安全
+    const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 50);
+    const offset = Math.max(Number(url.searchParams.get("offset") ?? 0), 0);
+
     const drive = await makeDrive();
+    const where = targetIds
+      ? { id: { in: targetIds } }
+      : overwrite
+        ? {}
+        : { photoUrl: null };
+
+    const totalRemaining = await prisma.person.count({ where });
     const persons = await prisma.person.findMany({
-      where: targetIds
-        ? { id: { in: targetIds } }
-        : overwrite
-          ? {}
-          : { photoUrl: null },
+      where,
       select: { id: true, name: true, driveFolderUrl: true, photoUrl: true },
       orderBy: { id: "asc" },
+      skip: offset,
+      take: limit,
     });
 
     const personRootFolderUrl =
@@ -197,8 +207,9 @@ export async function POST(req: Request) {
           skipped++;
           continue;
         }
-        // 候補者フォルダ + サブフォルダを再帰的に走査 (深さ 3 まで)
-        const { files: imageOrPdfFiles, visited } = await listAllPhotoCandidates(drive, folderId, 3);
+        // 候補者フォルダ + サブフォルダを再帰的に走査 (深さ 2 まで)
+        // 深さ 3 にすると全員バッチで Railway HTTP タイムアウトを超えやすい
+        const { files: imageOrPdfFiles, visited } = await listAllPhotoCandidates(drive, folderId, 2);
         const photo = pickPhotoFile(imageOrPdfFiles);
         if (!photo?.id) {
           log.push(
@@ -224,9 +235,21 @@ export async function POST(req: Request) {
       }
     }
 
+    const nextOffset = offset + persons.length;
+    const hasMore = nextOffset < totalRemaining;
     return Response.json({
       ok: true,
-      summary: { total: persons.length, found: foundCount, updated, skipped, error },
+      summary: {
+        processed: persons.length,
+        totalRemaining,
+        offset,
+        nextOffset,
+        hasMore,
+        found: foundCount,
+        updated,
+        skipped,
+        error,
+      },
       log,
     });
   } catch (err) {
