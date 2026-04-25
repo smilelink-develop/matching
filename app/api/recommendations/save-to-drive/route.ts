@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
-import { ensureCompanyDriveFolder } from "@/lib/google-docs";
+import { ensureCompanyDriveFolder, parseGoogleDocId, parseGoogleDriveFolderId } from "@/lib/google-docs";
 import {
   RECOMMENDATION_PROGRESS_OPTIONS,
   sanitizeRecommendationColumns,
@@ -25,7 +25,14 @@ export async function POST(req: Request) {
     await requireApiAccount();
     const body = await req.json();
     const dealId = Number(body?.dealId);
-    const stage = String(body?.stage ?? "接続済み");
+    // 複数ステージ対応: stages[] / 単一 stage どちらも受け付ける
+    const stagesInput: string[] | null = Array.isArray(body?.stages)
+      ? (body.stages as unknown[]).map((s) => String(s)).filter(Boolean)
+      : typeof body?.stage === "string" && body.stage !== "all"
+        ? [String(body.stage)]
+        : body?.stage === "all"
+          ? null
+          : ["接続済み"];
     if (!Number.isFinite(dealId)) {
       return Response.json({ ok: false, error: "dealId が必要です" }, { status: 400 });
     }
@@ -38,7 +45,7 @@ export async function POST(req: Request) {
       prisma.dealCandidate.findMany({
         where: {
           dealId,
-          ...(stage === "all" ? {} : { stage }),
+          ...(stagesInput && stagesInput.length > 0 ? { stage: { in: stagesInput } } : {}),
         },
         include: {
           person: {
@@ -62,19 +69,24 @@ export async function POST(req: Request) {
     const userColumns = sanitizeRecommendationColumns(settings?.recommendationColumns);
 
     // 固定 + 設定列構成: ID + 進捗 + (設定列…) + 備考
-    const header = [
+    const header: string[] = [
       "ID",
       "進捗",
       ...userColumns.map((key) => getRecommendationColumnLabel(key)),
       "備考",
     ];
-    const rows = candidates.map((candidate) => {
+    const dataRows: (string | number)[][] = candidates.map((candidate) => {
       const cells: (string | number)[] = [candidate.person.id, ""];
       for (const key of userColumns) cells.push(buildRecommendationCellValue(candidate, key));
       cells.push("");
-      return cells.map(csvEscape).join(",");
+      return cells;
     });
-    const csv = [header.map(csvEscape).join(","), ...rows].join("\n");
+    const csv = [
+      header.map(csvEscape).join(","),
+      ...dataRows.map((row) => row.map(csvEscape).join(",")),
+    ].join("\n");
+
+    const templateUrl = settings?.recommendationTemplateUrl?.trim() || null;
 
     // 企業フォルダを確保
     const folder = await ensureCompanyDriveFolder({
@@ -111,86 +123,157 @@ export async function POST(req: Request) {
     const safeTitle = deal.title.replace(/[\\/:*?"<>|]/g, "");
     const fileName = `${date}_${safeTitle}_推薦リスト`;
 
-    // CSV を Sheets として変換アップロード
-    const buffer = Buffer.from(csv, "utf-8");
-    const { Readable } = await import("node:stream");
-    const created = await drive.files.create({
-      supportsAllDrives: true,
-      requestBody: {
-        name: fileName,
-        parents: [folder.folderId!],
-        mimeType: "application/vnd.google-apps.spreadsheet",
-      },
-      media: {
-        mimeType: "text/csv",
-        body: Readable.from(buffer),
-      },
-      fields: "id,webViewLink,name,mimeType",
-    });
+    let spreadsheetId: string | null | undefined;
+    let webViewLink: string | null | undefined;
+    let progressColumnIndex = 1; // ID(0), 進捗(1) by default
+    let dataStartRow = 1; // 0-indexed row index to start writing data (row index 1 = A2)
+    let usedTemplate = false;
+    let templateColumnCount = header.length;
 
-    const spreadsheetId = created.data.id;
+    if (templateUrl) {
+      // テンプレを企業フォルダに複製してデータを書き込む
+      const templateFileId = parseGoogleDocId(templateUrl) || parseGoogleDriveFolderId(templateUrl);
+      if (!templateFileId) {
+        return Response.json({ ok: false, error: "推薦リストテンプレ URL を解析できません" }, { status: 400 });
+      }
+      try {
+        const copied = await drive.files.copy({
+          fileId: templateFileId,
+          supportsAllDrives: true,
+          requestBody: {
+            name: fileName,
+            parents: [folder.folderId!],
+          },
+          fields: "id,webViewLink,name,mimeType",
+        });
+        spreadsheetId = copied.data.id;
+        webViewLink = copied.data.webViewLink;
+        usedTemplate = true;
+
+        // テンプレ 1 行目を読み取って列マッピングを作る
+        if (spreadsheetId) {
+          const meta = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: "1:1",
+          });
+          const templateHeader = (meta.data.values?.[0] ?? []).map((v) => String(v ?? "").trim());
+          templateColumnCount = templateHeader.length;
+          // テンプレのヘッダー名 → コードの header 配列での index を逆引き
+          const codeHeaderIndex = new Map(header.map((h, i) => [h, i]));
+          // テンプレ列順に並び替えたデータを作る
+          const reorderedRows: (string | number)[][] = dataRows.map((row) => {
+            return templateHeader.map((th) => {
+              const idx = codeHeaderIndex.get(th);
+              if (idx === undefined) return ""; // テンプレにあって我々が知らない列は空
+              return row[idx] ?? "";
+            });
+          });
+          // 進捗列の index をテンプレから取得
+          const progressIdx = templateHeader.findIndex((h) => h === "進捗");
+          progressColumnIndex = progressIdx >= 0 ? progressIdx : 1;
+          dataStartRow = 1; // テンプレ 1 行目 = ヘッダー、データは A2 から
+          if (reorderedRows.length > 0) {
+            await sheets.spreadsheets.values.update({
+              spreadsheetId,
+              range: `A${dataStartRow + 1}`,
+              valueInputOption: "USER_ENTERED",
+              requestBody: { values: reorderedRows },
+            });
+          }
+        }
+      } catch (templateError) {
+        console.warn("recommendations template copy failed, falling back to CSV:", templateError);
+        usedTemplate = false;
+      }
+    }
+
+    if (!usedTemplate) {
+      // CSV を Sheets として変換アップロード (フォールバック / テンプレ未設定時)
+      const buffer = Buffer.from(csv, "utf-8");
+      const { Readable } = await import("node:stream");
+      const created = await drive.files.create({
+        supportsAllDrives: true,
+        requestBody: {
+          name: fileName,
+          parents: [folder.folderId!],
+          mimeType: "application/vnd.google-apps.spreadsheet",
+        },
+        media: {
+          mimeType: "text/csv",
+          body: Readable.from(buffer),
+        },
+        fields: "id,webViewLink,name,mimeType",
+      });
+      spreadsheetId = created.data.id;
+      webViewLink = created.data.webViewLink;
+      progressColumnIndex = 1;
+      dataStartRow = 1;
+      templateColumnCount = header.length;
+    }
 
     // 進捗列に dropdown (data validation) を追加
+    // テンプレ使用時はテンプレ自体に書式・固定が含まれるので dropdown のみ
     if (spreadsheetId) {
       try {
         const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: "sheets(properties(sheetId,title))" });
         const firstSheet = meta.data.sheets?.[0]?.properties;
         if (firstSheet?.sheetId !== undefined && firstSheet?.sheetId !== null) {
-          const progressColumnIndex = 1; // ID(0), 進捗(1)
-          const numRows = rows.length + 1; // header + data
+          const numRows = dataRows.length + (dataStartRow); // header + data rows
+          const requests: Record<string, unknown>[] = [
+            {
+              setDataValidation: {
+                range: {
+                  sheetId: firstSheet.sheetId,
+                  startRowIndex: dataStartRow,
+                  endRowIndex: numRows,
+                  startColumnIndex: progressColumnIndex,
+                  endColumnIndex: progressColumnIndex + 1,
+                },
+                rule: {
+                  condition: {
+                    type: "ONE_OF_LIST",
+                    values: RECOMMENDATION_PROGRESS_OPTIONS.map((v) => ({ userEnteredValue: v })),
+                  },
+                  strict: false,
+                  showCustomUi: true,
+                },
+              },
+            },
+          ];
+          if (!usedTemplate) {
+            // CSV 起点の場合のみヘッダー装飾と固定を付与
+            requests.push(
+              {
+                repeatCell: {
+                  range: {
+                    sheetId: firstSheet.sheetId,
+                    startRowIndex: 0,
+                    endRowIndex: 1,
+                  },
+                  cell: {
+                    userEnteredFormat: {
+                      textFormat: { bold: true },
+                      horizontalAlignment: "CENTER",
+                      backgroundColor: { red: 0.94, green: 0.97, blue: 0.95 },
+                    },
+                  },
+                  fields: "userEnteredFormat(textFormat,horizontalAlignment,backgroundColor)",
+                },
+              },
+              {
+                updateSheetProperties: {
+                  properties: {
+                    sheetId: firstSheet.sheetId,
+                    gridProperties: { frozenRowCount: 1 },
+                  },
+                  fields: "gridProperties.frozenRowCount",
+                },
+              }
+            );
+          }
           await sheets.spreadsheets.batchUpdate({
             spreadsheetId,
-            requestBody: {
-              requests: [
-                {
-                  setDataValidation: {
-                    range: {
-                      sheetId: firstSheet.sheetId,
-                      startRowIndex: 1, // skip header
-                      endRowIndex: numRows,
-                      startColumnIndex: progressColumnIndex,
-                      endColumnIndex: progressColumnIndex + 1,
-                    },
-                    rule: {
-                      condition: {
-                        type: "ONE_OF_LIST",
-                        values: RECOMMENDATION_PROGRESS_OPTIONS.map((v) => ({ userEnteredValue: v })),
-                      },
-                      strict: false,
-                      showCustomUi: true,
-                    },
-                  },
-                },
-                // 1行目を太字 + 中央寄せ
-                {
-                  repeatCell: {
-                    range: {
-                      sheetId: firstSheet.sheetId,
-                      startRowIndex: 0,
-                      endRowIndex: 1,
-                    },
-                    cell: {
-                      userEnteredFormat: {
-                        textFormat: { bold: true },
-                        horizontalAlignment: "CENTER",
-                        backgroundColor: { red: 0.94, green: 0.97, blue: 0.95 },
-                      },
-                    },
-                    fields: "userEnteredFormat(textFormat,horizontalAlignment,backgroundColor)",
-                  },
-                },
-                // 1行目を固定
-                {
-                  updateSheetProperties: {
-                    properties: {
-                      sheetId: firstSheet.sheetId,
-                      gridProperties: { frozenRowCount: 1 },
-                    },
-                    fields: "gridProperties.frozenRowCount",
-                  },
-                },
-              ],
-            },
+            requestBody: { requests },
           });
         }
       } catch (sheetsError) {
@@ -201,9 +284,11 @@ export async function POST(req: Request) {
 
     return Response.json({
       ok: true,
-      fileName: created.data.name,
-      fileUrl: created.data.webViewLink,
+      fileName,
+      fileUrl: webViewLink,
       folderUrl: folder.folderUrl,
+      usedTemplate,
+      columnCount: templateColumnCount,
     });
   } catch (error) {
     return Response.json(

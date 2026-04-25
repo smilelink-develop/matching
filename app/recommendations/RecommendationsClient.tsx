@@ -20,9 +20,18 @@ export default function RecommendationsClient({
   const [dealId, setDealId] = useState(
     lockedDealId ? String(lockedDealId) : deals[0]?.id ? String(deals[0].id) : ""
   );
-  const [stageFilter, setStageFilter] = useState<string>("接続済み");
+  // ステージ複数選択 (デフォルトは接続済みのみ)
+  const STAGE_OPTIONS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "不合格"] as const;
+  const [stageFilters, setStageFilters] = useState<string[]>(["接続済み"]);
   const [downloading, setDownloading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const toggleStage = (stage: string) => {
+    setStageFilters((current) =>
+      current.includes(stage) ? current.filter((s) => s !== stage) : [...current, stage]
+    );
+  };
+  const stagesQuery = stageFilters.length === 0 ? "all" : stageFilters.join(",");
 
   const saveToDrive = async () => {
     if (!dealId) {
@@ -34,7 +43,7 @@ export default function RecommendationsClient({
       const response = await fetch("/api/recommendations/save-to-drive", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dealId: Number(dealId), stage: stageFilter }),
+        body: JSON.stringify({ dealId: Number(dealId), stages: stageFilters }),
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
@@ -59,7 +68,7 @@ export default function RecommendationsClient({
     }
     setDownloading(true);
     try {
-      const url = `/api/recommendations/csv?dealId=${dealId}&stage=${encodeURIComponent(stageFilter)}`;
+      const url = `/api/recommendations/csv?dealId=${dealId}&stages=${encodeURIComponent(stagesQuery)}`;
       const response = await fetch(url);
       if (!response.ok) {
         const text = await response.text();
@@ -100,14 +109,30 @@ export default function RecommendationsClient({
             </select>
           </Field>
         ) : null}
-        <Field label="対象ステージ">
-          <select className={INPUT} value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}>
-            <option value="接続済み">接続済みのみ</option>
-            <option value="事前面談済み">事前面談済みのみ</option>
-            <option value="推薦済み">推薦済みのみ</option>
-            <option value="内定済み">内定済みのみ</option>
-            <option value="all">すべて</option>
-          </select>
+        <Field label="対象ステージ (複数選択可)">
+          <div className="flex flex-wrap gap-2">
+            {STAGE_OPTIONS.map((stage) => {
+              const checked = stageFilters.includes(stage);
+              return (
+                <label
+                  key={stage}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
+                    checked
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                      : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="hidden"
+                    checked={checked}
+                    onChange={() => toggleStage(stage)}
+                  />
+                  {stage}
+                </label>
+              );
+            })}
+          </div>
         </Field>
         <div className="flex items-end gap-2">
           <button

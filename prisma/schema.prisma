@@ -303,6 +303,8 @@ model CoreSettings {
   monthlyRevenueTarget   Int?
   // 月ごとの目標履歴。形式: [{ month: "2026-04", offer: 5, revenue: 1500000 }, ...]
   monthlyTargets         Json?
+  // 推薦リスト用 Google Sheets テンプレ URL (列見出し + フォーマット込み)
+  recommendationTemplateUrl String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }

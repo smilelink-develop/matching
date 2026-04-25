@@ -68,5 +68,6 @@ export async function getCoreSettings() {
     monthlyOfferTarget: settings?.monthlyOfferTarget ?? null,
     monthlyRevenueTarget: settings?.monthlyRevenueTarget ?? null,
     monthlyTargets: sanitizeMonthlyTargets(settings?.monthlyTargets),
+    recommendationTemplateUrl: settings?.recommendationTemplateUrl ?? null,
   };
 }

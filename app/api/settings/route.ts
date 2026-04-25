@@ -29,6 +29,7 @@ export async function GET() {
         monthlyOfferTarget: coreSettings?.monthlyOfferTarget ?? null,
         monthlyRevenueTarget: coreSettings?.monthlyRevenueTarget ?? null,
         monthlyTargets: sanitizeMonthlyTargets(coreSettings?.monthlyTargets),
+        recommendationTemplateUrl: coreSettings?.recommendationTemplateUrl ?? "",
       },
       currentAccount: account,
     });
@@ -64,6 +65,12 @@ export async function PATCH(req: Request) {
     const nextMonthlyRevenueTarget = toIntOrNull(body.monthlyRevenueTarget);
     const nextMonthlyTargets =
       body.monthlyTargets !== undefined ? sanitizeMonthlyTargets(body.monthlyTargets) : undefined;
+    const nextRecommendationTemplateUrl =
+      body.recommendationTemplateUrl !== undefined
+        ? typeof body.recommendationTemplateUrl === "string"
+          ? body.recommendationTemplateUrl.trim() || null
+          : null
+        : undefined;
 
     const accountSettings = await prisma.appSettings.upsert({
       where: { accountId: account.id },
@@ -85,7 +92,8 @@ export async function PATCH(req: Request) {
         nextRecommendationColumns !== undefined ||
         nextMonthlyOfferTarget !== undefined ||
         nextMonthlyRevenueTarget !== undefined ||
-        nextMonthlyTargets !== undefined) &&
+        nextMonthlyTargets !== undefined ||
+        nextRecommendationTemplateUrl !== undefined) &&
       account.role === "admin"
     ) {
       await prisma.coreSettings.upsert({
@@ -103,6 +111,9 @@ export async function PATCH(req: Request) {
             ? { monthlyRevenueTarget: nextMonthlyRevenueTarget }
             : {}),
           ...(nextMonthlyTargets !== undefined ? { monthlyTargets: nextMonthlyTargets } : {}),
+          ...(nextRecommendationTemplateUrl !== undefined
+            ? { recommendationTemplateUrl: nextRecommendationTemplateUrl }
+            : {}),
         },
         update: {
           ...(nextFixedQuestions !== undefined ? { fixedQuestions: nextFixedQuestions } : {}),
@@ -116,6 +127,9 @@ export async function PATCH(req: Request) {
             ? { monthlyRevenueTarget: nextMonthlyRevenueTarget }
             : {}),
           ...(nextMonthlyTargets !== undefined ? { monthlyTargets: nextMonthlyTargets } : {}),
+          ...(nextRecommendationTemplateUrl !== undefined
+            ? { recommendationTemplateUrl: nextRecommendationTemplateUrl }
+            : {}),
         },
       });
     }
@@ -134,6 +148,7 @@ export async function PATCH(req: Request) {
         monthlyOfferTarget: coreSettings?.monthlyOfferTarget ?? null,
         monthlyRevenueTarget: coreSettings?.monthlyRevenueTarget ?? null,
         monthlyTargets: sanitizeMonthlyTargets(coreSettings?.monthlyTargets),
+        recommendationTemplateUrl: coreSettings?.recommendationTemplateUrl ?? "",
       },
     });
   } catch (e) {

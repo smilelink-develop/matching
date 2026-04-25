@@ -36,6 +36,7 @@ export default function SettingsClient({
     monthlyOfferTarget: number | null;
     monthlyRevenueTarget: number | null;
     monthlyTargets: { month: string; offer: number | null; revenue: number | null }[];
+    recommendationTemplateUrl: string;
   };
   currentAccount: {
     id: number;
@@ -58,6 +59,28 @@ export default function SettingsClient({
   const [recommendationColumns, setRecommendationColumns] = useState<string[]>(initialSettings.recommendationColumns);
   const [recommendationColumnsOpen, setRecommendationColumnsOpen] = useState(false);
   const [savingRecommendationColumns, setSavingRecommendationColumns] = useState(false);
+  const [recommendationTemplateUrl, setRecommendationTemplateUrl] = useState<string>(
+    initialSettings.recommendationTemplateUrl ?? ""
+  );
+  const [savingRecommendationTemplate, setSavingRecommendationTemplate] = useState(false);
+  const saveRecommendationTemplate = async () => {
+    setSavingRecommendationTemplate(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recommendationTemplateUrl }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        alert(`保存失敗: ${data.error}`);
+        return;
+      }
+      alert("推薦リストテンプレを保存しました");
+    } finally {
+      setSavingRecommendationTemplate(false);
+    }
+  };
   type MonthlyTargetRow = { month: string; offer: string; revenue: string };
   const toRow = (t: { month: string; offer: number | null; revenue: number | null }): MonthlyTargetRow => ({
     month: t.month,
@@ -715,6 +738,26 @@ export default function SettingsClient({
             <ActionButton onClick={saveRecommendationColumns} disabled={savingRecommendationColumns}>
               {savingRecommendationColumns ? "保存中..." : "出力項目を保存"}
             </ActionButton>
+            <div className="mt-6 rounded-2xl border border-[var(--color-secondary)] bg-[var(--color-light)] p-4">
+              <p className="text-sm font-semibold text-[var(--color-text-dark)]">推薦リストテンプレ (Google Sheets)</p>
+              <p className="mt-1 text-xs text-gray-500">
+                登録されたテンプレを企業フォルダに複製してデータを書き込みます。
+                テンプレの 1 行目を見出し行として設定で選んだ列名と一致させると自動的にマッピングされます。
+                未設定の場合は CSV から新規 Sheets を生成します。
+              </p>
+              <div className="mt-3 flex flex-col gap-2 md:flex-row">
+                <input
+                  className={`${INPUT} flex-1`}
+                  type="url"
+                  value={recommendationTemplateUrl}
+                  onChange={(e) => setRecommendationTemplateUrl(e.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                />
+                <ActionButton onClick={saveRecommendationTemplate} disabled={savingRecommendationTemplate}>
+                  {savingRecommendationTemplate ? "保存中..." : "テンプレを保存"}
+                </ActionButton>
+              </div>
+            </div>
           </div>
         </SectionCard>
       )}

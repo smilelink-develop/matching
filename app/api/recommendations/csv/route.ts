@@ -20,7 +20,9 @@ export async function GET(req: Request) {
     await requireApiAccount();
     const { searchParams } = new URL(req.url);
     const dealId = Number(searchParams.get("dealId"));
-    const stage = searchParams.get("stage") ?? "接続済み";
+    // 新: ?stages=接続済み,事前面談済み (互換: ?stage=接続済み)
+    const stagesParam = searchParams.get("stages") ?? searchParams.get("stage") ?? "接続済み";
+    const stageList = stagesParam === "all" ? null : stagesParam.split(",").map((s) => s.trim()).filter(Boolean);
     if (!Number.isFinite(dealId)) {
       return new Response("dealId is required", { status: 400 });
     }
@@ -29,7 +31,7 @@ export async function GET(req: Request) {
       prisma.dealCandidate.findMany({
         where: {
           dealId,
-          ...(stage === "all" ? {} : { stage }),
+          ...(stageList && stageList.length > 0 ? { stage: { in: stageList } } : {}),
         },
         include: {
           person: {
