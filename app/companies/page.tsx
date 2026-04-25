@@ -2,7 +2,12 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAccount } from "@/lib/auth";
 import { compareExternalId, findExternalIdByName } from "@/lib/company-id-mapping";
+import { findFolderByPrefix } from "@/lib/google-docs";
 import CompaniesListClient from "./CompaniesListClient";
+
+const COMPANY_ROOT_FOLDER_URL =
+  process.env.GOOGLE_COMPANY_FILES_FOLDER_URL?.trim() ||
+  "https://drive.google.com/drive/folders/1TEqGDtoQZlLU8bg8c4cWZSNDp7mRwbin";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +16,8 @@ export default async function CompaniesPage() {
 
   // externalId が未設定の企業に、マッピング (data/company-id-mapping.json) から自動補完
   await autoFillExternalIds();
+  // driveFolderUrl が未設定の企業を、企業ルートから externalId プレフィックスで検索して紐付け
+  await autoFillCompanyDriveFolders();
 
   const companies = await prisma.company.findMany({
     include: {
@@ -74,6 +81,40 @@ function toRow(c: RawCompany) {
 
 // セッション内で 1 度だけ実行 (モジュールスコープのフラグ)
 let autoFillDone = false;
+let autoFillDriveDone = false;
+
+async function autoFillCompanyDriveFolders() {
+  if (autoFillDriveDone) return;
+  autoFillDriveDone = true;
+  try {
+    const candidates = await prisma.company.findMany({
+      where: {
+        driveFolderUrl: null,
+        externalId: { not: null },
+      },
+      select: { id: true, externalId: true, name: true },
+    });
+    if (candidates.length === 0) return;
+
+    for (const company of candidates) {
+      try {
+        const found = await findFolderByPrefix({
+          parentFolderUrl: COMPANY_ROOT_FOLDER_URL,
+          namePrefix: company.externalId!,
+        });
+        if (!found) continue;
+        await prisma.company.update({
+          where: { id: company.id },
+          data: { driveFolderUrl: found.folderUrl },
+        });
+      } catch {
+        // 1 社失敗しても全体を止めない
+      }
+    }
+  } catch {
+    // 一度失敗したら再試行しない (フラグは立てたまま)
+  }
+}
 
 async function autoFillExternalIds() {
   if (autoFillDone) return;
