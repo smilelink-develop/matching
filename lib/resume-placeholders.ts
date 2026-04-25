@@ -143,7 +143,16 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
 
   // 職歴: 最大 N 件 (テンプレに枠を並べてもらい、空の枠は行ごと自動削除)
   const works: ReturnType<typeof mapWorkLine>[] = [];
-  for (let i = 0; i < MAX_WORKS; i++) works.push(mapWorkLine(workLines, i));
+  for (let i = 0; i < MAX_WORKS; i++) {
+    const w = mapWorkLine(workLines, i);
+    // 退社理由が空でも、会社/入社/退社のいずれかが入っていれば
+    // 「退社」ラベルをデフォルト表示する (空白に見えるのを防止)
+    const hasAnyData = Boolean(w.label || w.date || w.endDate);
+    if (hasAnyData && !w.result) {
+      w.result = "退社";
+    }
+    works.push(w);
+  }
 
   // 資格: 最大 N 件 (1=免許, 2=日本語検定, 3=その他資格, 4以降は certifications JSON)
   const certs: { date: string; label: string }[] = [];
