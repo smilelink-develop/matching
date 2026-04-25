@@ -465,7 +465,7 @@ export function buildPersonAssetName({
 }
 
 // 親フォルダ内で指定の名前プレフィックスで始まるフォルダを検索
-async function findFolderByPrefix({
+export async function findFolderByPrefix({
   parentFolderUrl,
   namePrefix,
 }: {

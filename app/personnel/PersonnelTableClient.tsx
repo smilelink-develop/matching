@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
+import PersonAvatar from "@/app/components/PersonAvatar";
 import {
   DEFAULT_PERSONNEL_COLUMNS,
   MAX_PERSONNEL_COLUMNS,
@@ -263,23 +263,7 @@ function renderColumn(person: PersonRow, key: PersonnelColumnKey, isFirst: boole
   if (key === "name") {
     return (
       <div className="flex items-center gap-3">
-        {person.photoUrl ? (
-          <Image
-            src={person.photoUrl}
-            alt={person.name}
-            width={40}
-            height={40}
-            unoptimized
-            className="h-10 w-10 rounded-xl object-cover"
-          />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-[var(--color-light)] text-[var(--color-primary)]">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 21a8 8 0 0 1 16 0" />
-            </svg>
-          </div>
-        )}
+        <PersonAvatar photoUrl={person.photoUrl} name={person.name} size={40} className="rounded-xl" />
         <span className={isFirst ? "font-medium text-[var(--color-text-dark)]" : ""}>{person.name}</span>
       </div>
     );

@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import PersonAvatar from "@/app/components/PersonAvatar";
 
 export default function PhotoPanel({
   personId,
@@ -68,23 +68,12 @@ export default function PhotoPanel({
 
   return (
     <section className="flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-      {photoUrl ? (
-        <Image
-          src={photoUrl}
-          alt={personName}
-          width={80}
-          height={80}
-          unoptimized
-          className="h-20 w-20 shrink-0 rounded-2xl border border-gray-200 object-cover shadow-sm"
-        />
-      ) : (
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-[var(--color-light)] text-[var(--color-primary)] shadow-sm">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21a8 8 0 0 1 16 0" />
-          </svg>
-        </div>
-      )}
+      <PersonAvatar
+        photoUrl={photoUrl}
+        name={personName}
+        size={80}
+        className="rounded-2xl border border-gray-200 shadow-sm"
+      />
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="truncate text-sm font-semibold text-[var(--color-text-dark)]">{personName}</p>
         <label className="inline-flex cursor-pointer items-center rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-primary-hover)]">

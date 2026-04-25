@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import PersonAvatar from "@/app/components/PersonAvatar";
 
 export type PersonOption = {
   id: number;
@@ -118,20 +118,12 @@ export default function PersonPicker({
                   String(person.id) === selectedId ? "bg-[var(--color-light)]" : ""
                 }`}
               >
-                {person.photoUrl ? (
-                  <Image
-                    src={person.photoUrl}
-                    alt={person.name}
-                    width={32}
-                    height={32}
-                    unoptimized
-                    className="h-8 w-8 shrink-0 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary)] text-xs font-bold text-white">
-                    {person.name[0]}
-                  </div>
-                )}
+                <PersonAvatar
+                  photoUrl={person.photoUrl}
+                  name={person.name}
+                  size={32}
+                  className="rounded-lg"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[var(--color-text-dark)]">
                     {person.name}

@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAdmin } from "@/lib/auth";
 import { google } from "googleapis";
-import { parseGoogleDriveFolderId } from "@/lib/google-docs";
+import { findFolderByPrefix, formatPersonIdPrefix, parseGoogleDriveFolderId } from "@/lib/google-docs";
+
+const DEFAULT_PERSON_ROOT_FOLDER_URL =
+  "https://drive.google.com/drive/folders/1Pmv-hFyk8DKIuu24mtMS5c26DWXmjqXr";
 
 function getClientEmail() {
   const v = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
@@ -44,13 +47,15 @@ export async function POST(req: Request) {
     const overwrite = url.searchParams.get("overwrite") === "1";
 
     const drive = await makeDrive();
+    // driveFolderUrl が無い候補者も対象 (ルートフォルダから ID プレフィックスで検索する)
     const persons = await prisma.person.findMany({
-      where: overwrite
-        ? { driveFolderUrl: { not: null } }
-        : { driveFolderUrl: { not: null }, photoUrl: null },
+      where: overwrite ? {} : { photoUrl: null },
       select: { id: true, name: true, driveFolderUrl: true, photoUrl: true },
       orderBy: { id: "asc" },
     });
+
+    const personRootFolderUrl =
+      process.env.GOOGLE_CANDIDATE_FILES_FOLDER_URL?.trim() || DEFAULT_PERSON_ROOT_FOLDER_URL;
 
     const log: string[] = [];
     let found = 0;
@@ -60,7 +65,28 @@ export async function POST(req: Request) {
 
     for (const person of persons) {
       try {
-        const folderId = parseGoogleDriveFolderId(person.driveFolderUrl!);
+        // driveFolderUrl があればそれ、無ければ候補者ルートから ID プレフィックスでフォルダ検索
+        let folderId = person.driveFolderUrl ? parseGoogleDriveFolderId(person.driveFolderUrl) : null;
+        let resolvedFolderUrl = person.driveFolderUrl;
+        if (!folderId) {
+          const prefix = formatPersonIdPrefix(person.id) + "_";
+          const found = await findFolderByPrefix({
+            parentFolderUrl: personRootFolderUrl,
+            namePrefix: prefix,
+          });
+          if (!found) {
+            log.push(`⚠️ id=${person.id} ${person.name}: 候補者フォルダが見つからない (${prefix})`);
+            skipped++;
+            continue;
+          }
+          folderId = found.folderId;
+          resolvedFolderUrl = found.folderUrl;
+          // 同時に Person.driveFolderUrl も保存しておく
+          await prisma.person.update({
+            where: { id: person.id },
+            data: { driveFolderUrl: resolvedFolderUrl },
+          });
+        }
         if (!folderId) {
           log.push(`id=${person.id} ${person.name}: folderId 取得失敗`);
           skipped++;

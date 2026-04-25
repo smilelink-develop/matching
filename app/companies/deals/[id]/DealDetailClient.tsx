@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { SSW_INDUSTRIES } from "@/lib/company-options";
 import PersonPicker from "@/app/components/PersonPicker";
+import PersonAvatar from "@/app/components/PersonAvatar";
 
 const CANDIDATE_COLUMNS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "不合格"] as const;
 
@@ -425,23 +425,12 @@ export default function DealDetailClient({
                     className={`rounded-2xl border p-3 transition ${colors.tile}`}
                   >
                     <div className="flex items-start gap-3">
-                      {candidate.person.photoUrl ? (
-                        <Image
-                          src={candidate.person.photoUrl}
-                          alt={candidate.person.name}
-                          width={44}
-                          height={44}
-                          unoptimized
-                          className="h-11 w-11 rounded-xl object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-[var(--color-primary)]">
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                            <circle cx="12" cy="8" r="4" />
-                            <path d="M4 21a8 8 0 0 1 16 0" />
-                          </svg>
-                        </div>
-                      )}
+                      <PersonAvatar
+                        photoUrl={candidate.person.photoUrl}
+                        name={candidate.person.name}
+                        size={44}
+                        className="rounded-xl"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-[var(--color-text-dark)]">{candidate.person.name}</p>
                         <p className="mt-1 text-xs text-gray-500">
