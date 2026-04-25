@@ -214,6 +214,13 @@ export async function POST(req: Request) {
           replacements["勤務時間1"] = buildWorkTimeString(fields.workTime1Start, fields.workTime1End);
           replacements["勤務時間2"] = buildWorkTimeString(fields.workTime2Start, fields.workTime2End);
 
+          const filledKeys = Object.entries(replacements)
+            .filter(([, v]) => typeof v === "string" && v.trim() !== "")
+            .map(([k]) => k);
+          console.log(
+            `[job-postings] dealId=${dealId} replacements: ${filledKeys.length} filled / ${Object.keys(replacements).length} total`,
+            filledKeys.join(",")
+          );
           const generated = await createResumeDocumentFromTemplate({
             templateUrl: template.templateUrl,
             folderUrl: folder.folderUrl,

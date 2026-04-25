@@ -30,7 +30,14 @@ export async function POST(req: Request) {
       return Response.json({ ok: false, error: "ファイルを読み取れません" }, { status: 400 });
     }
     const extracted = await extractJobPostingFromFiles(sourceFiles);
-    return Response.json({ ok: true, extracted });
+    const populated = Object.entries(extracted).filter(
+      ([, v]) => typeof v === "string" && v.trim() !== ""
+    );
+    console.log(
+      `[job-postings/extract] files=${sourceFiles.length} populated=${populated.length}`,
+      populated.map(([k]) => k).join(",")
+    );
+    return Response.json({ ok: true, extracted, populatedCount: populated.length });
   } catch (error) {
     return Response.json(
       { ok: false, error: error instanceof Error ? error.message : "error" },

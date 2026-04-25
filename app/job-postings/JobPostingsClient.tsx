@@ -248,6 +248,48 @@ export default function JobPostingsClient({
   );
 }
 
+// AI 抽出結果のプレビュー用フィールド定義 (テンプレ側の placeholder と一致)
+const EXTRACTED_FIELDS: { key: string; label: string }[] = [
+  { key: "jobDescription", label: "仕事内容" },
+  { key: "workLocation", label: "勤務地" },
+  { key: "nearestStation", label: "最寄り駅" },
+  { key: "headcount", label: "募集人数" },
+  { key: "gender", label: "性別" },
+  { key: "nationality", label: "国籍" },
+  { key: "workTime1Start", label: "勤務時間1 開始" },
+  { key: "workTime1End", label: "勤務時間1 終了" },
+  { key: "workTime2Start", label: "勤務時間2 開始" },
+  { key: "workTime2End", label: "勤務時間2 終了" },
+  { key: "overtime", label: "残業有無" },
+  { key: "avgMonthlyOvertime", label: "月平均残業時間" },
+  { key: "fixedOvertimeHours", label: "固定残業時間" },
+  { key: "fixedOvertimePay", label: "固定残業代" },
+  { key: "monthlyGross", label: "月総支給額" },
+  { key: "basicSalary", label: "基本給" },
+  { key: "salaryCalcMethod", label: "給与計算方法" },
+  { key: "perfectAttendance", label: "皆勤手当" },
+  { key: "housingAllowance", label: "住宅手当" },
+  { key: "nightShiftAllowance", label: "深夜手当" },
+  { key: "commuteAllowance", label: "通勤手当" },
+  { key: "socialInsurance", label: "社会保険料" },
+  { key: "employmentInsurance", label: "雇用保険料" },
+  { key: "healthInsurance", label: "健康保険料" },
+  { key: "pensionInsurance", label: "厚生年金保険料" },
+  { key: "incomeTax", label: "所得税" },
+  { key: "residentTax", label: "住民税" },
+  { key: "mealProvision", label: "食費支給" },
+  { key: "mealAmount", label: "食費金額" },
+  { key: "dormProvision", label: "寮の有無" },
+  { key: "dormAmount", label: "寮費" },
+  { key: "utilitiesProvision", label: "光熱費支給" },
+  { key: "utilitiesAmount", label: "光熱費金額" },
+  { key: "holidays", label: "休日" },
+  { key: "otherBenefits", label: "その他手当" },
+  { key: "notes", label: "特記事項" },
+];
+
+type ExtractedJobPostingMap = Record<string, string>;
+
 function JobPostingUploadModal({
   deal,
   template,
@@ -271,8 +313,11 @@ function JobPostingUploadModal({
   }) => void;
 }) {
   const [files, setFiles] = useState<IncomingFile[]>([]);
+  const [stage, setStage] = useState<"upload" | "review">("upload");
   const [extracting, setExtracting] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [extracted, setExtracted] = useState<ExtractedJobPostingMap>({});
 
   const addFiles = async (fileList: FileList | null) => {
     if (!fileList) return;
@@ -298,7 +343,7 @@ function JobPostingUploadModal({
     setFiles((current) => current.filter((file) => file.id !== id));
   };
 
-  const createFromFiles = async () => {
+  const runExtract = async () => {
     if (files.length === 0) {
       alert("求人票の元ファイルをアップロードしてください");
       return;
@@ -321,7 +366,25 @@ function JobPostingUploadModal({
         setError(extractResult.error || "AI取込に失敗しました");
         return;
       }
+      const payload = (extractResult.extracted ?? {}) as Record<string, unknown>;
+      const normalized: ExtractedJobPostingMap = {};
+      for (const field of EXTRACTED_FIELDS) {
+        const v = payload[field.key];
+        normalized[field.key] = typeof v === "string" ? v : v == null ? "" : String(v);
+      }
+      setExtracted(normalized);
+      setStage("review");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "エラーが発生しました");
+    } finally {
+      setExtracting(false);
+    }
+  };
 
+  const createWithExtracted = async () => {
+    setCreating(true);
+    setError(null);
+    try {
       const createRes = await fetch("/api/job-postings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -329,7 +392,7 @@ function JobPostingUploadModal({
           dealId: deal.id,
           templateId: template.id,
           title,
-          ...extractResult.extracted,
+          ...extracted,
         }),
       });
       const createResult = await createRes.json();
@@ -337,15 +400,16 @@ function JobPostingUploadModal({
         setError(createResult.error || "求人票の作成に失敗しました");
         return;
       }
-
       onCreated(createResult.jobPosting);
       alert("求人票を作成しました");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "エラーが発生しました");
     } finally {
-      setExtracting(false);
+      setCreating(false);
     }
   };
+
+  const populatedCount = Object.values(extracted).filter((v) => v && v.trim()).length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
@@ -383,54 +447,81 @@ function JobPostingUploadModal({
           </p>
         </div>
 
-        <div className="mt-5 rounded-[24px] border border-dashed border-[var(--color-secondary)] bg-white p-6">
-          <label className="block cursor-pointer text-center">
-            <input
-              type="file"
-              className="hidden"
-              accept=".pdf,image/*"
-              multiple
-              onChange={(e) => void addFiles(e.target.files)}
-            />
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-light)] text-[var(--color-primary)]">
-              <UploadIcon />
-            </div>
-            <p className="mt-4 text-sm font-medium text-[var(--color-text-dark)]">
-              PDFや画像ファイルをアップロード
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              原本の求人票、求人票スクリーンショット、PDF資料などを読み取れます
-            </p>
-          </label>
-
-          <div className="mt-5 space-y-2">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-[var(--color-light)] px-4 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[var(--color-text-dark)]">
-                    {file.fileName}
-                  </p>
-                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeFile(file.id)}
-                  className="rounded-lg px-3 py-1 text-xs text-gray-500 hover:bg-white"
-                >
-                  削除
-                </button>
+        {stage === "upload" ? (
+          <div className="mt-5 rounded-[24px] border border-dashed border-[var(--color-secondary)] bg-white p-6">
+            <label className="block cursor-pointer text-center">
+              <input
+                type="file"
+                className="hidden"
+                accept=".pdf,image/*"
+                multiple
+                onChange={(e) => void addFiles(e.target.files)}
+              />
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-light)] text-[var(--color-primary)]">
+                <UploadIcon />
               </div>
-            ))}
-            {files.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
-                まだファイルは追加されていません
+              <p className="mt-4 text-sm font-medium text-[var(--color-text-dark)]">
+                PDFや画像ファイルをアップロード
               </p>
-            ) : null}
+              <p className="mt-1 text-xs text-gray-500">
+                原本の求人票、求人票スクリーンショット、PDF資料などを読み取れます
+              </p>
+            </label>
+
+            <div className="mt-5 space-y-2">
+              {files.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-[var(--color-light)] px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--color-text-dark)]">
+                      {file.fileName}
+                    </p>
+                    <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(file.id)}
+                    className="rounded-lg px-3 py-1 text-xs text-gray-500 hover:bg-white"
+                  >
+                    削除
+                  </button>
+                </div>
+              ))}
+              {files.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
+                  まだファイルは追加されていません
+                </p>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-sm text-[#166534]">
+            AI が {populatedCount} / {EXTRACTED_FIELDS.length} 項目を抽出しました。
+            内容を確認して、必要があれば修正してから「求人票を作成」を押してください。
+            空欄のまま作成すると、その項目はテンプレ上で空文字に置換されます。
+          </div>
+        )}
+
+        {stage === "review" ? (
+          <div className="mt-4 max-h-[50vh] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              {EXTRACTED_FIELDS.map((field) => (
+                <label key={field.key} className="flex flex-col gap-1">
+                  <span className="text-[11px] font-medium text-gray-500">{field.label}</span>
+                  <input
+                    value={extracted[field.key] ?? ""}
+                    onChange={(e) =>
+                      setExtracted((prev) => ({ ...prev, [field.key]: e.target.value }))
+                    }
+                    className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {error ? (
           <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -439,21 +530,42 @@ function JobPostingUploadModal({
         ) : null}
 
         <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-          >
-            戻る
-          </button>
-          <button
-            type="button"
-            onClick={() => void createFromFiles()}
-            disabled={extracting}
-            className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
-          >
-            {extracting ? "取り込み中..." : "取り込んで求人票を作成"}
-          </button>
+          {stage === "review" ? (
+            <button
+              type="button"
+              onClick={() => setStage("upload")}
+              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            >
+              ファイル選択に戻る
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            >
+              閉じる
+            </button>
+          )}
+          {stage === "upload" ? (
+            <button
+              type="button"
+              onClick={() => void runExtract()}
+              disabled={extracting || files.length === 0}
+              className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+            >
+              {extracting ? "AI 取込中..." : "AI で抽出"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void createWithExtracted()}
+              disabled={creating}
+              className="rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+            >
+              {creating ? "作成中..." : "この内容で求人票を作成"}
+            </button>
+          )}
         </div>
       </div>
     </div>
