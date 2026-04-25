@@ -69,6 +69,10 @@ type CandidateFormRow = {
   englishName: string | null;
   birthDate: string | null;
   gender: string | null;
+  nationality: string | null;
+  residenceStatus: string | null;
+  visaExpiryDate: string | null;
+  traineeExperience: string | null;
   spouseStatus: string | null;
   childrenCount: string | null;
   postalCode: string | null;
@@ -149,6 +153,10 @@ function main() {
       englishName: s(rec["英語名"]),
       birthDate: dStr(rec["生年月日"]),
       gender: s(rec["性別"]),
+      nationality: s(rec["国籍"]),
+      residenceStatus: s(rec["在留資格"]),
+      visaExpiryDate: dStr(rec["在留資格の有効期限"]),
+      traineeExperience: s(rec["実習経験"]),
       spouseStatus: s(rec["配偶者"]),
       childrenCount: s(rec["子供"]),
       postalCode: s(rec["郵便番号"]),

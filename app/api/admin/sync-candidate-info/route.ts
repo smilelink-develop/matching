@@ -39,6 +39,10 @@ type FormRow = {
   englishName: string | null;
   birthDate: string | null;
   gender: string | null;
+  nationality: string | null;
+  residenceStatus: string | null;
+  visaExpiryDate: string | null;
+  traineeExperience: string | null;
   spouseStatus: string | null;
   childrenCount: string | null;
   postalCode: string | null;
@@ -77,7 +81,8 @@ function normalizeNationality(value: string | null) {
 
 function normalizeResidenceStatus(value: string | null) {
   if (!value) return null;
-  if (value.includes("技能実習")) return "技能実習";
+  // 実習生 / 技能実習生 → 技能実習
+  if (value.includes("技能実習") || value.includes("実習")) return "技能実習";
   if (value.includes("特定技能1") || value.includes("特定技能一")) return "特定技能1号";
   if (value.includes("特定技能2") || value.includes("特定技能二")) return "特定技能2号";
   if (value.includes("技術") || value.includes("技人国")) return "技術・人文知識・国際業務";
@@ -219,8 +224,15 @@ export async function POST(req: Request) {
       } else if (effectiveEnglish && !person.name) {
         personUpdate.name = effectiveEnglish;
       }
-      setIfEmpty("nationality", normalizeNationality(masterRow.nationality ?? null));
-      setIfEmpty("residenceStatus", normalizeResidenceStatus(masterRow.residenceStatus ?? null));
+      // master を優先しつつ form にある値で埋める
+      setIfEmpty(
+        "nationality",
+        normalizeNationality(masterRow.nationality ?? formMatch?.nationality ?? null)
+      );
+      setIfEmpty(
+        "residenceStatus",
+        normalizeResidenceStatus(masterRow.residenceStatus ?? formMatch?.residenceStatus ?? null)
+      );
       if (partnerId !== null && (overwrite || person.partnerId === null)) {
         personUpdate.partnerId = partnerId;
       }
@@ -263,11 +275,20 @@ export async function POST(req: Request) {
         }
       };
       setResumeIfEmpty("gender", masterRow.gender ?? formMatch?.gender);
-      setResumeIfEmpty("country", normalizeNationality(masterRow.nationality ?? null));
-      setResumeIfEmpty("visaType", normalizeResidenceStatus(masterRow.residenceStatus ?? null));
-      setResumeIfEmpty("visaExpiryDate", masterRow.visaExpiryDate);
+      setResumeIfEmpty(
+        "country",
+        normalizeNationality(masterRow.nationality ?? formMatch?.nationality ?? null)
+      );
+      setResumeIfEmpty(
+        "visaType",
+        normalizeResidenceStatus(masterRow.residenceStatus ?? formMatch?.residenceStatus ?? null)
+      );
+      setResumeIfEmpty("visaExpiryDate", masterRow.visaExpiryDate ?? formMatch?.visaExpiryDate);
       setResumeIfEmpty("japaneseLevel", masterRow.japaneseLevel);
-      setResumeIfEmpty("traineeExperience", masterRow.traineeExperience);
+      setResumeIfEmpty(
+        "traineeExperience",
+        masterRow.traineeExperience ?? formMatch?.traineeExperience
+      );
       if (masterRow.preferenceNote) {
         setResumeIfEmpty("preferenceNote", `現職の手取り額: ${masterRow.preferenceNote}`);
       }
