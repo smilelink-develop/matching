@@ -216,12 +216,26 @@ type DocsClient = ReturnType<typeof google.docs>;
  *  - 「職歴 N」の 2 行目に {{退社Nラベル}}、1 行目に {{会社名N}} を書く
  * → 会社名N が空なら、職歴N の 2 行 (会社名N を含む行、退社Nラベル を含む行) が同時に削除される
  */
-const RESUME_EMPTY_ROW_GROUPS: { guard: string; rowMarkers: string[] }[] = [
-  { guard: "大学名", rowMarkers: ["大学名", "入学_大学", "卒業_大学"] },
-  { guard: "会社名1", rowMarkers: ["会社名1", "入社1", "退社1", "退社1ラベル"] },
-  { guard: "会社名2", rowMarkers: ["会社名2", "入社2", "退社2", "退社2ラベル"] },
-  { guard: "会社名3", rowMarkers: ["会社名3", "入社3", "退社3", "退社3ラベル"] },
-];
+// 各人の項目数 (職歴・資格) は大きくバラつくので、テンプレに最大 10 件分の枠を
+// 置いてもらい、データが空の枠は履歴書生成時に「行ごと消す」設計にしている。
+function buildResumeEmptyRowGroups(): { guard: string; rowMarkers: string[] }[] {
+  const groups: { guard: string; rowMarkers: string[] }[] = [
+    { guard: "大学名", rowMarkers: ["大学名", "入学_大学", "卒業_大学"] },
+  ];
+  for (let i = 1; i <= 10; i++) {
+    groups.push({
+      guard: `会社名${i}`,
+      rowMarkers: [`会社名${i}`, `入社${i}`, `退社${i}`, `退社${i}ラベル`],
+    });
+    groups.push({
+      guard: `資格${i}`,
+      rowMarkers: [`資格${i}`, `資格年${i}`],
+    });
+  }
+  return groups;
+}
+
+const RESUME_EMPTY_ROW_GROUPS = buildResumeEmptyRowGroups();
 
 type TableRowHit = {
   tableStartLocation: number;

@@ -136,25 +136,30 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     result: valueOrBlank(profile?.universityEndDate),
   };
   const education3 = mapLine(educationLines, 0);
-  const work1 = mapWorkLine(workLines, 0);
-  const work2 = mapWorkLine(workLines, 1);
-  const work3 = mapWorkLine(workLines, 2);
-  const cert1 = {
+
+  // 職歴: 最大 10 件まで対応 (テンプレ側に枠を 10 個並べてもらえれば
+  // データが空の枠は履歴書生成時に行ごと自動削除される)
+  const works: ReturnType<typeof mapWorkLine>[] = [];
+  for (let i = 0; i < 10; i++) works.push(mapWorkLine(workLines, i));
+
+  // 資格: 最大 10 件まで対応 (1〜3 は単独フィールド、4 以降は certifications JSON)
+  const certs: { date: string; label: string }[] = [];
+  certs.push({
     date: valueOrBlank(profile?.licenseExpiryDate),
     label: valueOrBlank(profile?.licenseName),
-    result: "",
-  };
-  const cert2 = {
+  });
+  certs.push({
     date: valueOrBlank(profile?.japaneseLevelDate),
     label: valueOrBlank(profile?.japaneseLevel),
-    result: "",
-  };
-  const cert3 = {
+  });
+  certs.push({
     date: valueOrBlank(profile?.otherQualificationExpiryDate),
     label: valueOrBlank(profile?.otherQualificationName),
-    result: "",
-  };
-  const cert4 = mapLine(certLines, 0);
+  });
+  for (let i = 0; i < 7; i++) {
+    const line = mapLine(certLines, i);
+    certs.push({ date: line.date, label: line.label });
+  }
 
   return {
     作成日: new Intl.DateTimeFormat("ja-JP").format(new Date()),
@@ -195,29 +200,8 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     入学3: education3.date,
     学校名3: education3.label,
     卒業3: education3.result,
-    // 職歴 (日付は入社/退社、会社名、退社理由ラベル)
-    入社1: work1.date,
-    退社1: work1.endDate,
-    会社名1: work1.label,
-    退社1ラベル: work1.result,
-    入社2: work2.date,
-    退社2: work2.endDate,
-    会社名2: work2.label,
-    退社2ラベル: work2.result,
-    入社3: work3.date,
-    退社3: work3.endDate,
-    会社名3: work3.label,
-    退社3ラベル: work3.result,
-    免許年: cert1.date,
-    免許: cert1.label,
-    資格年1: cert2.date,
-    資格1: cert2.label,
-    資格年2: cert3.date,
-    資格2: cert3.label,
-    資格年3: cert4.date,
-    資格3: cert4.label,
-    資格年4: "",
-    資格4: "",
+    // 職歴・資格は最大 10 件分のキーを生成 (使われていない番号は空文字)
+    ...buildIndexedPlaceholders(works, certs, profile),
     志望動機: valueOrBlank(profile?.motivation),
     自己紹介: valueOrBlank(profile?.selfIntroduction),
     来日目的: valueOrBlank(profile?.japanPurpose),
@@ -225,6 +209,34 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     退職理由: valueOrBlank(profile?.retirementReason),
     本人希望記入欄: valueOrBlank(profile?.preferenceNote),
   };
+}
+
+// 職歴 N (最大10) と 資格 N (最大10) のキーをまとめて生成。
+// 互換のため {{免許}} / {{免許年}} は資格1番にも展開する。
+function buildIndexedPlaceholders(
+  works: { date: string; endDate: string; label: string; result: string }[],
+  certs: { date: string; label: string }[],
+  profile: ResumeProfileInput | null | undefined
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (let i = 0; i < works.length; i++) {
+    const n = i + 1;
+    const w = works[i];
+    map[`入社${n}`] = w.date;
+    map[`退社${n}`] = w.endDate;
+    map[`会社名${n}`] = w.label;
+    map[`退社${n}ラベル`] = w.result;
+  }
+  for (let i = 0; i < certs.length; i++) {
+    const n = i + 1;
+    const c = certs[i];
+    map[`資格${n}`] = c.label;
+    map[`資格年${n}`] = c.date;
+  }
+  // 互換: 免許 / 免許年 は資格1相当 (=licenseName/licenseExpiryDate) を再掲
+  map["免許"] = valueOrBlank(profile?.licenseName);
+  map["免許年"] = valueOrBlank(profile?.licenseExpiryDate);
+  return map;
 }
 
 export function parseResumeLines(value: string) {
