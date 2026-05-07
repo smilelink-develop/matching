@@ -522,11 +522,19 @@ function MonthlyTargetTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dirty, rows]);
 
-  const metrics: { key: keyof Omit<MonthlyTargetEntry, "month">; label: string; actualKey: "jobOpenings" | "recommendCount" | "offer" | "revenue"; yen?: boolean }[] = [
-    { key: "jobOpenings", label: "求人数", actualKey: "jobOpenings" },
-    { key: "recommendCount", label: "推薦者数", actualKey: "recommendCount" },
-    { key: "offer", label: "内定者数", actualKey: "offer" },
-    { key: "revenue", label: "売上 (円)", actualKey: "revenue", yen: true },
+  // 各メトリクスを色で識別 (薄い背景帯) して、グループ間にスペーサ列を入れる
+  const metrics: {
+    key: keyof Omit<MonthlyTargetEntry, "month">;
+    label: string;
+    actualKey: "jobOpenings" | "recommendCount" | "offer" | "revenue";
+    yen?: boolean;
+    headerBg: string;
+    bodyBg: string;
+  }[] = [
+    { key: "jobOpenings", label: "求人数", actualKey: "jobOpenings", headerBg: "#2E5E4E", bodyBg: "#F1F6F3" },
+    { key: "recommendCount", label: "推薦者数", actualKey: "recommendCount", headerBg: "#3E7D67", bodyBg: "#EAF1EC" },
+    { key: "offer", label: "内定者数", actualKey: "offer", headerBg: "#5D9B85", bodyBg: "#F1F8F4" },
+    { key: "revenue", label: "売上 (円)", actualKey: "revenue", yen: true, headerBg: "#C89F5B", bodyBg: "#FBF6EB" },
   ];
 
   return (
@@ -546,49 +554,96 @@ function MonthlyTargetTable({
         </div>
       </div>
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[1100px] border-collapse text-sm">
+        <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-sm">
           <thead>
-            <tr className="bg-[var(--color-primary)] text-xs font-semibold text-white">
-              <th rowSpan={2} className="border border-white/20 px-3 py-2 text-left align-middle">月</th>
-              {metrics.map((m) => (
-                <th key={m.key} colSpan={3} className="border border-white/20 px-3 py-2 text-center">
-                  {m.label}
-                </th>
+            <tr className="text-xs font-semibold text-white">
+              <th
+                rowSpan={2}
+                className="sticky left-0 z-10 bg-[var(--color-primary)] px-3 py-2 text-left align-middle"
+                style={{ borderRight: "1px solid rgba(255,255,255,0.2)" }}
+              >
+                月
+              </th>
+              {metrics.map((m, idx) => (
+                <Fragment key={m.key}>
+                  {idx > 0 ? <th className="w-2 bg-white" /> : null}
+                  <th
+                    colSpan={3}
+                    className="px-3 py-2 text-center"
+                    style={{ background: m.headerBg }}
+                  >
+                    {m.label}
+                  </th>
+                </Fragment>
               ))}
             </tr>
-            <tr className="bg-[var(--color-primary)] text-[11px] font-semibold text-white">
-              {metrics.map((m) => (
+            <tr className="text-[11px] font-semibold text-white">
+              {metrics.map((m, idx) => (
                 <Fragment key={m.key}>
-                  <th className="border border-white/20 px-2 py-1.5 text-right">目標</th>
-                  <th className="border border-white/20 px-2 py-1.5 text-right">実績</th>
-                  <th className="border border-white/20 px-2 py-1.5 text-right">達成率</th>
+                  {idx > 0 ? <th className="w-2 bg-white" /> : null}
+                  <th
+                    className="px-2 py-1.5 text-right"
+                    style={{ background: m.headerBg, borderTop: "1px solid rgba(255,255,255,0.2)" }}
+                  >
+                    目標
+                  </th>
+                  <th
+                    className="px-2 py-1.5 text-right"
+                    style={{ background: m.headerBg, borderTop: "1px solid rgba(255,255,255,0.2)" }}
+                  >
+                    実績
+                  </th>
+                  <th
+                    className="px-2 py-1.5 text-right"
+                    style={{ background: m.headerBg, borderTop: "1px solid rgba(255,255,255,0.2)" }}
+                  >
+                    達成率
+                  </th>
                 </Fragment>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
+            {rows.map((row, ri) => {
               const actual = actualsByMonth[row.month] ?? { jobOpenings: 0, recommendCount: 0, offer: 0, revenue: 0 };
+              const isFutureBlank =
+                row.jobOpenings == null && row.recommendCount == null && row.offer == null && row.revenue == null;
               return (
-                <tr key={row.month} className="border-t border-gray-100">
-                  <td className="border border-gray-100 px-3 py-2 font-mono text-[12.5px] text-[var(--color-text-dark)]">
+                <tr key={row.month}>
+                  <td
+                    className={`sticky left-0 z-10 border-b border-gray-100 bg-white px-3 py-2 font-mono text-[12.5px] text-[var(--color-text-dark)] ${
+                      ri % 2 === 1 ? "bg-gray-50/60" : ""
+                    }`}
+                  >
                     {row.month}
+                    {isFutureBlank ? (
+                      <span className="ml-1 text-[10px] text-gray-300">未設定</span>
+                    ) : null}
                   </td>
-                  {metrics.map((m) => {
+                  {metrics.map((m, idx) => {
                     const target = row[m.key];
                     const act = actual[m.actualKey];
                     const ratePct = target != null && target > 0 ? (act / target) * 100 : null;
                     return (
                       <Fragment key={m.key}>
+                        {idx > 0 ? <td className="w-2 bg-white" /> : null}
                         <NumberCell
                           value={target}
                           onChange={(v) => updateCell(row.month, m.key, v)}
+                          background={m.bodyBg}
                         />
-                        <td className="border border-gray-100 px-2 py-1 text-right text-[12.5px] text-gray-700 tabular-nums">
-                          {m.yen ? `¥${act.toLocaleString()}` : act.toLocaleString()}
+                        <td
+                          className="border-b border-gray-100 px-2 py-1 text-right text-[12.5px] text-gray-800 tabular-nums"
+                          style={{ background: m.bodyBg }}
+                        >
+                          {m.yen
+                            ? act > 0
+                              ? `¥${act.toLocaleString()}`
+                              : "¥0"
+                            : act.toLocaleString()}
                         </td>
                         <td
-                          className={`border border-gray-100 px-2 py-1 text-right text-[12.5px] tabular-nums ${
+                          className={`border-b border-gray-100 px-2 py-1 text-right text-[12.5px] tabular-nums ${
                             ratePct == null
                               ? "text-gray-400"
                               : ratePct >= 100
@@ -597,6 +652,7 @@ function MonthlyTargetTable({
                                   ? "text-[var(--color-primary)]"
                                   : "text-gray-700"
                           }`}
+                          style={{ background: m.bodyBg }}
                         >
                           {ratePct == null ? "—" : `${ratePct.toFixed(2)}%`}
                         </td>
@@ -620,19 +676,51 @@ function MonthlyTargetTable({
 function NumberCell({
   value,
   onChange,
+  background,
 }: {
   value: number | null;
   onChange: (raw: string) => void;
+  background?: string;
 }) {
+  // フォーカスが外れているときは 1,000,000 のようにカンマ区切りで表示、
+  // フォーカス中はカンマ無しの素の値で編集できるようにする
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState<string>(value != null ? String(value) : "");
+
+  // 親の value が変わったときに draft を同期 (フォーカス中はユーザー入力を尊重)
+  useEffect(() => {
+    if (!focused) setDraft(value != null ? String(value) : "");
+  }, [value, focused]);
+
+  const display = focused
+    ? draft
+    : value != null
+      ? value.toLocaleString()
+      : "";
+
   return (
-    <td className="border border-gray-100 bg-[var(--color-light)]/40 px-2 py-1 text-right">
+    <td
+      className="border-b border-gray-100 px-2 py-1 text-right"
+      style={{ background: background ?? "transparent" }}
+    >
       <input
-        type="number"
+        type="text"
         inputMode="numeric"
-        min={0}
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-right text-[12.5px] tabular-nums focus:border-[var(--color-primary)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]/30"
+        value={display}
+        onFocus={(e) => {
+          setFocused(true);
+          setDraft(value != null ? String(value) : "");
+          // 全選択して上書きしやすく
+          requestAnimationFrame(() => e.target.select());
+        }}
+        onChange={(e) => {
+          // 数字以外を除去 (カンマ等を弾く) して親へ
+          const cleaned = e.target.value.replace(/[^\d-]/g, "");
+          setDraft(cleaned);
+          onChange(cleaned);
+        }}
+        onBlur={() => setFocused(false)}
+        className="w-full rounded-md border border-transparent bg-white/70 px-2 py-1 text-right text-[12.5px] tabular-nums focus:border-[var(--color-primary)] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]/30"
       />
     </td>
   );
