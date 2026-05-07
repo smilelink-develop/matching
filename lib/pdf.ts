@@ -1,18 +1,19 @@
 /**
  * PDF からページ単位でテキストを抽出する。
  *
- * 使うライブラリは pdfjs-dist (pure-JS / OS 依存なし / Vercel/Railway で動く)。
+ * 元々は pdfjs-dist を使っていたが Next.js (Railway) のバンドラで
+ *   "Setting up fake worker failed: Cannot find module pdf.worker.mjs"
+ * が出るため、worker 不要な pdf-parse に切り替え。
+ *
+ * pdf-parse は内部で pdfjs-dist を使うが Node 用にラップしているので
+ *   * バンドル不要
+ *   * worker 不要
+ *   * テキストレイヤー前提 (スキャン PDF は別途 OCR が必要)
+ *
  * 注意:
- * - スキャン画像 PDF にはこのままでは効かない。テキストレイヤー付き PDF が前提。
- * - 後で Cloud Vision OCR を差し込めるよう、入出力は素朴な配列にしておく。
- *
- * 出力例:
- *   [
- *     { pageNumber: 1, text: "...", items: [{ text, x, y, width, height }] },
- *     { pageNumber: 2, text: "...", items: [...] },
- *   ]
- *
- * x, y は PDF 座標系 (左下原点) ではなく、こちらでは ↑→ y 増加に正規化済み。
+ * - pdf-parse はページ単位の構造化テキストを返さず、全文 + ページ毎の
+ *   pageRender callback を提供する。各ページの text を集めるため
+ *   options.pagerender を上書きしてページ別に保存する。
  */
 
 export type PdfTextItem = {
@@ -26,6 +27,7 @@ export type PdfTextItem = {
 export type PdfPage = {
   pageNumber: number;
   text: string;
+  /** pdf-parse 経由では bbox が取れないため空配列 (将来 Cloud Vision 等で埋める) */
   items: PdfTextItem[];
 };
 
@@ -33,84 +35,61 @@ export type PdfPage = {
  * Buffer / Uint8Array の PDF から全ページのテキストを抽出。
  */
 export async function extractPdfPages(input: Buffer | Uint8Array): Promise<PdfPage[]> {
-  // pdfjs-dist は legacy build を使う (Node 環境用)
-  // TypeScript の型は legacy entry に対しては弱いので動的 import
-  const pdfjsModule = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  // pdfjs-dist は worker 設定を要求するが、legacy build では disable で OK
-  const data = input instanceof Buffer ? new Uint8Array(input) : input;
-  const loadingTask = pdfjsModule.getDocument({
-    data,
-    verbosity: 0,
-    disableFontFace: true,
-    useWorkerFetch: false,
-    useSystemFonts: false,
-  });
+  // pdf-parse は CJS で require が中で走るため動的 import で読み込む
+  type PdfParseFn = (
+    data: Buffer,
+    options?: { pagerender?: (page: unknown) => Promise<string> | string }
+  ) => Promise<{ numpages: number; text: string }>;
+  const mod = (await import("pdf-parse")) as unknown as PdfParseFn | { default: PdfParseFn };
+  const pdfParse: PdfParseFn = typeof mod === "function" ? mod : mod.default;
 
-  const pdfDocument = await loadingTask.promise;
-  const pages: PdfPage[] = [];
+  const buffer = input instanceof Buffer ? input : Buffer.from(input);
 
-  for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-    const page = await pdfDocument.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 1.0 });
-    const content = await page.getTextContent();
+  const pageTexts: string[] = [];
 
-    type TextItemLike = {
-      str?: string;
-      transform?: number[];
-      width?: number;
-      height?: number;
-    };
-
-    const items: PdfTextItem[] = [];
-    for (const raw of content.items as TextItemLike[]) {
-      const text = raw.str ?? "";
-      if (!text) continue;
-      // PDF transform: [a, b, c, d, e, f] → x = e, y = f (テキストの基準点)
-      const tx = raw.transform?.[4] ?? 0;
-      const ty = raw.transform?.[5] ?? 0;
-      // PDF は左下原点なので、上原点に変換
-      const yTop = viewport.height - ty;
-      items.push({
-        text,
-        x: tx,
-        y: yTop,
-        width: raw.width ?? 0,
-        height: raw.height ?? 12,
-      });
-    }
-
-    // y, x の順に並べて行を再構築
-    items.sort((a, b) => {
-      if (Math.abs(a.y - b.y) > 4) return a.y - b.y;
-      return a.x - b.x;
+  // pdf-parse の page render hook を上書きして、各ページの text 配列を組み立てる
+  // (pdfjs-dist Page#getTextContent と同等を内部で実行)
+  type PdfPageProxy = {
+    getTextContent(opts: {
+      normalizeWhitespace: boolean;
+      disableCombineTextItems: boolean;
+    }): Promise<{ items: { str?: string; transform?: number[] }[] }>;
+  };
+  const pagerender = async (page: unknown): Promise<string> => {
+    const textContent = await (page as PdfPageProxy).getTextContent({
+      normalizeWhitespace: true,
+      disableCombineTextItems: false,
     });
-
-    // 同じ y (許容 4px) を 1 行とみなして連結
-    const lines: string[] = [];
-    let currentY: number | null = null;
-    let currentLine: string[] = [];
-    for (const item of items) {
-      if (currentY === null || Math.abs(item.y - currentY) > 4) {
-        if (currentLine.length > 0) lines.push(currentLine.join(" ").trim());
-        currentLine = [item.text];
-        currentY = item.y;
+    type Item = { str?: string; transform?: number[] };
+    const items = textContent.items as Item[];
+    // y 座標で行を組み直す (pdf-parse のデフォルトは join " " で 1 行になりがち)
+    const lines: { y: number; parts: { x: number; text: string }[] }[] = [];
+    for (const it of items) {
+      const text = it.str ?? "";
+      if (!text) continue;
+      const tx = it.transform?.[4] ?? 0;
+      const ty = it.transform?.[5] ?? 0;
+      const existing = lines.find((l) => Math.abs(l.y - ty) < 4);
+      if (existing) {
+        existing.parts.push({ x: tx, text });
       } else {
-        currentLine.push(item.text);
+        lines.push({ y: ty, parts: [{ x: tx, text }] });
       }
     }
-    if (currentLine.length > 0) lines.push(currentLine.join(" ").trim());
+    // y 大きい (上の行) → 小さい (下の行) 順に並べる (PDF は左下原点)
+    lines.sort((a, b) => b.y - a.y);
+    const text = lines
+      .map((l) => l.parts.sort((a, b) => a.x - b.x).map((p) => p.text).join(" "))
+      .join("\n");
+    pageTexts.push(text);
+    return text;
+  };
 
-    pages.push({
-      pageNumber: pageNum,
-      text: lines.join("\n"),
-      items,
-    });
+  await pdfParse(buffer, { pagerender });
 
-    // メモリ解放
-    page.cleanup();
-  }
-
-  await pdfDocument.cleanup();
-  await pdfDocument.destroy();
-  return pages;
+  return pageTexts.map((text, i) => ({
+    pageNumber: i + 1,
+    text,
+    items: [],
+  }));
 }
