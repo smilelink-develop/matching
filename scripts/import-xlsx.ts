@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { getDatabaseUrl } from "../lib/database-url";
+import { parseFlexibleDate } from "../lib/flexible-date";
 
 const CANDIDATE_FILE = process.env.CANDIDATE_XLSX || `${process.env.HOME}/Downloads/候補者データベース.xlsx`;
 const COMPANY_FILE = process.env.COMPANY_XLSX || `${process.env.HOME}/Downloads/企業データベース.xlsx`;
@@ -31,12 +32,15 @@ function d(value: unknown): Date | null {
 }
 
 function dStr(value: unknown): string | null {
+  // 1) Date インスタンス / ISO 文字列ならそのまま
   const date = d(value);
-  if (!date) {
-    const str = s(value);
-    return str;
-  }
-  return date.toISOString().slice(0, 10);
+  if (date) return date.toISOString().slice(0, 10);
+  // 2) 「2018年5月」「現在に至る」「2014 năm 08 tháng」等の柔軟パース
+  const r = parseFlexibleDate(value);
+  if (r && r.type === "iso") return r.value;
+  if (r && r.type === "current") return null; // 「現在」は日付化せず空に
+  // 3) パース不能はそのまま (元実装と同じく文字列保存)
+  return s(value);
 }
 
 function num(value: unknown): number | null {

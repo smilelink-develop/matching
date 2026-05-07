@@ -17,6 +17,7 @@ import * as XLSX from "xlsx";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { getDatabaseUrl } from "../lib/database-url";
+import { parseFlexibleDate } from "../lib/flexible-date";
 
 const FROM_ID = Number(process.env.FROM_ID ?? 101);
 const TO_ID = Number(process.env.TO_ID ?? 110);
@@ -45,8 +46,11 @@ function d(value: unknown): Date | null {
 
 function dStr(value: unknown): string | null {
   const date = d(value);
-  if (!date) return s(value);
-  return date.toISOString().slice(0, 10);
+  if (date) return date.toISOString().slice(0, 10);
+  const r = parseFlexibleDate(value);
+  if (r && r.type === "iso") return r.value;
+  if (r && r.type === "current") return null;
+  return s(value);
 }
 
 function normalizeNationality(value: unknown): string {
