@@ -339,6 +339,12 @@ function JobPostingUploadModal({
     setFiles((current) => current.filter((file) => file.id !== id));
   };
 
+  /**
+   * AI 取込:
+   * - 添付の中に PDF があれば 新パイプライン /api/job-sheet/parse を使う
+   *   (ページ分割 + ルール分割 + Gemini セクション抽出 + 正規化)
+   * - PDF が無い (画像だけ) なら 旧 /api/job-postings/extract で全部投げ
+   */
   const runExtract = async () => {
     if (files.length === 0) {
       alert("求人票の元ファイルをアップロードしてください");
@@ -347,22 +353,44 @@ function JobPostingUploadModal({
     setExtracting(true);
     setError(null);
     try {
-      const extractRes = await fetch("/api/job-postings/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          files: files.map((file) => ({
-            fileName: file.fileName,
-            dataUrl: file.dataUrl,
-          })),
-        }),
-      });
-      const extractResult = await extractRes.json();
-      if (!extractRes.ok || !extractResult.ok) {
-        setError(extractResult.error || "AI取込に失敗しました");
-        return;
+      const pdfFile = files.find((f) => f.mimeType === "application/pdf");
+      let payload: Record<string, unknown> = {};
+      if (pdfFile) {
+        // multipart で PDF を 1 件送る
+        const blob = await fetch(pdfFile.dataUrl).then((r) => r.blob());
+        const formData = new FormData();
+        formData.append("file", new File([blob], pdfFile.fileName, { type: pdfFile.mimeType }));
+        const parseRes = await fetch("/api/job-sheet/parse", {
+          method: "POST",
+          body: formData,
+        });
+        const parseResult = await parseRes.json();
+        if (!parseRes.ok || !parseResult.success) {
+          setError(parseResult.error || "PDF 解析に失敗しました");
+          return;
+        }
+        // 1 ページ目の mappedJobs を採用 (複数案件 PDF は将来対応)
+        const first = (parseResult.mappedJobs ?? [])[0] ?? {};
+        payload = first as Record<string, unknown>;
+      } else {
+        const extractRes = await fetch("/api/job-postings/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            files: files.map((file) => ({
+              fileName: file.fileName,
+              dataUrl: file.dataUrl,
+            })),
+          }),
+        });
+        const extractResult = await extractRes.json();
+        if (!extractRes.ok || !extractResult.ok) {
+          setError(extractResult.error || "AI取込に失敗しました");
+          return;
+        }
+        payload = (extractResult.extracted ?? {}) as Record<string, unknown>;
       }
-      const payload = (extractResult.extracted ?? {}) as Record<string, unknown>;
+
       const normalized: ExtractedJobPostingMap = {};
       for (const field of EXTRACTED_FIELDS) {
         const v = payload[field.key];
