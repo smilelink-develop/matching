@@ -14,7 +14,7 @@ export type MonthlyTarget = {
   revenue: number | null;
   /** 求人数 (新規受注した案件件数) */
   jobOpenings: number | null;
-  /** 推薦社数 (推薦リスト送付した企業数) */
+  /** 推薦者数 (推薦した候補者の延べ件数) */
   recommendCount: number | null;
 };
 

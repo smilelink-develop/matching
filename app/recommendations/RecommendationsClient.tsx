@@ -23,7 +23,6 @@ export default function RecommendationsClient({
   // ステージ複数選択 (デフォルトは接続済みのみ)
   const STAGE_OPTIONS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "不合格"] as const;
   const [stageFilters, setStageFilters] = useState<string[]>(["接続済み"]);
-  const [downloading, setDownloading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const toggleStage = (stage: string) => {
@@ -31,7 +30,6 @@ export default function RecommendationsClient({
       current.includes(stage) ? current.filter((s) => s !== stage) : [...current, stage]
     );
   };
-  const stagesQuery = stageFilters.length === 0 ? "all" : stageFilters.join(",");
 
   const saveToDrive = async () => {
     if (!dealId) {
@@ -50,46 +48,14 @@ export default function RecommendationsClient({
         alert(result.error || "Drive への保存に失敗しました");
         return;
       }
-      const usedTemplate = result.usedTemplate ? " (テンプレ使用)" : " (テンプレ未使用)";
-      const errorNote = result.templateError ? `\n⚠️ テンプレ複製失敗: ${result.templateError}\n→ 設定 → 推薦リストテンプレ で URL とサービスアカウントへの共有を確認してください` : "";
       const openFolder = confirm(
-        `企業フォルダに保存しました${usedTemplate}\nファイル: ${result.fileName}${errorNote}\n\n企業フォルダを開きますか？`
+        `推薦リストを保存しました\n企業フォルダを開きますか？`
       );
       if (openFolder && result.folderUrl) {
         window.open(result.folderUrl, "_blank");
       }
     } finally {
       setSaving(false);
-    }
-  };
-
-  const download = async () => {
-    if (!dealId) {
-      alert("案件を選択してください");
-      return;
-    }
-    setDownloading(true);
-    try {
-      const url = `/api/recommendations/csv?dealId=${dealId}&stages=${encodeURIComponent(stagesQuery)}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        const text = await response.text();
-        alert(`CSV出力に失敗しました: ${text}`);
-        return;
-      }
-      const blob = await response.blob();
-      const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      const deal = deals.find((d) => String(d.id) === dealId);
-      const date = new Date().toISOString().slice(0, 10);
-      a.download = `${deal?.companyName ?? "company"}_${deal?.title ?? "deal"}_推薦リスト_${date}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
-    } finally {
-      setDownloading(false);
     }
   };
 
@@ -137,14 +103,6 @@ export default function RecommendationsClient({
           </div>
         </Field>
         <div className="flex items-end gap-2">
-          <button
-            type="button"
-            onClick={() => void download()}
-            disabled={downloading}
-            className="h-[42px] rounded-xl border border-[var(--color-secondary)] bg-white px-4 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-light)] disabled:opacity-60"
-          >
-            {downloading ? "出力中..." : "CSV ダウンロード"}
-          </button>
           <button
             type="button"
             onClick={() => void saveToDrive()}

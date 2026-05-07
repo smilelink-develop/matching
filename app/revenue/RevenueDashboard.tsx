@@ -3,13 +3,13 @@
 /**
  * 売上ダッシュボード v2
  * - 上部: 月選択 (type=month). 既定は当月、開始は 2026-03 から
- * - KPI: 当月の 求人数 / 推薦社数 / 内定 / 売上 をタコメーター
- * - 年間推移グラフ: 求人数 / 推薦社数 / 内定 / 売上 を target vs actual 棒+線
+ * - KPI: 当月の 求人数 / 推薦者数 / 内定 / 売上 をタコメーター
+ * - 年間推移グラフ: 求人数 / 推薦者数 / 内定 / 売上 を target vs actual 棒+線
  * - 年間目標テーブル: 月ごとに 4 メトリクス目標を直接編集 (PATCH /api/settings)
  *
  * 実績の集計:
  *   求人数 (jobOpenings) = その月に作成 (createdAt) または受注 (acceptedAt) された Deal の件数
- *   推薦社数 (recommendCount) = その月に invoice の channel に関わらず deal が紐づいた "ユニーク企業数" を概算
+ *   推薦者数 (recommendCount) = その月に invoice の channel に関わらず deal が紐づいた "ユニーク企業数" を概算
  *   内定者数 (offerCount) = その月に紐づく Deal の offerCount 合計
  *   売上 (revenue) = その月の invoice.invoiceAmount の合計
  */
@@ -80,7 +80,7 @@ export default function RevenueDashboard({
   // 表示する月リスト (FISCAL_START_MONTH から最新月+残り12 か月分まで or 全部 monthlyTargets 入っている月)
   const yearMonths = useMemo(() => buildYearMonths(FISCAL_START_MONTH, monthlyTargets), [monthlyTargets]);
 
-  // 月別実績集計 (求人数, 推薦社数, 内定, 売上)
+  // 月別実績集計 (求人数, 推薦者数, 内定, 売上)
   const actualsByMonth = useMemo(() => {
     return aggregateActuals(initialDeals, initialInvoices, yearMonths);
   }, [initialDeals, initialInvoices, yearMonths]);
@@ -113,16 +113,34 @@ export default function RevenueDashboard({
         </label>
       </header>
 
-      {/* 当月のメトリクス: 4 タコメーター */}
-      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex items-baseline justify-between">
+      {/* 当月のメトリクス: 内定 / 売上 タコメーター + 案件ファネル */}
+      <section className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-semibold text-[var(--color-text-dark)]">{selectedMonth} 達成率</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Tachometer label="内定者数" unit="件" value={currentActual.offer} target={currentTarget?.offer ?? null} />
+            <Tachometer
+              label="売上"
+              unit="円"
+              value={currentActual.revenue}
+              target={currentTarget?.revenue ?? null}
+              format={(n) => n.toLocaleString()}
+            />
+          </div>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Tachometer label="求人数" unit="件" value={currentActual.jobOpenings} target={currentTarget?.jobOpenings ?? null} />
-          <Tachometer label="推薦社数" unit="社" value={currentActual.recommendCount} target={currentTarget?.recommendCount ?? null} />
-          <Tachometer label="内定者数" unit="件" value={currentActual.offer} target={currentTarget?.offer ?? null} />
-          <Tachometer label="売上" unit="円" value={currentActual.revenue} target={currentTarget?.revenue ?? null} format={(n) => n.toLocaleString()} />
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-base font-semibold text-[var(--color-text-dark)]">案件ファネル</h2>
+            <p className="text-xs text-gray-500">募集 → 推薦 → 面接 → 内定</p>
+          </div>
+          <Funnel
+            stages={[
+              { label: "募集", value: sumDealField(initialDeals, "requiredCount"), color: "#DCE8DF" },
+              { label: "推薦", value: sumDealField(initialDeals, "recommendedCount"), color: "#B5CEC3" },
+              { label: "面接", value: sumDealField(initialDeals, "interviewCount"), color: "#7EAE97" },
+              { label: "内定", value: sumDealField(initialDeals, "offerCount"), color: "#2E5E4E" },
+            ]}
+          />
         </div>
       </section>
 
@@ -140,7 +158,7 @@ export default function RevenueDashboard({
             targets={yearMonths.map((m) => monthlyTargets.find((t) => t.month === m)?.jobOpenings ?? null)}
           />
           <BarLineChart
-            title="推薦社数"
+            title="推薦者数"
             yearMonths={yearMonths}
             actuals={yearMonths.map((m) => actualsByMonth[m]?.recommendCount ?? 0)}
             targets={yearMonths.map((m) => monthlyTargets.find((t) => t.month === m)?.recommendCount ?? null)}
@@ -173,6 +191,10 @@ export default function RevenueDashboard({
 
 /* ---------- helpers ---------- */
 
+function sumDealField(deals: DealRow[], key: "requiredCount" | "recommendedCount" | "interviewCount" | "offerCount" | "contractCount"): number {
+  return deals.reduce((sum, d) => sum + (d[key] ?? 0), 0);
+}
+
 function buildYearMonths(startMonthKey: string, targets: MonthlyTargetEntry[]): string[] {
   // 開始月 (2026-03) から、targets の最大月 or 当月 + 12 ヶ月までの一覧
   const [sy, sm] = startMonthKey.split("-").map((v) => parseInt(v, 10));
@@ -202,7 +224,7 @@ function aggregateActuals(
   for (const m of yearMonths) result[m] = { jobOpenings: 0, recommendCount: 0, offer: 0, revenue: 0 };
 
   // 求人数: deal の acceptedAt (or createdAt) が当月にあるものをカウント
-  // 推薦社数: その月に created/accepted された deal の uniq companyName 数
+  // 推薦者数: その月に created/accepted された deal の uniq companyName 数
   const dealsByMonthCompanies = new Map<string, Set<string>>();
   for (const d of deals) {
     const ref = d.acceptedAt ?? d.createdAt;
@@ -288,6 +310,38 @@ function Tachometer({
         </span>
         <span className="text-gray-500">目標 {target != null ? `${fmt(target)} ${unit}` : "未設定"}</span>
       </div>
+    </div>
+  );
+}
+
+/* ---------- Funnel (inverted-triangle / horizontal bars) ---------- */
+
+function Funnel({ stages }: { stages: { label: string; value: number; color: string }[] }) {
+  const max = Math.max(1, ...stages.map((s) => s.value));
+  return (
+    <div className="mt-4 space-y-2">
+      {stages.map((stage) => {
+        const widthPct = Math.max((stage.value / max) * 100, 4);
+        return (
+          <div key={stage.label} className="flex items-center gap-3">
+            <div className="w-12 shrink-0 text-xs font-semibold text-gray-600">{stage.label}</div>
+            <div className="flex flex-1 justify-center">
+              <div
+                className="flex h-8 items-center justify-center rounded-full text-xs font-semibold text-white shadow-sm"
+                style={{
+                  width: `${widthPct}%`,
+                  background: stage.color,
+                  transition: "width 200ms",
+                  minWidth: "44px",
+                  color: stage.color === "#DCE8DF" || stage.color === "#B5CEC3" ? "#1F2937" : "#FFFFFF",
+                }}
+              >
+                {stage.value.toLocaleString()} 名
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -470,7 +524,7 @@ function MonthlyTargetTable({
             <tr className="bg-[var(--color-light)] text-left text-xs font-semibold text-gray-600">
               <th className="px-3 py-2">月</th>
               <th className="px-3 py-2 text-right">求人数</th>
-              <th className="px-3 py-2 text-right">推薦社数</th>
+              <th className="px-3 py-2 text-right">推薦者数</th>
               <th className="px-3 py-2 text-right">内定者数</th>
               <th className="px-3 py-2 text-right">売上 (円)</th>
             </tr>

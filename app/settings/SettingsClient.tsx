@@ -650,7 +650,7 @@ export default function SettingsClient({
                 <div className="hidden grid-cols-[140px_repeat(4,1fr)_40px] gap-2 px-2 text-[11px] font-medium text-gray-500 md:grid">
                   <span>月</span>
                   <span>求人数 目標</span>
-                  <span>推薦社数 目標</span>
+                  <span>推薦者数 目標</span>
                   <span>内定者数 目標</span>
                   <span>売上 目標 (円)</span>
                   <span></span>
