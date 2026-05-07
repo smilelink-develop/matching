@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { REGISTRANT_OPTIONS } from "@/lib/candidate-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,10 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const incomingRegisteredBy = typeof body.registeredBy === "string" ? body.registeredBy.trim() : "";
+    const registeredBy = (REGISTRANT_OPTIONS as readonly string[]).includes(incomingRegisteredBy)
+      ? incomingRegisteredBy
+      : null;
     const person = await prisma.person.create({
       data: {
         name: body.name,
@@ -19,6 +24,7 @@ export async function POST(req: Request) {
         partnerId: body.partnerId ? Number(body.partnerId) : null,
         channel: body.channel,
         email: body.email || null,
+        registeredBy,
         onboarding: body.englishName
           ? {
               create: {

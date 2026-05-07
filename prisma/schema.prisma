@@ -21,6 +21,8 @@ model Person {
   messengerPsid   String?
   email           String?
   whatsappId      String?
+  /// 候補者を追加した担当者の表示名 (固定リストから 1 つ: トゥイ / チンディ / ミン / 土田)
+  registeredBy    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

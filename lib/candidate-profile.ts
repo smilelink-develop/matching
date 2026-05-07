@@ -1,5 +1,28 @@
 export const NATIONALITIES = ["ベトナム", "インドネシア", "ミャンマー", "フィリピン", "タイ", "その他"];
 
+/** 候補者を追加した担当者 (固定 4 択) */
+export const REGISTRANT_OPTIONS = ["トゥイ", "チンディ", "ミン", "土田"] as const;
+export type Registrant = (typeof REGISTRANT_OPTIONS)[number];
+
+/**
+ * ログイン中アカウントの name / loginId から、候補者追加画面の
+ * 「登録者」セレクタの初期値を推定する。一致しなければ null を返し、
+ * UI 側でセレクタを未選択のままにできる。
+ */
+export function inferRegistrantFromAccount(input: {
+  name?: string | null;
+  loginId?: string | null;
+}): Registrant | null {
+  const haystack = `${input.name ?? ""} ${input.loginId ?? ""}`.toLowerCase();
+  if (!haystack.trim()) return null;
+  // ローマ字 / カタカナ両方に対応
+  if (haystack.includes("tsuchida") || haystack.includes("土田") || haystack.includes("kodai")) return "土田";
+  if (haystack.includes("thuy") || haystack.includes("トゥイ")) return "トゥイ";
+  if (haystack.includes("cindy") || haystack.includes("chindi") || haystack.includes("チンディ")) return "チンディ";
+  if (haystack.includes("min") || haystack.includes("ミン")) return "ミン";
+  return null;
+}
+
 // 履歴書テンプレや書類管理で扱う在留資格 (留学生 / 特定活動 を追加)
 export const RESIDENCE_STATUSES = [
   "技能実習",

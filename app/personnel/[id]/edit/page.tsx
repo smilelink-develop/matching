@@ -76,10 +76,17 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
   return (
     <div className="px-8 py-10">
       <div className="mx-auto w-full max-w-6xl space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">候補者詳細</h1>
-          <p className="text-sm text-gray-500 mt-2">
-            候補者情報を「基本情報」「詳細情報」「請求」に分けて管理します。
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-[var(--color-text-dark)]">候補者詳細</h1>
+            <p className="text-sm text-gray-500 mt-2">
+              候補者情報を「基本情報」「詳細情報」「請求」に分けて管理します。
+            </p>
+          </div>
+          <p className="shrink-0 text-[11px] text-gray-400">
+            ID #{person.id}
+            {person.registeredBy ? <> ・ 登録者: <span className="font-medium text-gray-500">{person.registeredBy}</span></> : null}
+            {" "}・ 追加日 {new Date(person.createdAt).toLocaleDateString("ja-JP")}
           </p>
         </div>
 

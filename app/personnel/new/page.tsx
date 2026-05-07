@@ -2,7 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CHANNELS, NATIONALITIES, RESIDENCE_STATUSES } from "@/lib/candidate-profile";
+import {
+  CHANNELS,
+  NATIONALITIES,
+  REGISTRANT_OPTIONS,
+  RESIDENCE_STATUSES,
+  inferRegistrantFromAccount,
+} from "@/lib/candidate-profile";
 
 export default function NewPersonnelPage() {
   const router = useRouter();
@@ -14,7 +20,8 @@ export default function NewPersonnelPage() {
     partnerId: "",
     nationality: "ベトナム",
     residenceStatus: "技能実習",
-    channel: "LINE",
+    channel: "未設定",
+    registeredBy: "",
   });
 
   useEffect(() => {
@@ -22,6 +29,17 @@ export default function NewPersonnelPage() {
       .then((response) => response.json())
       .then((result) => {
         if (result.ok) setPartners(result.partners ?? []);
+      })
+      .catch(() => undefined);
+    // ログインしているスタッフから登録者の初期値を推定
+    void fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const inferred = inferRegistrantFromAccount({
+          name: d?.account?.name,
+          loginId: d?.account?.loginId,
+        });
+        if (inferred) setForm((f) => (f.registeredBy ? f : { ...f, registeredBy: inferred }));
       })
       .catch(() => undefined);
   }, []);
@@ -83,6 +101,20 @@ export default function NewPersonnelPage() {
         <Field label="主な連絡手段">
           <select className={INPUT} value={form.channel} onChange={(e) => set("channel", e.target.value)}>
             {CHANNELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </Field>
+        <Field label="登録者 (この候補者を追加した人)">
+          <select
+            className={INPUT}
+            value={form.registeredBy}
+            onChange={(e) => set("registeredBy", e.target.value)}
+          >
+            <option value="">選択してください</option>
+            {REGISTRANT_OPTIONS.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
           </select>
         </Field>
         <div className="flex gap-3 pt-2">
