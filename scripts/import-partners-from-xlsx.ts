@@ -57,7 +57,15 @@ function listSheets(filePath: string): string[] {
 }
 
 function headersOf(row: unknown[]): (string | null)[] {
-  return row.map((h) => (h ? String(h).replace(/\s+/g, "").replace(/\n/g, "") : null));
+  // 全角括弧 ( ) を半角に統一して、ルックアップキーの表記揺れを防ぐ
+  return row.map((h) => {
+    if (!h) return null;
+    return String(h)
+      .replace(/\s+/g, "")
+      .replace(/\n/g, "")
+      .replace(/（/g, "(")
+      .replace(/）/g, ")");
+  });
 }
 
 function record(headers: (string | null)[], row: unknown[]): Record<string, unknown> {
