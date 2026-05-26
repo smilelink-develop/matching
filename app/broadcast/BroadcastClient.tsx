@@ -1,6 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  INTRODUCIBLE_FIELDS,
+  INTRODUCIBLE_NATIONALITIES,
+  INTRODUCIBLE_RESIDENCE_STATUSES,
+  INTRODUCIBLE_SCOPES,
+  PARTNER_ROLES,
+  RELATIONSHIP_STATUSES,
+  parseCsv,
+} from "@/lib/partner-profile";
 
 type Partner = {
   id: number;
@@ -12,13 +21,22 @@ type Partner = {
   lineUserId: string | null;
   messengerPsid: string | null;
   whatsappId: string | null;
+  relationshipStatus: string | null;
+  role: string | null;
+  rating: number | null;
+  introducibleNationalities: string | null;
+  introducibleScope: string | null;
+  introducibleFields: string | null;
+  introducibleResidenceStatuses: string | null;
 };
 type Template = { id: number; name: string; content: string };
 type Group = { id: number; name: string; memberCount: number };
 
-const COUNTRIES = ["すべて", "ベトナム", "インドネシア", "ミャンマー", "フィリピン", "タイ", "中国", "その他"];
-const CHANNELS = ["すべて", "LINE", "Messenger", "WhatsApp", "メール", "未設定"];
-const LINK_STATUSES = ["すべて", "未", "連携中", "停止"];
+const ALL = "すべて";
+const COUNTRIES = [ALL, "日本", "ベトナム", "インドネシア", "ミャンマー", "フィリピン", "タイ", "中国", "ネパール", "スリランカ", "カンボジア", "バングラデシュ", "インド", "モンゴル", "韓国"];
+const CHANNELS = [ALL, "LINE", "Messenger", "WhatsApp", "メール", "未設定"];
+const LINK_STATUSES = [ALL, "未", "完了"];
+const RATINGS = [ALL, "★1 以上", "★2 以上", "★3 以上", "★4 以上", "★5"];
 
 export default function BroadcastClient({
   partners,
@@ -30,9 +48,16 @@ export default function BroadcastClient({
   groups: Group[];
 }) {
   const [mode, setMode] = useState<"filter" | "group">("filter");
-  const [country, setCountry] = useState("すべて");
-  const [channel, setChannel] = useState("すべて");
-  const [linkStatus, setLinkStatus] = useState("すべて");
+  const [country, setCountry] = useState(ALL);
+  const [channel, setChannel] = useState(ALL);
+  const [linkStatus, setLinkStatus] = useState(ALL);
+  const [relationshipStatus, setRelationshipStatus] = useState(ALL);
+  const [role, setRole] = useState(ALL);
+  const [introducibleScope, setIntroducibleScope] = useState(ALL);
+  const [introNationality, setIntroNationality] = useState(ALL);
+  const [introField, setIntroField] = useState(ALL);
+  const [introResStatus, setIntroResStatus] = useState(ALL);
+  const [minRating, setMinRating] = useState(ALL);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [message, setMessage] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("");
@@ -40,18 +65,43 @@ export default function BroadcastClient({
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleDate, setScheduleDate] = useState("");
 
+  const minRatingNum = (() => {
+    if (minRating === ALL) return null;
+    const m = minRating.match(/(\d)/);
+    return m ? Number(m[1]) : null;
+  })();
+
   const filtered = useMemo(
     () =>
       partners.filter((p) => {
-        if (country !== "すべて" && (p.country ?? "") !== country) return false;
-        if (channel !== "すべて") {
+        if (country !== ALL && (p.country ?? "") !== country) return false;
+        if (channel !== ALL) {
           const ch = (p.channel ?? "未設定") || "未設定";
           if (ch !== channel) return false;
         }
-        if (linkStatus !== "すべて" && p.linkStatus !== linkStatus) return false;
+        if (linkStatus !== ALL && p.linkStatus !== linkStatus) return false;
+        if (relationshipStatus !== ALL && (p.relationshipStatus ?? "") !== relationshipStatus) return false;
+        if (role !== ALL && (p.role ?? "") !== role) return false;
+        if (introducibleScope !== ALL && (p.introducibleScope ?? "") !== introducibleScope) return false;
+        if (introNationality !== ALL && !parseCsv(p.introducibleNationalities).includes(introNationality)) return false;
+        if (introField !== ALL && !parseCsv(p.introducibleFields).includes(introField)) return false;
+        if (introResStatus !== ALL && !parseCsv(p.introducibleResidenceStatuses).includes(introResStatus)) return false;
+        if (minRatingNum !== null && (p.rating ?? 0) < minRatingNum) return false;
         return true;
       }),
-    [partners, country, channel, linkStatus]
+    [
+      partners,
+      country,
+      channel,
+      linkStatus,
+      relationshipStatus,
+      role,
+      introducibleScope,
+      introNationality,
+      introField,
+      introResStatus,
+      minRatingNum,
+    ]
   );
 
   const targetCount =
@@ -79,9 +129,16 @@ export default function BroadcastClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode,
-          country: country === "すべて" ? null : country,
-          channel: channel === "すべて" ? null : channel,
-          linkStatus: linkStatus === "すべて" ? null : linkStatus,
+          country: country === ALL ? null : country,
+          channel: channel === ALL ? null : channel,
+          linkStatus: linkStatus === ALL ? null : linkStatus,
+          relationshipStatus: relationshipStatus === ALL ? null : relationshipStatus,
+          role: role === ALL ? null : role,
+          introducibleScope: introducibleScope === ALL ? null : introducibleScope,
+          introNationality: introNationality === ALL ? null : introNationality,
+          introField: introField === ALL ? null : introField,
+          introResStatus: introResStatus === ALL ? null : introResStatus,
+          minRating: minRatingNum,
           groupId: selectedGroup ? Number(selectedGroup) : null,
           message,
           scheduledAt: scheduled ? scheduleDate : null,
@@ -135,8 +192,40 @@ export default function BroadcastClient({
           </div>
 
           {mode === "filter" ? (
-            <div className="space-y-3">
-              <Select label="国" value={country} onChange={setCountry} options={COUNTRIES} />
+            <div className="grid grid-cols-2 gap-3">
+              <Select label="拠点国" value={country} onChange={setCountry} options={COUNTRIES} />
+              <Select
+                label="関係性"
+                value={relationshipStatus}
+                onChange={setRelationshipStatus}
+                options={[ALL, ...RELATIONSHIP_STATUSES]}
+              />
+              <Select label="役割" value={role} onChange={setRole} options={[ALL, ...PARTNER_ROLES]} />
+              <Select
+                label="紹介の範囲"
+                value={introducibleScope}
+                onChange={setIntroducibleScope}
+                options={[ALL, ...INTRODUCIBLE_SCOPES]}
+              />
+              <Select
+                label="紹介可能 国籍"
+                value={introNationality}
+                onChange={setIntroNationality}
+                options={[ALL, ...INTRODUCIBLE_NATIONALITIES]}
+              />
+              <Select
+                label="紹介可能 分野"
+                value={introField}
+                onChange={setIntroField}
+                options={[ALL, ...INTRODUCIBLE_FIELDS]}
+              />
+              <Select
+                label="紹介可能 在留資格"
+                value={introResStatus}
+                onChange={setIntroResStatus}
+                options={[ALL, ...INTRODUCIBLE_RESIDENCE_STATUSES]}
+              />
+              <Select label="評価 (最低)" value={minRating} onChange={setMinRating} options={RATINGS} />
               <Select label="連絡手段" value={channel} onChange={setChannel} options={CHANNELS} />
               <Select label="連携状況" value={linkStatus} onChange={setLinkStatus} options={LINK_STATUSES} />
             </div>
@@ -182,7 +271,9 @@ export default function BroadcastClient({
               <div className="min-w-0">
                 <p className="text-sm font-medium text-[var(--color-text-dark)] truncate">{p.name}</p>
                 <p className="text-xs text-gray-400 truncate">
-                  {p.country ?? "—"} · {p.channel ?? "未設定"} · {p.linkStatus}
+                  {p.country ?? "—"} · {p.relationshipStatus ?? "未設定"}
+                  {p.role ? ` · ${p.role}` : ""}
+                  {p.rating ? ` · ★${p.rating}` : ""}
                 </p>
               </div>
               <span className="ml-auto text-xs text-gray-400 shrink-0">

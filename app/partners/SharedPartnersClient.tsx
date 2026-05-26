@@ -89,7 +89,7 @@ export default function SharedPartnersClient({
               <th className="px-4 py-3 text-left font-semibold w-28 whitespace-nowrap">関係性</th>
               <th className="px-4 py-3 text-left font-semibold">紹介可能国籍</th>
               <th className="px-4 py-3 text-left font-semibold w-32">評価</th>
-              <th className="px-4 py-3 text-right font-semibold w-24">実績 (案件)</th>
+              <th className="px-4 py-3 text-right font-semibold w-28 whitespace-nowrap">実績 (案件)</th>
             </tr>
           </thead>
           <tbody>

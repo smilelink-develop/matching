@@ -3,11 +3,33 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { mode, country, channel, linkStatus, groupId, message, scheduledAt } = body as {
+    const {
+      mode,
+      country,
+      channel,
+      linkStatus,
+      relationshipStatus,
+      role,
+      introducibleScope,
+      introNationality,
+      introField,
+      introResStatus,
+      minRating,
+      groupId,
+      message,
+      scheduledAt,
+    } = body as {
       mode: "filter" | "group";
       country: string | null;
       channel: string | null;
       linkStatus: string | null;
+      relationshipStatus: string | null;
+      role: string | null;
+      introducibleScope: string | null;
+      introNationality: string | null;
+      introField: string | null;
+      introResStatus: string | null;
+      minRating: number | null;
       groupId: number | null;
       message: string;
       scheduledAt: string | null;
@@ -48,6 +70,14 @@ export async function POST(req: Request) {
         }
       }
       if (linkStatus) where.linkStatus = linkStatus;
+      if (relationshipStatus) where.relationshipStatus = relationshipStatus;
+      if (role) where.role = role;
+      if (introducibleScope) where.introducibleScope = introducibleScope;
+      // CSV カラムは contains で簡易検索
+      if (introNationality) where.introducibleNationalities = { contains: introNationality };
+      if (introField) where.introducibleFields = { contains: introField };
+      if (introResStatus) where.introducibleResidenceStatuses = { contains: introResStatus };
+      if (typeof minRating === "number" && minRating >= 1) where.rating = { gte: minRating };
       const partners = await prisma.partner.findMany({ where });
       targets = partners.map((p) => ({
         id: p.id,
@@ -64,7 +94,20 @@ export async function POST(req: Request) {
           title: "予約配信 (パートナー)",
           body: message,
           channel: "LINE/Messenger/WhatsApp",
-          targetFilter: JSON.stringify({ mode, country, channel, linkStatus, groupId }),
+          targetFilter: JSON.stringify({
+            mode,
+            country,
+            channel,
+            linkStatus,
+            relationshipStatus,
+            role,
+            introducibleScope,
+            introNationality,
+            introField,
+            introResStatus,
+            minRating,
+            groupId,
+          }),
           status: "scheduled",
           matchedCount: targets.length,
           sentCount: 0,

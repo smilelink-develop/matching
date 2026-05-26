@@ -32,6 +32,13 @@ export default async function BroadcastPage() {
           lineUserId: p.lineUserId,
           messengerPsid: p.messengerPsid,
           whatsappId: p.whatsappId,
+          relationshipStatus: p.relationshipStatus,
+          role: p.role,
+          rating: p.rating,
+          introducibleNationalities: p.introducibleNationalities,
+          introducibleScope: p.introducibleScope,
+          introducibleFields: p.introducibleFields,
+          introducibleResidenceStatuses: p.introducibleResidenceStatuses,
         }))}
         templates={templates.map((t) => ({ id: t.id, name: t.name, content: t.content }))}
         groups={groups.map((g) => ({ id: g.id, name: g.name, memberCount: g.members.length }))}
