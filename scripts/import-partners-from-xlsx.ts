@@ -124,7 +124,8 @@ async function main() {
   //   - 「一覧（移動前）」: 国別シートに分かれているので重複になる
   //   - 「管理シート」: SNS の登録人数管理。パートナー情報ではない
   //   - 「セット」: 設定/テンプレ
-  const SKIP_PATTERNS = [/移動前/, /管理シート/, /^セット$/, /説明/, /例\)/];
+  //   - 「「取引停止」」: 既に取引していない相手は取り込まない
+  const SKIP_PATTERNS = [/移動前/, /管理シート/, /^セット$/, /取引停止/, /説明/, /例\)/];
   const targetSheets = sheets.filter((s) => !SKIP_PATTERNS.some((re) => re.test(s)));
   console.log(`  取り込み対象: ${targetSheets.join(" / ")}`);
 
@@ -157,8 +158,8 @@ async function main() {
     const headers = headersOf(rows[1] as unknown[]);
     const sheetCountry = sheetToCountry(sheet);
     const sheetRole = defaultRoleForSheet(sheet);
-    const isStopped = /取引停止/.test(sheet);
     let sheetCreated = 0;
+    let skippedStopped = 0;
 
     for (let i = 2; i < rows.length; i++) {
       const rec = record(headers, rows[i] as unknown[]);
@@ -166,10 +167,12 @@ async function main() {
       if (!name) continue;
 
       const relation = s(rec["関係性"]);
-      const stoppedFromRelation = relation ? relation.includes("取引停止") || relation.includes("停止") : false;
-      const stopped = isStopped || stoppedFromRelation;
-      const hasPerformance =
-        !stopped && (relation ? relation.includes("実績有り") || relation.includes("有") : false);
+      // 個別行で「取引停止」が指定されているものは取り込まない
+      if (relation && (relation.includes("取引停止") || relation === "停止")) {
+        skippedStopped++;
+        continue;
+      }
+      const hasPerformance = relation ? relation.includes("実績有り") || relation.includes("有") : false;
 
       const rawCountryCell = s(rec["国"]);
       // シート名から決まる正規 country を優先。
@@ -192,10 +195,7 @@ async function main() {
         email: s(rec["連絡先(メールアドレス)"]) ?? s(rec["メールアドレス"]) ?? s(rec["メール"]),
         snsContact:
           s(rec["連絡先(SNS)"]) ?? s(rec["SNS"]) ?? s(rec["連絡先SNS"]) ?? s(rec["LINE"]) ?? null,
-        features: buildFeatures({
-          base: s(rec["備考(特徴や強みなど)"]) ?? s(rec["備考"]) ?? s(rec["特徴"]),
-          stopped,
-        }),
+        features: s(rec["備考(特徴や強みなど)"]) ?? s(rec["備考"]) ?? s(rec["特徴"]),
         feeAmount: s(rec["手数料金額"]) ?? s(rec["手数料"]),
         minFeeAmount: s(rec["最低金額"]),
         feeShareRatio: s(rec["配分比率"]) ? String(s(rec["配分比率"])) : null,
@@ -211,7 +211,7 @@ async function main() {
         introducibleResidenceStatuses: csvFromString(
           s(rec["在留資格"]) ?? s(rec["紹介可能在留資格"])
         ),
-        linkStatus: stopped ? "停止" : "未",
+        linkStatus: "未",
         channel: null,
         notes: null,
         rating: null,
@@ -236,19 +236,14 @@ async function main() {
       }
     }
     totalCreated += sheetCreated;
-    console.log(`  [${sheet}] 作成 ${sheetCreated} 件`);
+    console.log(
+      `  [${sheet}] 作成 ${sheetCreated} 件${skippedStopped > 0 ? ` (取引停止スキップ ${skippedStopped})` : ""}`
+    );
   }
 
   console.log(
     `\n✅ 完了: パース ${totalParsed} 行 / 新規作成 ${totalCreated} 件${DRY_RUN ? " (DRY-RUN)" : ""}`
   );
-}
-
-function buildFeatures({ base, stopped }: { base: string | null; stopped: boolean }): string | null {
-  const parts: string[] = [];
-  if (stopped) parts.push("[取引停止]");
-  if (base) parts.push(base);
-  return parts.length > 0 ? parts.join("\n") : null;
 }
 
 /**
