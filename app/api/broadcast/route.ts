@@ -6,22 +6,16 @@ export async function POST(req: Request) {
     const {
       mode,
       relationshipStatus,
-      role,
-      introducibleScope,
       introNationality,
       introField,
-      introResStatus,
       groupId,
       message,
       scheduledAt,
     } = body as {
       mode: "filter" | "group";
       relationshipStatus: string | null;
-      role: string | null;
-      introducibleScope: string | null;
       introNationality: string | null;
       introField: string | null;
-      introResStatus: string | null;
       groupId: number | null;
       message: string;
       scheduledAt: string | null;
@@ -54,12 +48,9 @@ export async function POST(req: Request) {
     } else {
       const where: Record<string, unknown> = {};
       if (relationshipStatus) where.relationshipStatus = relationshipStatus;
-      if (role) where.role = role;
-      if (introducibleScope) where.introducibleScope = introducibleScope;
       // CSV カラムは contains で簡易検索
       if (introNationality) where.introducibleNationalities = { contains: introNationality };
       if (introField) where.introducibleFields = { contains: introField };
-      if (introResStatus) where.introducibleResidenceStatuses = { contains: introResStatus };
       const partners = await prisma.partner.findMany({ where });
       targets = partners.map((p) => ({
         id: p.id,
@@ -79,11 +70,8 @@ export async function POST(req: Request) {
           targetFilter: JSON.stringify({
             mode,
             relationshipStatus,
-            role,
-            introducibleScope,
             introNationality,
             introField,
-            introResStatus,
             groupId,
           }),
           status: "scheduled",
@@ -137,11 +125,8 @@ export async function POST(req: Request) {
         targetFilter: JSON.stringify({
           mode,
           relationshipStatus,
-          role,
-          introducibleScope,
           introNationality,
           introField,
-          introResStatus,
           groupId,
         }),
         status: "done",

@@ -4,9 +4,6 @@ import { useMemo, useState } from "react";
 import {
   INTRODUCIBLE_FIELDS,
   INTRODUCIBLE_NATIONALITIES,
-  INTRODUCIBLE_RESIDENCE_STATUSES,
-  INTRODUCIBLE_SCOPES,
-  PARTNER_ROLES,
   RELATIONSHIP_STATUSES,
   parseCsv,
 } from "@/lib/partner-profile";
@@ -45,11 +42,8 @@ export default function BroadcastClient({
 }) {
   const [mode, setMode] = useState<"filter" | "group">("filter");
   const [relationshipStatus, setRelationshipStatus] = useState(ALL);
-  const [role, setRole] = useState(ALL);
-  const [introducibleScope, setIntroducibleScope] = useState(ALL);
   const [introNationality, setIntroNationality] = useState(ALL);
   const [introField, setIntroField] = useState(ALL);
-  const [introResStatus, setIntroResStatus] = useState(ALL);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [message, setMessage] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("");
@@ -61,22 +55,11 @@ export default function BroadcastClient({
     () =>
       partners.filter((p) => {
         if (relationshipStatus !== ALL && (p.relationshipStatus ?? "") !== relationshipStatus) return false;
-        if (role !== ALL && (p.role ?? "") !== role) return false;
-        if (introducibleScope !== ALL && (p.introducibleScope ?? "") !== introducibleScope) return false;
         if (introNationality !== ALL && !parseCsv(p.introducibleNationalities).includes(introNationality)) return false;
         if (introField !== ALL && !parseCsv(p.introducibleFields).includes(introField)) return false;
-        if (introResStatus !== ALL && !parseCsv(p.introducibleResidenceStatuses).includes(introResStatus)) return false;
         return true;
       }),
-    [
-      partners,
-      relationshipStatus,
-      role,
-      introducibleScope,
-      introNationality,
-      introField,
-      introResStatus,
-    ]
+    [partners, relationshipStatus, introNationality, introField]
   );
 
   const targetCount =
@@ -105,11 +88,8 @@ export default function BroadcastClient({
         body: JSON.stringify({
           mode,
           relationshipStatus: relationshipStatus === ALL ? null : relationshipStatus,
-          role: role === ALL ? null : role,
-          introducibleScope: introducibleScope === ALL ? null : introducibleScope,
           introNationality: introNationality === ALL ? null : introNationality,
           introField: introField === ALL ? null : introField,
-          introResStatus: introResStatus === ALL ? null : introResStatus,
           groupId: selectedGroup ? Number(selectedGroup) : null,
           message,
           scheduledAt: scheduled ? scheduleDate : null,
@@ -171,22 +151,10 @@ export default function BroadcastClient({
                 options={[ALL, ...INTRODUCIBLE_NATIONALITIES]}
               />
               <Select
-                label="紹介の範囲"
-                value={introducibleScope}
-                onChange={setIntroducibleScope}
-                options={[ALL, ...INTRODUCIBLE_SCOPES]}
-              />
-              <Select
                 label="紹介可能 分野"
                 value={introField}
                 onChange={setIntroField}
                 options={[ALL, ...INTRODUCIBLE_FIELDS]}
-              />
-              <Select
-                label="紹介可能 在留資格"
-                value={introResStatus}
-                onChange={setIntroResStatus}
-                options={[ALL, ...INTRODUCIBLE_RESIDENCE_STATUSES]}
               />
               <Select
                 label="関係性"
@@ -194,7 +162,6 @@ export default function BroadcastClient({
                 onChange={setRelationshipStatus}
                 options={[ALL, ...RELATIONSHIP_STATUSES]}
               />
-              <Select label="役割" value={role} onChange={setRole} options={[ALL, ...PARTNER_ROLES]} />
             </div>
           ) : (
             <Select
