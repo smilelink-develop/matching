@@ -84,7 +84,7 @@ export default function SharedPartnersClient({
             <tr className="bg-[var(--color-light)] text-[var(--color-text-dark)]">
               <th className="px-4 py-3 text-left font-semibold w-16">ID</th>
               <th className="px-4 py-3 text-left font-semibold">パートナー名</th>
-              <th className="px-4 py-3 text-left font-semibold w-24">国</th>
+              <th className="px-4 py-3 text-left font-semibold w-24">拠点国</th>
               <th className="px-4 py-3 text-left font-semibold w-24">役割</th>
               <th className="px-4 py-3 text-left font-semibold w-24">関係性</th>
               <th className="px-4 py-3 text-left font-semibold">紹介可能国籍</th>

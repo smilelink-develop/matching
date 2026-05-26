@@ -213,7 +213,7 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
           <Field label="パートナー名 *">
             <input className={INPUT} value={form.name} onChange={(e) => set("name", e.target.value)} />
           </Field>
-          <Field label="国">
+          <Field label="拠点国">
             <input className={INPUT} value={form.country} onChange={(e) => set("country", e.target.value)} />
           </Field>
           <Field label="役割">
@@ -291,6 +291,12 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
             </p>
           </Field>
         </Group>
+      </section>
+
+      {/* 紹介可能 / 手数料 / メモ・特徴 (別セクション) */}
+      <section className="rounded-2xl border border-gray-200 bg-[#FAF9F5] p-6 shadow-sm">
+        <h2 className="text-base font-semibold text-[var(--color-text-dark)]">紹介条件・特徴</h2>
+        <p className="mt-0.5 text-xs text-gray-500">どの人材を紹介できるか、手数料、強み・備考をまとめます。</p>
 
         {/* 紹介可能 */}
         <Group title="紹介可能">

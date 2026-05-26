@@ -84,10 +84,8 @@ export default function NewPartnerPage() {
             アライアンス先 (協力関係にある企業・学校・送り出し機関) を登録します。
           </p>
         </div>
-        <form
-          onSubmit={submit}
-          className="space-y-1 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
-        >
+        <form onSubmit={submit} className="space-y-6">
+          <div className="space-y-1 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
           <Group title="基本情報">
             <Field label="パートナー名 *" className="md:col-span-2">
               <input
@@ -97,7 +95,7 @@ export default function NewPartnerPage() {
                 placeholder="株式会社○○ / ABC School など"
               />
             </Field>
-            <Field label="国">
+            <Field label="拠点国">
               <input
                 className={INPUT}
                 value={form.country}
@@ -184,6 +182,13 @@ export default function NewPartnerPage() {
               />
             </Field>
           </Group>
+          </div>
+
+          <div className="space-y-1 rounded-2xl border border-gray-200 bg-[#FAF9F5] p-8 shadow-sm">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-text-dark)]">紹介条件・特徴</h2>
+            <p className="mt-0.5 text-xs text-gray-500">どの人材を紹介できるか、手数料、強み・備考をまとめます。</p>
+          </div>
 
           <Group title="紹介可能">
             <Field label="紹介の範囲">
@@ -264,6 +269,7 @@ export default function NewPartnerPage() {
               />
             </Field>
           </Group>
+          </div>
 
           <div className="flex gap-3 pt-4">
             <button
