@@ -524,9 +524,9 @@ export default function EditPersonForm({
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="現在の在留資格">
                 <select className={INPUT} value={form.residenceStatus} onChange={(event) => setValue("residenceStatus", event.target.value)}>
-                  {/* 既存 DB の値がリストに無い場合も表示できるよう動的に追加 */}
+                  {/* 既存 DB に標準リスト外の値があれば、その値も option として表示 */}
                   {form.residenceStatus && !RESIDENCE_STATUSES.includes(form.residenceStatus) ? (
-                    <option value={form.residenceStatus}>{form.residenceStatus} (要修正)</option>
+                    <option value={form.residenceStatus}>{form.residenceStatus}</option>
                   ) : null}
                   {RESIDENCE_STATUSES.map((status) => (
                     <option key={status}>{status}</option>
@@ -673,8 +673,8 @@ export default function EditPersonForm({
             </div>
           </div>
 
-          {/* 島3: 在留資格別 */}
-          {(() => {
+          {/* 島3: 在留資格別 (「不明」「持っていない」「空」のときは非表示) */}
+          {!["不明", "持っていない", ""].includes(form.residenceStatus) && (() => {
             const cfg = visaSpecificConfig(form.residenceStatus);
             return (
               <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">

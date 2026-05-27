@@ -63,13 +63,17 @@ function normalizeNationality(value: unknown): string {
 
 function normalizeResidenceStatus(value: unknown): string {
   const v = s(value);
-  if (!v) return "特定技能1号";
-  if (v.includes("技能実習")) return "技能実習";
+  // xlsx 空欄 → 「不明」 (旧: 特定技能1号 にデフォルトしていた不具合を修正)
+  if (!v) return "不明";
+  if (v.includes("実習")) return "技能実習"; // 「技能実習生」「実習生」も含む
   if (v.includes("特定技能1") || v.includes("特定技能一")) return "特定技能1号";
   if (v.includes("特定技能2") || v.includes("特定技能二")) return "特定技能2号";
   if (v.includes("技術") || v.includes("技人国")) return "技術・人文知識・国際業務";
   if (v.includes("留学")) return "留学生";
   if (v.includes("特定活動")) return "特定活動";
+  if (v.includes("持っていない") || v.includes("持ってない") || v.includes("なし")) return "持っていない";
+  if (v.includes("永住")) return "永住";
+  if (v.includes("不明") || v === "?") return "不明";
   return v;
 }
 

@@ -23,15 +23,21 @@ export function inferRegistrantFromAccount(input: {
   return null;
 }
 
-// 履歴書テンプレや書類管理で扱う在留資格 (留学生 / 特定活動 を追加)
+// 履歴書テンプレや書類管理で扱う在留資格
 export const RESIDENCE_STATUSES = [
+  "不明",
+  "持っていない",
   "技能実習",
   "特定技能1号",
   "特定技能2号",
   "技術・人文知識・国際業務",
   "留学生",
   "特定活動",
+  "永住",
 ];
+
+// 「不明」「持っていない」のときは在留資格別の必要書類は無い
+const RESIDENCE_STATUSES_WITHOUT_DOCUMENTS = new Set(["不明", "持っていない", ""]);
 
 export const CHANNELS = [
   { value: "未設定", label: "未設定" },
@@ -91,6 +97,8 @@ const TOKUTEI_ACTIVITY_DOCUMENTS = [
 export const TOKUTEI_DOCUMENTS = TOKUTEI_1_DOCUMENTS;
 
 export function getDocumentDefinitions(residenceStatus: string): { kind: string; label: string }[] {
+  // 「不明」「持っていない」「(空)」のときは在留資格別の必要書類は存在しない
+  if (RESIDENCE_STATUSES_WITHOUT_DOCUMENTS.has(residenceStatus)) return [];
   switch (residenceStatus) {
     case "技能実習":
       return [...BASIC_DOCUMENTS, ...TRAINEE_DOCUMENTS];
@@ -104,6 +112,9 @@ export function getDocumentDefinitions(residenceStatus: string): { kind: string;
       return [...BASIC_DOCUMENTS, ...GIJINKOKU_DOCUMENTS];
     case "特定活動":
       return [...BASIC_DOCUMENTS, ...TOKUTEI_ACTIVITY_DOCUMENTS];
+    case "永住":
+      // 永住者は基本書類 (在留カード) のみ
+      return [...BASIC_DOCUMENTS];
     default:
       return [...BASIC_DOCUMENTS];
   }
