@@ -527,6 +527,10 @@ export default function EditPersonForm({
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="現在の在留資格">
                 <select className={INPUT} value={form.residenceStatus} onChange={(event) => setValue("residenceStatus", event.target.value)}>
+                  {/* 既存 DB の値がリストに無い場合も表示できるよう動的に追加 */}
+                  {form.residenceStatus && !RESIDENCE_STATUSES.includes(form.residenceStatus) ? (
+                    <option value={form.residenceStatus}>{form.residenceStatus} (要修正)</option>
+                  ) : null}
                   {RESIDENCE_STATUSES.map((status) => (
                     <option key={status}>{status}</option>
                   ))}
