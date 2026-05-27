@@ -11,7 +11,11 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/logo") ||
-    pathname.startsWith("/api/auth")
+    pathname.startsWith("/api/auth") ||
+    // 外部からの Webhook (LINE / Messenger / WhatsApp 等) は未ログインで呼ばれる
+    pathname.startsWith("/api/line/webhook") ||
+    pathname.startsWith("/api/messenger/webhook") ||
+    pathname.startsWith("/api/whatsapp/webhook")
   ) {
     return NextResponse.next();
   }
