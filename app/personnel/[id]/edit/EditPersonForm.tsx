@@ -642,7 +642,7 @@ export default function EditPersonForm({
               </div>
               <div className="mt-4 space-y-4">
                 {form.workExperiences.map((entry, index) => (
-                  <div key={`${index}-${entry.companyName}`} className="rounded-2xl border border-white bg-white p-4">
+                  <div key={index} className="rounded-2xl border border-white bg-white p-4">
                     <div className="grid gap-4 md:grid-cols-2">
                       <Field label="会社名" className="md:col-span-2">
                         <input className={INPUT} value={entry.companyName} onChange={(event) => updateWorkExperience(index, "companyName", event.target.value)} />
