@@ -125,6 +125,7 @@ export default function EditPersonForm({
   const [activeSection, setActiveSection] = useState<(typeof SECTION_ITEMS)[number]["id"]>("basic");
   const [submitting, setSubmitting] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [form, setForm] = useState({
@@ -196,6 +197,13 @@ export default function EditPersonForm({
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
+
+  // 保存後 3 秒で「保存しました」トーストを自動非表示
+  useEffect(() => {
+    if (savedAt === null) return;
+    const t = setTimeout(() => setSavedAt(null), 3000);
+    return () => clearTimeout(t);
+  }, [savedAt]);
 
   // ⌘/Ctrl + S で保存ショートカット
   useEffect(() => {
@@ -365,7 +373,8 @@ export default function EditPersonForm({
         return;
       }
       setDirty(false);
-      router.push("/personnel");
+      setSavedAt(Date.now());
+      // 一覧へ遷移せず、現在のページに残ったまま最新データを再取得
       router.refresh();
     } catch {
       alert("更新に失敗しました");
@@ -798,6 +807,18 @@ export default function EditPersonForm({
           {deleting ? "削除中..." : "削除"}
         </button>
       </div>
+
+      {/* 保存しましたトースト (3 秒で消える) */}
+      {savedAt !== null && !dirty ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4 sm:pb-6">
+          <div className="flex items-center gap-2 rounded-full border border-[#16A34A]/30 bg-[#F0FDF4] px-5 py-3 text-sm font-medium text-[#15803D] shadow-xl">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            保存しました
+          </div>
+        </div>
+      ) : null}
 
       {/* 未保存の変更があるときに画面下から浮上してくる固定保存バー */}
       {dirty && (activeSection === "basic" || activeSection === "visa") ? (
