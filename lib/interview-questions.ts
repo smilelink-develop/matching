@@ -267,19 +267,6 @@ export const INTERVIEW_SECTIONS: InterviewSection[] = [
         jsonKey: "jobUnderstanding",
       },
       {
-        key: "companyAwareness",
-        question: "弊社がどんな会社か知っていますか？",
-        type: "text",
-        jsonKey: "companyAwareness",
-      },
-      {
-        key: "noHousingOk",
-        question:
-          "この求人は社宅がありません。ご自身で部屋を探す必要がありますが、大丈夫ですか？",
-        type: "text",
-        jsonKey: "noHousingOk",
-      },
-      {
         key: "movingCostReady",
         question: "引っ越し費用や初期費用は準備できますか？",
         type: "text",
