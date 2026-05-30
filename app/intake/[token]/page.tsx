@@ -17,6 +17,7 @@ export default async function IntakePage({
     select: {
       id: true,
       name: true,
+      intakeConfig: true,
       onboarding: { select: { englishName: true } },
       resumeProfile: {
         select: {
@@ -32,11 +33,31 @@ export default async function IntakePage({
   });
   if (!person) notFound();
 
+  const cfg =
+    person.intakeConfig && typeof person.intakeConfig === "object"
+      ? (person.intakeConfig as Record<string, unknown>)
+      : {};
+  const excludedKeys = Array.isArray(cfg.excludedKeys)
+    ? (cfg.excludedKeys as string[]).filter((s) => typeof s === "string")
+    : [];
+  const customQuestions = Array.isArray(cfg.customQuestions)
+    ? (cfg.customQuestions as Array<{ key?: unknown; label?: unknown; required?: unknown; type?: unknown }>)
+        .map((q) => ({
+          key: typeof q.key === "string" ? q.key : "",
+          label: typeof q.label === "string" ? q.label : "",
+          required: q.required === true,
+          type: q.type === "textarea" ? "textarea" : "text",
+        }))
+        .filter((q) => q.key && q.label)
+    : [];
+
   return (
     <IntakeClient
       token={token}
       personName={person.name}
       englishName={person.onboarding?.englishName ?? null}
+      excludedKeys={excludedKeys}
+      customQuestions={customQuestions as { key: string; label: string; required: boolean; type: "text" | "textarea" }[]}
       initial={{
         motivation: person.resumeProfile?.motivation ?? "",
         selfIntroduction: person.resumeProfile?.selfIntroduction ?? "",

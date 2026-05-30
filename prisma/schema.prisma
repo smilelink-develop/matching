@@ -25,6 +25,9 @@ model Person {
   registeredBy    String?
   /// 候補者向け公開フォーム (intake) の共有トークン。SNS / LINE 等で URL を渡す
   intakeToken     String?  @unique
+  /// 公開フォームの設定 (除外する質問キー / 個別追加質問)
+  ///   形式: { excludedKeys: string[], customQuestions: [{ key, label, required, type }] }
+  intakeConfig    Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

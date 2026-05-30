@@ -41,6 +41,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ token: string }> 
     select: {
       id: true,
       name: true,
+      intakeConfig: true,
       onboarding: { select: { englishName: true } },
       resumeProfile: {
         select: {
@@ -57,6 +58,10 @@ export async function GET(_: Request, ctx: { params: Promise<{ token: string }> 
   if (!person) {
     return Response.json({ ok: false, error: "リンクが無効です" }, { status: 404 });
   }
+  const config =
+    person.intakeConfig && typeof person.intakeConfig === "object"
+      ? (person.intakeConfig as Record<string, unknown>)
+      : {};
   return Response.json({
     ok: true,
     person: {
@@ -64,6 +69,8 @@ export async function GET(_: Request, ctx: { params: Promise<{ token: string }> 
       englishName: person.onboarding?.englishName ?? null,
     },
     answers: pickAnswers(person.resumeProfile),
+    excludedKeys: Array.isArray(config.excludedKeys) ? config.excludedKeys : [],
+    customQuestions: Array.isArray(config.customQuestions) ? config.customQuestions : [],
   });
 }
 

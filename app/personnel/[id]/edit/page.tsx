@@ -102,7 +102,22 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             候補者が回答すると 50+ 項目が自動でこの画面の各欄に反映されます。
           </p>
           <div className="mt-3">
-            <IntakeLinkButton personId={person.id} />
+            <IntakeLinkButton
+              personId={person.id}
+              personName={person.name}
+              answers={{
+                motivation: person.resumeProfile?.motivation ?? "",
+                selfIntroduction: person.resumeProfile?.selfIntroduction ?? "",
+                japanPurpose: person.resumeProfile?.japanPurpose ?? "",
+                currentJob: person.resumeProfile?.currentJob ?? "",
+                retirementReason: person.resumeProfile?.retirementReason ?? "",
+                interviewAnswers:
+                  person.resumeProfile?.interviewAnswers &&
+                  typeof person.resumeProfile.interviewAnswers === "object"
+                    ? (person.resumeProfile.interviewAnswers as Record<string, string>)
+                    : {},
+              }}
+            />
           </div>
         </div>
 
