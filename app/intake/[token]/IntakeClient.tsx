@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { INTERVIEW_SECTIONS, type InterviewQuestion } from "@/lib/interview-questions";
 
 type ExistingFields = "motivation" | "selfIntroduction" | "japanPurpose" | "currentJob" | "retirementReason";
@@ -14,6 +14,15 @@ type CustomQuestion = {
   label: string;
   required: boolean;
   type: "text" | "textarea";
+};
+
+type PageBlock = {
+  title: string;
+  description?: string;
+  questions: (
+    | { kind: "interview"; q: InterviewQuestion }
+    | { kind: "custom"; q: CustomQuestion }
+  )[];
 };
 
 export default function IntakeClient({
@@ -35,6 +44,37 @@ export default function IntakeClient({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pageIdx, setPageIdx] = useState(0);
+
+  // 1 ページ = 1 セクションでビルド。空セクション + カスタム質問ページを末尾に追加
+  const pages = useMemo<PageBlock[]>(() => {
+    const isAnswered = (q: InterviewQuestion): boolean => {
+      if (q.existingField) return (initial[q.existingField] ?? "").trim().length > 0;
+      return (initial.interviewAnswers[q.jsonKey ?? q.key] ?? "").trim().length > 0;
+    };
+    const result: PageBlock[] = [];
+    for (const section of INTERVIEW_SECTIONS) {
+      const qs = section.questions
+        .filter((q) => !excludedKeys.includes(q.key) && !isAnswered(q))
+        .map((q) => ({ kind: "interview" as const, q }));
+      if (qs.length > 0) {
+        result.push({ title: section.title, description: section.description, questions: qs });
+      }
+    }
+    if (customQuestions.length > 0) {
+      result.push({
+        title: "担当者からの個別質問",
+        questions: customQuestions.map((q) => ({ kind: "custom" as const, q })),
+      });
+    }
+    return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [excludedKeys, customQuestions, initial]);
+
+  const totalPages = pages.length;
+  const currentPage = pages[pageIdx];
+  const isLastPage = pageIdx >= totalPages - 1;
+  const progressPct = totalPages > 0 ? Math.round(((pageIdx + 1) / totalPages) * 100) : 0;
 
   const setExisting = (key: ExistingFields, value: string) => {
     setForm((c) => ({ ...c, [key]: value }));
@@ -43,8 +83,36 @@ export default function IntakeClient({
     setForm((c) => ({ ...c, interviewAnswers: { ...c.interviewAnswers, [key]: value } }));
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 必須カスタム質問の充足チェック (現ページ分)
+  const currentPageInvalid = useMemo(() => {
+    if (!currentPage) return false;
+    for (const item of currentPage.questions) {
+      if (item.kind === "custom" && item.q.required) {
+        const v = form.interviewAnswers[item.q.key] ?? "";
+        if (!v.trim()) return true;
+      }
+    }
+    return false;
+  }, [currentPage, form]);
+
+  const next = () => {
+    if (currentPageInvalid) {
+      alert("必須の質問に回答してください / Please answer required fields.");
+      return;
+    }
+    setPageIdx((i) => Math.min(i + 1, totalPages - 1));
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const prev = () => {
+    setPageIdx((i) => Math.max(i - 1, 0));
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const submit = async () => {
+    if (currentPageInvalid) {
+      alert("必須の質問に回答してください / Please answer required fields.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -82,7 +150,7 @@ export default function IntakeClient({
           </p>
           <button
             type="button"
-            onClick={() => setSubmitted(false)}
+            onClick={() => { setSubmitted(false); setPageIdx(0); }}
             className="text-xs text-[var(--color-primary)] hover:underline"
           >
             続けて編集する / Edit again
@@ -92,93 +160,90 @@ export default function IntakeClient({
     );
   }
 
-  // 質問のフィルタリング:
-  // 1. excludedKeys にある質問はスキップ
-  // 2. 既に回答済みの質問はスキップ (再表示しない)
-  // ※ 残った質問のみセクション内に表示。セクション全体が空なら非表示
-  const isAnswered = (q: InterviewQuestion): boolean => {
-    if (q.existingField) return (initial[q.existingField] ?? "").trim().length > 0;
-    return (initial.interviewAnswers[q.jsonKey ?? q.key] ?? "").trim().length > 0;
-  };
-  const sectionsToShow = INTERVIEW_SECTIONS.map((section) => ({
-    title: section.title,
-    description: section.description,
-    questions: section.questions.filter((q) => !excludedKeys.includes(q.key) && !isAnswered(q)),
-  })).filter((section) => section.questions.length > 0);
-
-  const totalQuestionsToShow =
-    sectionsToShow.reduce((sum, s) => sum + s.questions.length, 0) + customQuestions.length;
+  if (totalPages === 0) {
+    return (
+      <div className="min-h-screen bg-[var(--color-light)] flex items-center justify-center p-6">
+        <div className="max-w-md w-full rounded-2xl bg-white p-8 shadow-md text-center space-y-3">
+          <h1 className="text-base font-semibold text-[var(--color-text-dark)]">
+            質問はありません / No questions
+          </h1>
+          <p className="text-sm text-gray-500">
+            担当者へご連絡ください。<br />
+            Please contact the recruiter.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[var(--color-light)] py-8 px-4">
-      <form onSubmit={submit} className="max-w-3xl mx-auto space-y-5">
-        <div className="rounded-2xl bg-white p-6 shadow-md">
-          <p className="text-xs font-semibold tracking-[0.16em] text-[var(--color-primary)]">SMILE MATCHING</p>
-          <h1 className="mt-2 text-2xl font-bold text-[var(--color-text-dark)]">
-            事前質問フォーム / Pre-Interview Form
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {personName}
-            {englishName ? ` / ${englishName}` : ""} さん
-          </p>
-          <p className="mt-2 text-xs text-gray-500 leading-relaxed">
-            日本語で答えてください。わからない質問は空欄でも大丈夫です。/
-            Please answer in Japanese. You can leave items blank if you don&apos;t know.
-          </p>
-          {totalQuestionsToShow === 0 ? (
-            <p className="mt-3 rounded-xl border border-dashed border-gray-200 px-4 py-3 text-center text-sm text-gray-400">
-              質問がありません。担当者へご連絡ください。
-            </p>
-          ) : null}
+    <div className="min-h-screen bg-[var(--color-light)] py-6 px-4">
+      <div className="max-w-2xl mx-auto space-y-4">
+        {/* ヘッダー (常時表示) */}
+        <div className="rounded-2xl bg-white p-5 shadow-md">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold tracking-[0.16em] text-[var(--color-primary)]">SMILE MATCHING</p>
+              <h1 className="mt-1 text-lg font-bold text-[var(--color-text-dark)]">
+                事前質問フォーム / Pre-Interview
+              </h1>
+              <p className="mt-1 text-xs text-gray-500 truncate">
+                {personName}
+                {englishName ? ` / ${englishName}` : ""}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[11px] font-medium text-gray-500">
+                {pageIdx + 1} / {totalPages}
+              </p>
+            </div>
+          </div>
+          {/* プログレスバー */}
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full bg-[var(--color-primary)] transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </div>
 
-        {sectionsToShow.map((section, sectionIdx) => (
-          <section key={sectionIdx} className="rounded-2xl bg-white p-6 shadow-md">
-            <h2 className="text-base font-bold text-[var(--color-text-dark)]">{section.title}</h2>
-            {section.description ? (
-              <p className="mt-1 text-xs text-gray-500">{section.description}</p>
-            ) : null}
-            <div className="mt-4 space-y-4">
-              {section.questions.map((q) => (
+        {/* 現在のページ */}
+        <section className="rounded-2xl bg-white p-6 shadow-md">
+          <h2 className="text-base font-bold text-[var(--color-text-dark)]">{currentPage.title}</h2>
+          {currentPage.description ? (
+            <p className="mt-1 text-xs text-gray-500">{currentPage.description}</p>
+          ) : null}
+          <div className="mt-5 space-y-5">
+            {currentPage.questions.map((item) =>
+              item.kind === "interview" ? (
                 <QuestionField
-                  key={q.key}
-                  label={q.question}
-                  hint={q.hint}
-                  type={q.type === "textarea" ? "textarea" : q.type === "select" ? "select" : "text"}
-                  options={q.options}
+                  key={`i_${item.q.key}`}
+                  label={item.q.question}
+                  hint={item.q.hint}
+                  type={item.q.type === "textarea" ? "textarea" : item.q.type === "select" ? "select" : "text"}
+                  options={item.q.options}
                   value={
-                    q.existingField
-                      ? form[q.existingField]
-                      : form.interviewAnswers[q.jsonKey ?? q.key] ?? ""
+                    item.q.existingField
+                      ? form[item.q.existingField]
+                      : form.interviewAnswers[item.q.jsonKey ?? item.q.key] ?? ""
                   }
                   onChange={(v) => {
-                    if (q.existingField) setExisting(q.existingField, v);
-                    else setAnswer(q.jsonKey ?? q.key, v);
+                    if (item.q.existingField) setExisting(item.q.existingField, v);
+                    else setAnswer(item.q.jsonKey ?? item.q.key, v);
                   }}
                 />
-              ))}
-            </div>
-          </section>
-        ))}
-
-        {customQuestions.length > 0 ? (
-          <section className="rounded-2xl bg-white p-6 shadow-md">
-            <h2 className="text-base font-bold text-[var(--color-text-dark)]">
-              担当者からの個別質問 / Custom Questions
-            </h2>
-            <div className="mt-4 space-y-4">
-              {customQuestions.map((q) => (
+              ) : (
                 <QuestionField
-                  key={q.key}
-                  label={q.label + (q.required ? " *" : "")}
-                  type={q.type}
-                  value={form.interviewAnswers[q.key] ?? ""}
-                  onChange={(v) => setAnswer(q.key, v)}
+                  key={`c_${item.q.key}`}
+                  label={item.q.label + (item.q.required ? " *" : "")}
+                  type={item.q.type}
+                  value={form.interviewAnswers[item.q.key] ?? ""}
+                  onChange={(v) => setAnswer(item.q.key, v)}
                 />
-              ))}
-            </div>
-          </section>
-        ) : null}
+              )
+            )}
+          </div>
+        </section>
 
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -186,18 +251,38 @@ export default function IntakeClient({
           </div>
         ) : null}
 
-        {totalQuestionsToShow > 0 ? (
-          <div className="sticky bottom-4 z-10 flex justify-center">
+        {/* ナビゲーション (sticky 下部) */}
+        <div className="sticky bottom-3 z-10 rounded-2xl bg-white px-4 py-3 shadow-xl">
+          <div className="flex items-center justify-between gap-2">
             <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-full bg-[var(--color-primary)] px-8 py-3 text-sm font-semibold text-white shadow-xl hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+              type="button"
+              onClick={prev}
+              disabled={pageIdx === 0}
+              className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-30"
             >
-              {submitting ? "送信中... / Submitting..." : "回答を送信する / Submit answers"}
+              ← 戻る / Back
             </button>
+            {isLastPage ? (
+              <button
+                type="button"
+                onClick={() => void submit()}
+                disabled={submitting}
+                className="rounded-full bg-[var(--color-primary)] px-6 py-2 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+              >
+                {submitting ? "送信中..." : "送信する / Submit"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={next}
+                className="rounded-full bg-[var(--color-primary)] px-6 py-2 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+              >
+                次へ / Next →
+              </button>
+            )}
           </div>
-        ) : null}
-      </form>
+        </div>
+      </div>
     </div>
   );
 }
@@ -222,7 +307,7 @@ function QuestionField({
       <label className="block text-sm font-medium text-[var(--color-text-dark)] mb-1.5">{label}</label>
       {type === "textarea" ? (
         <textarea
-          className="w-full min-h-[88px] rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20"
+          className="w-full min-h-[96px] rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={hint}

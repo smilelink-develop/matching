@@ -8,9 +8,11 @@ export default function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPortal = pathname.startsWith("/portal");
   const isAuth = pathname.startsWith("/login");
+  // 候補者向け公開フォーム (intake) は token 認証で動作するためサイドバーも認証チェックも不要
+  const isIntake = pathname.startsWith("/intake");
 
   useEffect(() => {
-    if (isPortal || isAuth) return;
+    if (isPortal || isAuth || isIntake) return;
 
     const checkSession = async () => {
       try {
@@ -25,9 +27,9 @@ export default function AppFrame({ children }: { children: React.ReactNode }) {
     };
 
     void checkSession();
-  }, [isAuth, isPortal]);
+  }, [isAuth, isPortal, isIntake]);
 
-  if (isPortal || isAuth) {
+  if (isPortal || isAuth || isIntake) {
     return (
       <body className={`min-h-full ${isAuth ? "bg-[var(--color-text-dark)] text-white" : "bg-[var(--color-light)] text-[var(--color-text-dark)]"}`}>
         {children}
