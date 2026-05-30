@@ -11,6 +11,7 @@ import PlacementPanel from "./PlacementPanel";
 import DriveActionsPanel from "./DriveActionsPanel";
 import PhotoPanel from "./PhotoPanel";
 import CreateResumeButton from "./CreateResumeButton";
+import IntakeLinkButton from "./IntakeLinkButton";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,20 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             {person.registeredBy ? <> ・ 登録者: <span className="font-medium text-gray-500">{person.registeredBy}</span></> : null}
             {" "}・ 追加日 {new Date(person.createdAt).toLocaleDateString("ja-JP")}
           </p>
+        </div>
+
+        {/* 事前質問フォーム URL 発行 (LINE/SNS で候補者に送れるリンク) */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-semibold text-[var(--color-text-dark)]">
+            事前質問フォーム
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            候補者向けの公開フォームを発行できます。LINE / Messenger / SNS で URL を送り、
+            候補者が回答すると 50+ 項目が自動でこの画面の各欄に反映されます。
+          </p>
+          <div className="mt-3">
+            <IntakeLinkButton personId={person.id} />
+          </div>
         </div>
 
         <CustomQuestionsProvider

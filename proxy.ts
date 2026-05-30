@@ -15,7 +15,10 @@ export function proxy(request: NextRequest) {
     // 外部からの Webhook (LINE / Messenger / WhatsApp 等) は未ログインで呼ばれる
     pathname.startsWith("/api/line/webhook") ||
     pathname.startsWith("/api/messenger/webhook") ||
-    pathname.startsWith("/api/whatsapp/webhook")
+    pathname.startsWith("/api/whatsapp/webhook") ||
+    // 候補者向け公開フォーム (intake) は token 認証で動作するため未ログイン可
+    pathname.startsWith("/intake/") ||
+    pathname.startsWith("/api/intake/")
   ) {
     return NextResponse.next();
   }

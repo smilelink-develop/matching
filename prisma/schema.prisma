@@ -23,6 +23,8 @@ model Person {
   whatsappId      String?
   /// 候補者を追加した担当者の表示名 (固定リストから 1 つ: トゥイ / チンディ / ミン / 土田)
   registeredBy    String?
+  /// 候補者向け公開フォーム (intake) の共有トークン。SNS / LINE 等で URL を渡す
+  intakeToken     String?  @unique
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
