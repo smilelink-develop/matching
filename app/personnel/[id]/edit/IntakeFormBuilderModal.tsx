@@ -157,6 +157,46 @@ export default function IntakeFormBuilderModal({
           <CloseButton onClick={onClose} />
         </div>
 
+        {/* URL 発行済みのときはモーダル上部に固定表示 */}
+        {issuedUrl ? (
+          <div className="border-b border-[#16A34A]/30 bg-[#F0FDF4] px-6 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-[#15803D]">✓ URL を発行済み</p>
+                <p className="mt-0.5 break-all font-mono text-[11px] text-gray-700">{issuedUrl}</p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void copyUrl()}
+                  className="rounded-lg border border-[var(--color-primary)] bg-white px-3 py-1.5 text-[11px] font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
+                >
+                  {copied ? "コピー完了" : "コピー"}
+                </button>
+                <a
+                  href={issuedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  プレビュー
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm("URL を再発行すると、旧 URL は使えなくなります。よろしいですか?")) {
+                      void issueUrl(true);
+                    }
+                  }}
+                  className="text-[10px] text-gray-500 hover:underline"
+                >
+                  再発行
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
           {loading ? (
             <p className="text-center text-sm text-gray-400">読み込み中...</p>
@@ -322,40 +362,6 @@ export default function IntakeFormBuilderModal({
                 </div>
               </div>
 
-              {issuedUrl ? (
-                <div className="rounded-2xl border border-[#16A34A]/30 bg-[#F0FDF4] px-4 py-3">
-                  <p className="text-xs font-semibold text-[#15803D]">URL を発行しました</p>
-                  <p className="mt-1 break-all font-mono text-[11px] text-gray-700">{issuedUrl}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void copyUrl()}
-                      className="rounded-lg border border-[var(--color-primary)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-light)]"
-                    >
-                      {copied ? "コピー完了" : "URL をコピー"}
-                    </button>
-                    <a
-                      href={issuedUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      プレビュー
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm("URL を再発行すると、旧 URL は使えなくなります。よろしいですか?")) {
-                          void issueUrl(true);
-                        }
-                      }}
-                      className="text-[11px] text-gray-500 hover:underline"
-                    >
-                      再発行
-                    </button>
-                  </div>
-                </div>
-              ) : null}
             </>
           )}
         </div>
