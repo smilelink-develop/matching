@@ -3,10 +3,34 @@
  * - lineUserId があれば LINE Messaging API
  * - 無くて messengerPsid があれば Facebook Messenger Graph API
  * - 送信成功した場合のみ Message テーブルに outbound 記録
+ * - 本文中の {{パートナー名}} {{急ぎ案件一覧}} 等の変数を実データで展開してから送信
  *
  * (パス名は send-person との対称のために "line" 配下だが、実際は LINE / Messenger 両方扱う)
  */
 import { prisma } from "@/lib/prisma";
+import {
+  expandTemplate,
+  dealToBroadcast,
+  OPEN_DEAL_STATUSES,
+  URGENT_DEAL_STATUSES,
+  type PartnerForBroadcast,
+} from "@/lib/broadcast-variables";
+
+/** 配信用の案件スナップショットを 1 回だけ取得 */
+async function loadDealSnapshot() {
+  const deals = await prisma.deal.findMany({
+    where: { status: { in: [...OPEN_DEAL_STATUSES] } },
+    include: { company: { select: { name: true } } },
+    orderBy: { id: "asc" },
+  });
+  const mapped = deals.map(dealToBroadcast);
+  return {
+    openDeals: mapped,
+    urgentDeals: mapped.filter((d) =>
+      (URGENT_DEAL_STATUSES as readonly string[]).includes(d.status),
+    ),
+  };
+}
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +52,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // {{変数}} の展開
+    let expandedMessage = message as string;
+    if (expandedMessage.includes("{{")) {
+      const { openDeals, urgentDeals } = await loadDealSnapshot();
+      const ctx: PartnerForBroadcast = {
+        name: partner.name,
+        contactName: partner.contactName,
+        country: partner.country,
+        introducibleFields: partner.introducibleFields,
+      };
+      expandedMessage = expandTemplate(expandedMessage, { partner: ctx, openDeals, urgentDeals });
+    }
+
     // LINE 優先 → Messenger フォールバック
     if (partner.lineUserId) {
       const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -45,7 +82,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           to: partner.lineUserId,
-          messages: [{ type: "text", text: message }],
+          messages: [{ type: "text", text: expandedMessage }],
         }),
       });
       if (!res.ok) {
@@ -59,11 +96,11 @@ export async function POST(req: Request) {
           partnerId: partner.id,
           channel: "LINE",
           direction: "outbound",
-          content: message,
+          content: expandedMessage,
           externalId: partner.lineUserId,
         },
       });
-      return Response.json({ ok: true, channel: "LINE" });
+      return Response.json({ ok: true, channel: "LINE", content: expandedMessage });
     }
 
     if (partner.messengerPsid) {
@@ -84,7 +121,7 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             recipient: { id: partner.messengerPsid },
             messaging_type: "RESPONSE",
-            message: { text: message },
+            message: { text: expandedMessage },
           }),
         }
       );
@@ -103,11 +140,11 @@ export async function POST(req: Request) {
           partnerId: partner.id,
           channel: "Messenger",
           direction: "outbound",
-          content: message,
+          content: expandedMessage,
           externalId: partner.messengerPsid,
         },
       });
-      return Response.json({ ok: true, channel: "Messenger" });
+      return Response.json({ ok: true, channel: "Messenger", content: expandedMessage });
     }
 
     return Response.json(

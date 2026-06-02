@@ -218,7 +218,8 @@ export default function ChatClient({ partners, initialMessages, templates }: {
             partnerId: selected.id,
             channel: data.channel ?? selected.channel ?? "LINE",
             direction: "outbound",
-            content: input,
+            // サーバが {{変数}} を展開した本文を返すのでそれを表示
+            content: data.content ?? input,
             sentAt: new Date().toISOString(),
             readAt: null,
           },
