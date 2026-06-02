@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function PartnersPage() {
   await requireCurrentAccount();
   const partners = await prisma.partner.findMany({
-    orderBy: [{ updatedAt: "desc" }, { name: "asc" }],
+    orderBy: { id: "desc" },
     include: {
       _count: { select: { deals: true, persons: true } },
     },
