@@ -1,18 +1,42 @@
 /**
- * メール送信ライブラリ (Resend API 直叩き)
+ * メール送信ライブラリ (SMTP 経由)
+ *
+ * デフォルトで Gmail / Google Workspace の SMTP を使用する想定。
+ * 返信は SMTP_USER (送信元) の受信箱に直接届く。
  *
  * 環境変数:
- *   RESEND_API_KEY      = re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
- *   RESEND_FROM_EMAIL   = SMILE MATCHING <noreply@example.com>
- *                          ↑ Resend で検証済みドメインのアドレス
+ *   SMTP_HOST  = smtp.gmail.com
+ *   SMTP_PORT  = 587  (TLS / STARTTLS)
+ *   SMTP_USER  = recruit@croslan.co.jp
+ *   SMTP_PASS  = (Google アプリパスワード 16 文字)
+ *   SMTP_FROM  = SMILE MATCHING <recruit@croslan.co.jp>
  *
- * 別の送信サービス (SendGrid / SES / Gmail SMTP 等) に変更したい場合は、
- * この sendEmail() の中身だけを差し替えれば全機能が動く。
+ * SMTP_FROM を別アドレスにしても、SMTP_USER の受信箱に届けば返信を確認可能。
  */
+import nodemailer, { type Transporter } from "nodemailer";
 
 export type EmailSendResult =
   | { ok: true; id?: string }
   | { ok: false; error: string };
+
+let cachedTransporter: Transporter | null = null;
+
+function getTransporter(): Transporter | null {
+  if (cachedTransporter) return cachedTransporter;
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT ?? "587");
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return null;
+
+  cachedTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465, // 465 = TLS、587 = STARTTLS
+    auth: { user, pass },
+  });
+  return cachedTransporter;
+}
 
 /**
  * 1 件のメールを送信する。HTML / プレーンテキスト両対応。
@@ -25,47 +49,37 @@ export async function sendEmail(opts: {
   subject: string;
   text?: string;
   html?: string;
-  /** 返信先 (省略すると RESEND_FROM_EMAIL と同じ) */
+  /** Reply-To ヘッダ。省略時は SMTP_USER と同じになるので、別アドレスへの返信誘導に使う */
   replyTo?: string;
 }): Promise<EmailSendResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL;
-
-  if (!apiKey || !from) {
+  const transporter = getTransporter();
+  if (!transporter) {
     return {
       ok: false,
-      error: "RESEND_API_KEY / RESEND_FROM_EMAIL が未設定です",
+      error: "SMTP_HOST / SMTP_USER / SMTP_PASS のいずれかが未設定です",
     };
   }
   if (!opts.text && !opts.html) {
     return { ok: false, error: "text または html のいずれかが必要です" };
   }
 
-  const body: Record<string, unknown> = {
-    from,
-    to: Array.isArray(opts.to) ? opts.to : [opts.to],
-    subject: opts.subject,
-  };
-  if (opts.text) body.text = opts.text;
-  if (opts.html) body.html = opts.html;
-  if (opts.replyTo) body.reply_to = opts.replyTo;
+  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER;
+  if (!from) {
+    return { ok: false, error: "SMTP_FROM または SMTP_USER が必要です" };
+  }
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
+    const info = await transporter.sendMail({
+      from,
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text,
+      html: opts.html,
+      replyTo: opts.replyTo,
     });
-    if (!res.ok) {
-      return { ok: false, error: await res.text() };
-    }
-    const data = (await res.json()) as { id?: string };
-    return { ok: true, id: data.id };
+    return { ok: true, id: info.messageId };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "fetch error" };
+    return { ok: false, error: e instanceof Error ? e.message : "smtp error" };
   }
 }
 
@@ -79,12 +93,10 @@ export function textToBasicHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-  // URL を a タグに
   const linked = escaped.replace(
     /(https?:\/\/[^\s<]+)/g,
     '<a href="$1" style="color:#0c8a61;text-decoration:underline">$1</a>'
   );
-  // 改行を <br>
   const withBreaks = linked.replace(/\n/g, "<br>");
   return `<div style="font-family:sans-serif;line-height:1.7;color:#1f2937">${withBreaks}</div>`;
 }
