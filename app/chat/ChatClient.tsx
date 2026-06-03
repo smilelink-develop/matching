@@ -9,6 +9,9 @@ type Partner = {
   channel: string | null;
   contactName: string | null;
   lineUserId: string | null;
+  lineGroupId: string | null;
+  lineGroupName: string | null;
+  lineGroupMemberCount: number | null;
   messengerPsid: string | null;
   whatsappId: string | null;
 };
@@ -24,6 +27,7 @@ type Message = {
 type Template = { id: number; name: string; content: string };
 
 const CHANNEL_COLOR: Record<string, string> = {
+  "LINE-Group": "bg-emerald-100 text-emerald-700",
   LINE: "bg-green-100 text-green-700",
   Messenger: "bg-blue-100 text-blue-700",
   mail: "bg-yellow-100 text-yellow-700",
@@ -198,8 +202,8 @@ export default function ChatClient({ partners, initialMessages, templates }: {
 
   const send = async () => {
     if (!input.trim() || !selected) return;
-    if (!selected.lineUserId && !selected.messengerPsid) {
-      alert("このパートナーには LINE / Messenger ID が登録されていません");
+    if (!selected.lineGroupId && !selected.lineUserId && !selected.messengerPsid) {
+      alert("このパートナーには LINE グループ / 個人 LINE / Messenger ID が登録されていません");
       return;
     }
     setSending(true);
@@ -276,7 +280,17 @@ export default function ChatClient({ partners, initialMessages, templates }: {
                   <Avatar name={p.name} className="h-10 w-10 shrink-0 rounded-full text-xs" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium text-[var(--color-text-dark)] truncate">{p.name}</p>
+                      <div className="min-w-0 flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-[var(--color-text-dark)] truncate">{p.name}</p>
+                        {p.lineGroupId ? (
+                          <span
+                            title={`LINE グループ${p.lineGroupMemberCount ? ` (${p.lineGroupMemberCount}名)` : ""}`}
+                            className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700"
+                          >
+                            G{p.lineGroupMemberCount ? `·${p.lineGroupMemberCount}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {lastMsg && (
                           <span className="text-[11px] text-gray-400">
@@ -302,7 +316,7 @@ export default function ChatClient({ partners, initialMessages, templates }: {
           {sortedPartners.length === 0 && (
             <p className="p-4 text-sm text-gray-400 text-center">
               該当パートナーがいません<br />
-              <span className="text-[11px]">LINE / Messenger ID が紐づいたパートナーのみ表示されます</span>
+              <span className="text-[11px]">LINE グループ / 個人 LINE / Messenger ID が紐づいたパートナーのみ表示されます</span>
             </p>
           )}
         </div>
@@ -324,12 +338,22 @@ export default function ChatClient({ partners, initialMessages, templates }: {
                   {selected.contactName ? (
                     <span className="text-xs text-gray-500">担当: {selected.contactName}</span>
                   ) : null}
-                  {selected.channel ? (
+                  {selected.lineGroupId ? (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CHANNEL_COLOR["LINE-Group"]}`}>
+                      LINEグループ
+                      {selected.lineGroupMemberCount ? ` (${selected.lineGroupMemberCount}名)` : ""}
+                    </span>
+                  ) : selected.channel ? (
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CHANNEL_COLOR[selected.channel] ?? "bg-gray-100 text-gray-600"}`}>
                       {selected.channel}
                     </span>
                   ) : null}
                 </div>
+                {selected.lineGroupName ? (
+                  <p className="mt-0.5 text-[11px] text-gray-400 truncate">
+                    {selected.lineGroupName}
+                  </p>
+                ) : null}
               </div>
             </div>
 

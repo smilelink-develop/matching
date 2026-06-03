@@ -9,12 +9,24 @@ export default async function ChatPage() {
   await requireCurrentAccount();
   await reconcileMessagePersonLinks();
 
+  // 連絡先 ID (LINE グループ / 個人 LINE / Messenger / WhatsApp) のいずれかが
+  // 紐づいているパートナーを取得
   const partners = await prisma.partner.findMany({
     where: {
       OR: [
+        { lineGroups: { some: { isActive: true } } },
         { lineUserId: { not: null } },
         { messengerPsid: { not: null } },
+        { whatsappId: { not: null } },
       ],
+    },
+    include: {
+      lineGroups: {
+        where: { isActive: true },
+        select: { groupId: true, groupName: true, memberCount: true },
+        orderBy: { lastSeenAt: "desc" },
+        take: 1,
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -39,6 +51,9 @@ export default async function ChatPage() {
         channel: p.channel,
         contactName: p.contactName,
         lineUserId: p.lineUserId,
+        lineGroupId: p.lineGroups[0]?.groupId ?? null,
+        lineGroupName: p.lineGroups[0]?.groupName ?? null,
+        lineGroupMemberCount: p.lineGroups[0]?.memberCount ?? null,
         messengerPsid: p.messengerPsid,
         whatsappId: p.whatsappId,
       }))}
