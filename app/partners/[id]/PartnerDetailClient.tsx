@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CHANNELS } from "@/lib/candidate-profile";
 import {
   INTRODUCIBLE_FIELDS,
@@ -114,6 +114,39 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  // 未保存のままページ離脱時に警告
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  // 保存後 3 秒で「保存しました」トーストを自動非表示
+  useEffect(() => {
+    if (savedAt === null) return;
+    const t = setTimeout(() => setSavedAt(null), 3000);
+    return () => clearTimeout(t);
+  }, [savedAt]);
+
+  // ⌘/Ctrl + S で保存ショートカット
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+        if (!dirty || saving) return;
+        e.preventDefault();
+        void save();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, saving]);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
     setForm((c) => ({ ...c, [k]: v }));
@@ -144,8 +177,8 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
         return;
       }
       setDirty(false);
+      setSavedAt(Date.now());
       router.refresh();
-      alert("保存しました");
     } finally {
       setSaving(false);
     }
@@ -578,6 +611,38 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
           </>
         ) : null}
       </section>
+
+      {/* 保存しましたトースト (3 秒で消える) */}
+      {savedAt !== null && !dirty ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4 sm:pb-6">
+          <div className="flex items-center gap-2 rounded-full border border-[#16A34A]/30 bg-[#F0FDF4] px-5 py-3 text-sm font-medium text-[#15803D] shadow-xl">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            保存しました
+          </div>
+        </div>
+      ) : null}
+
+      {/* 未保存の変更があるときに画面下から浮上してくる固定保存バー */}
+      {dirty ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4 sm:pb-6">
+          <div className="pointer-events-auto flex w-full max-w-3xl items-center justify-between gap-3 rounded-full border border-[var(--color-primary)]/30 bg-white/95 px-5 py-3 shadow-2xl ring-1 ring-black/5 backdrop-blur transition-all">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-[#F59E0B]" />
+              <span className="font-medium text-[var(--color-text-dark)]">未保存の変更があります</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void save()}
+              disabled={saving}
+              className="rounded-full bg-[var(--color-primary)] px-6 py-2 text-sm font-semibold text-white shadow-md hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            >
+              {saving ? "保存中..." : "保存する"}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
