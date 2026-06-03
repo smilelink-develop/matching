@@ -49,6 +49,7 @@ export default async function BroadcastPage() {
           channel: p.channel,
           linkStatus: p.linkStatus,
           contactName: p.contactName,
+          email: p.email,
           lineUserId: p.lineUserId,
           lineGroupName: p.lineGroups[0]?.groupName ?? null,
           lineGroupId: p.lineGroups[0]?.groupId ?? null,

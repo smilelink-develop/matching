@@ -19,6 +19,7 @@ export default async function TemplatesPage() {
           id: t.id,
           name: t.name,
           content: t.content,
+          emailSubject: t.emailSubject,
           whatsappTemplateName: t.whatsappTemplateName,
           whatsappTemplateLang: t.whatsappTemplateLang,
           whatsappTemplateParams: t.whatsappTemplateParams,

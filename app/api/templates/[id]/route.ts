@@ -8,6 +8,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const {
       name,
       content,
+      emailSubject,
       whatsappTemplateName,
       whatsappTemplateLang,
       whatsappTemplateParams,
@@ -18,6 +19,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       data: {
         name,
         content,
+        emailSubject: emailSubject || null,
         whatsappTemplateName: whatsappTemplateName || null,
         whatsappTemplateLang: whatsappTemplateLang || null,
         whatsappTemplateParams: whatsappTemplateParams || null,

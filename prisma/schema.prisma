@@ -314,6 +314,9 @@ model MessageTemplate {
   /// LINE / Messenger / 24h 内 WhatsApp 用の本文 ({{変数}} 含む)
   content   String
 
+  /// メール送信時の件名 ({{変数}} 使用可)。空のときは共通デフォルト件名
+  emailSubject String?
+
   // ── WhatsApp 承認済みテンプレートメッセージとして送る場合 ──
   /// Meta WhatsApp Business Manager で承認された テンプレ名 (例: partner_broadcast_v1)
   whatsappTemplateName String?

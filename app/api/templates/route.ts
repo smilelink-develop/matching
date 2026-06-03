@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     const {
       name,
       content,
+      emailSubject,
       whatsappTemplateName,
       whatsappTemplateLang,
       whatsappTemplateParams,
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
         accountId: account.id,
         name,
         content,
+        emailSubject: emailSubject || null,
         whatsappTemplateName: whatsappTemplateName || null,
         whatsappTemplateLang: whatsappTemplateLang || null,
         whatsappTemplateParams: whatsappTemplateParams || null,

@@ -7,6 +7,7 @@ type Template = {
   id: number;
   name: string;
   content: string;
+  emailSubject: string | null;
   whatsappTemplateName: string | null;
   whatsappTemplateLang: string | null;
   whatsappTemplateParams: string | null;
@@ -16,6 +17,7 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
   const [templates, setTemplates] = useState(initial);
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
   const [whatsappTemplateName, setWaName] = useState("");
   const [whatsappTemplateLang, setWaLang] = useState("");
   const [whatsappTemplateParams, setWaParams] = useState("");
@@ -27,6 +29,7 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
   const buildBody = () => ({
     name,
     content,
+    emailSubject: emailSubject.trim() || null,
     whatsappTemplateName: whatsappTemplateName.trim() || null,
     whatsappTemplateLang: whatsappTemplateLang.trim() || null,
     whatsappTemplateParams: whatsappTemplateParams.trim() || null,
@@ -67,6 +70,7 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
     setEditId(t.id);
     setName(t.name);
     setContent(t.content);
+    setEmailSubject(t.emailSubject ?? "");
     setWaName(t.whatsappTemplateName ?? "");
     setWaLang(t.whatsappTemplateLang ?? "");
     setWaParams(t.whatsappTemplateParams ?? "");
@@ -76,6 +80,7 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
     setEditId(null);
     setName("");
     setContent("");
+    setEmailSubject("");
     setWaName("");
     setWaLang("");
     setWaParams("");
@@ -113,6 +118,17 @@ export default function TemplatesClient({ templates: initial }: { templates: Tem
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">テンプレート名</label>
           <input className={INPUT} value={name} onChange={(e) => setName(e.target.value)} placeholder="急ぎ案件まとめ" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            メール件名 <span className="text-[10px] text-gray-400">(メール配信時のみ使用、空欄なら共通デフォルト)</span>
+          </label>
+          <input
+            className={INPUT}
+            value={emailSubject}
+            onChange={(e) => setEmailSubject(e.target.value)}
+            placeholder="【SMILE MATCHING】今週の急ぎ案件のご案内"
+          />
         </div>
         <div>
           <div className="flex items-end justify-between mb-1">

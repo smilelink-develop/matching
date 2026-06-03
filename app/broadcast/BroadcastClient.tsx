@@ -25,6 +25,7 @@ type Partner = {
   channel: string | null;
   linkStatus: string;
   contactName: string | null;
+  email: string | null;
   lineUserId: string | null;
   lineGroupId: string | null;
   lineGroupName: string | null;
@@ -85,7 +86,7 @@ export default function BroadcastClient({
         if (relationshipStatus !== ALL && (p.relationshipStatus ?? "") !== relationshipStatus) return false;
         if (introNationality !== ALL && !parseCsv(p.introducibleNationalities).includes(introNationality)) return false;
         if (introField !== ALL && !parseCsv(p.introducibleFields).includes(introField)) return false;
-        const isLinked = Boolean(p.lineGroupId || p.lineUserId || p.messengerPsid || p.whatsappId);
+        const isLinked = Boolean(p.lineGroupId || p.lineUserId || p.messengerPsid || p.whatsappId || p.email);
         if (linkFilter === "linked" && !isLinked) return false;
         if (linkFilter === "unlinked" && isLinked) return false;
         return true;
@@ -168,7 +169,7 @@ export default function BroadcastClient({
         alert(
           scheduled
             ? `予約完了: ${data.scheduledAt} に ${data.targetCount} 件へ送信予定`
-            : `送信完了: ${data.sentCount} 件成功 (LINEグループ ${data.sentLineGroup ?? 0} / LINE個人 ${data.sentLine ?? 0} / WhatsApp ${data.sentWhatsapp ?? 0} / Messenger ${data.sentMessenger ?? 0}) / ${data.failedCount} 件失敗`
+            : `送信完了: ${data.sentCount} 件成功 (LINEグループ ${data.sentLineGroup ?? 0} / LINE個人 ${data.sentLine ?? 0} / WhatsApp ${data.sentWhatsapp ?? 0} / Messenger ${data.sentMessenger ?? 0} / メール ${data.sentEmail ?? 0}) / ${data.failedCount} 件失敗`
         );
         setShowSchedule(false);
       } else {
@@ -330,7 +331,7 @@ export default function BroadcastClient({
                 </p>
               </div>
               <span className="ml-auto text-xs text-gray-400 shrink-0">
-                {p.lineGroupId ? "LINE-Group" : p.lineUserId ? "LINE" : p.messengerPsid ? "MSG" : p.whatsappId ? "WA" : "未登録"}
+                {p.lineGroupId ? "LINE-Group" : p.lineUserId ? "LINE" : p.messengerPsid ? "MSG" : p.whatsappId ? "WA" : p.email ? "Mail" : "未登録"}
               </span>
             </div>
           ))}

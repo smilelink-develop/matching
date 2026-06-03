@@ -7,6 +7,7 @@ import {
   type DealForBroadcast,
   type PartnerForBroadcast,
 } from "@/lib/broadcast-variables";
+import { sendEmail, textToBasicHtml, DEFAULT_EMAIL_SUBJECT } from "@/lib/email";
 
 /** 配信時の案件スナップショットを 1 回だけ取得 */
 async function loadDealSnapshot(): Promise<{
@@ -89,6 +90,7 @@ export async function POST(req: Request) {
       lineGroupId: string | null;
       messengerPsid: string | null;
       whatsappId: string | null;
+      email: string | null;
     };
     let targets: Target[] = [];
 
@@ -115,6 +117,7 @@ export async function POST(req: Request) {
         lineGroupId: m.partner.lineGroups[0]?.groupId ?? null,
         messengerPsid: m.partner.messengerPsid,
         whatsappId: m.partner.whatsappId,
+        email: m.partner.email,
       }));
     } else {
       const where: Record<string, unknown> = {};
@@ -133,6 +136,7 @@ export async function POST(req: Request) {
         lineGroupId: p.lineGroups[0]?.groupId ?? null,
         messengerPsid: p.messengerPsid,
         whatsappId: p.whatsappId,
+        email: p.email,
       }));
     }
 
@@ -176,6 +180,7 @@ export async function POST(req: Request) {
     let sentLine = 0;
     let sentWhatsapp = 0;
     let sentMessenger = 0;
+    let sentEmail = 0;
     let failedCount = 0;
     let skippedCount = 0;
     const failures: { name: string; channel: string; error: string }[] = [];
@@ -330,7 +335,7 @@ export async function POST(req: Request) {
         continue;
       }
 
-      // WhatsApp も無ければ Messenger
+      // Messenger
       if (t.messengerPsid) {
         const r = await sendMessenger(t.messengerPsid, personalizedMessage);
         if (r.ok) {
@@ -339,6 +344,45 @@ export async function POST(req: Request) {
         } else {
           failedCount++;
           failures.push({ name: t.name, channel: "Messenger", error: r.error });
+        }
+        continue;
+      }
+
+      // 最終フォールバック: メール
+      if (t.email) {
+        const partnerCtx: PartnerForBroadcast = {
+          name: t.name,
+          contactName: t.contactName,
+          country: t.country,
+          introducibleFields: t.introducibleFields,
+        };
+        const subjectTemplate = tmpl?.emailSubject?.trim() || DEFAULT_EMAIL_SUBJECT;
+        const subject = expandTemplate(subjectTemplate, {
+          partner: partnerCtx,
+          openDeals,
+          urgentDeals,
+        });
+        const r = await sendEmail({
+          to: t.email,
+          subject,
+          text: personalizedMessage,
+          html: textToBasicHtml(personalizedMessage),
+        });
+        if (r.ok) {
+          sentCount++;
+          sentEmail++;
+          await prisma.message.create({
+            data: {
+              partnerId: t.id,
+              channel: "Email",
+              direction: "outbound",
+              content: personalizedMessage,
+              externalId: t.email,
+            },
+          });
+        } else {
+          failedCount++;
+          failures.push({ name: t.name, channel: "Email", error: r.error });
         }
         continue;
       }
@@ -375,6 +419,7 @@ export async function POST(req: Request) {
       sentLine,
       sentWhatsapp,
       sentMessenger,
+      sentEmail,
       failedCount,
       skippedCount,
     });
