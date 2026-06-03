@@ -40,7 +40,13 @@ type Partner = {
   introducibleResidenceStatuses: string | null;
 };
 type Template = { id: number; name: string; content: string };
-type Group = { id: number; name: string; memberCount: number };
+type Group = {
+  id: number;
+  name: string;
+  memberCount: number;
+  /** Group 所属パートナーの ID 配列 (preview / 送信整合性のために必須) */
+  memberPartnerIds: number[];
+};
 
 const ALL = "すべて";
 
@@ -79,6 +85,8 @@ export default function BroadcastClient({
   const [sending, setSending] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleDate, setScheduleDate] = useState("");
+  /** 送信前の確認モーダル: 押下時の (scheduled) 値を保持 */
+  const [confirmingScheduled, setConfirmingScheduled] = useState<boolean | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -94,8 +102,21 @@ export default function BroadcastClient({
     [partners, relationshipStatus, introNationality, introField, linkFilter]
   );
 
-  const targetCount =
-    mode === "filter" ? filtered.length : groups.find((g) => g.id === Number(selectedGroup))?.memberCount ?? 0;
+  /**
+   * 実際の送信対象パートナー一覧。
+   * filter / group どちらのモードでも、ここで返した配列がそのまま
+   * プレビューにも送信 API にも渡る = 不整合ゼロ
+   */
+  const targetPartners = useMemo<Partner[]>(() => {
+    if (mode === "filter") return filtered;
+    // group mode: 選択された group のメンバー partner ID をもとに、partners から再構築
+    const selectedG = groups.find((g) => g.id === Number(selectedGroup));
+    if (!selectedG) return [];
+    const ids = new Set(selectedG.memberPartnerIds);
+    return partners.filter((p) => ids.has(p.id));
+  }, [mode, filtered, groups, selectedGroup, partners]);
+
+  const targetCount = targetPartners.length;
 
   const applyTemplate = (id: string) => {
     const t = templates.find((t) => t.id === Number(id));
@@ -125,19 +146,36 @@ export default function BroadcastClient({
   const previewMessage = useMemo(() => {
     if (!message.trim()) return "";
     const samplePartner: PartnerForBroadcast =
-      mode === "filter" && filtered.length > 0
+      targetPartners.length > 0
         ? {
-            name: filtered[0].name,
-            contactName: filtered[0].contactName,
-            country: filtered[0].country,
-            introducibleFields: filtered[0].introducibleFields,
+            name: targetPartners[0].name,
+            contactName: targetPartners[0].contactName,
+            country: targetPartners[0].country,
+            introducibleFields: targetPartners[0].introducibleFields,
           }
         : PREVIEW_PARTNER;
     return expandTemplate(message, { partner: samplePartner, openDeals, urgentDeals });
-  }, [message, mode, filtered, openDeals, urgentDeals]);
+  }, [message, targetPartners, openDeals, urgentDeals]);
 
   const previewPartnerName =
-    mode === "filter" && filtered.length > 0 ? filtered[0].name : "サンプル";
+    targetPartners.length > 0 ? targetPartners[0].name : "サンプル";
+
+  /** 「配信」「予約」ボタン → まず確認モーダルを開く */
+  const requestSend = (scheduled: boolean) => {
+    if (!message.trim()) {
+      alert("メッセージを入力してください");
+      return;
+    }
+    if (scheduled && !scheduleDate) {
+      alert("日時を選択してください");
+      return;
+    }
+    if (targetPartners.length === 0) {
+      alert("送信対象がいません");
+      return;
+    }
+    setConfirmingScheduled(scheduled);
+  };
 
   const handleSend = async (scheduled = false) => {
     if (!message.trim()) {
@@ -148,6 +186,12 @@ export default function BroadcastClient({
       alert("日時を選択してください");
       return;
     }
+    if (targetPartners.length === 0) {
+      alert("送信対象がいません");
+      return;
+    }
+    // 明示的なホワイトリスト: プレビューに表示されている partner のみ送信対象
+    const partnerIds = targetPartners.map((p) => p.id);
     setSending(true);
     try {
       const res = await fetch("/api/broadcast", {
@@ -159,6 +203,7 @@ export default function BroadcastClient({
           introNationality: introNationality === ALL ? null : introNationality,
           introField: introField === ALL ? null : introField,
           groupId: selectedGroup ? Number(selectedGroup) : null,
+          partnerIds,
           message,
           scheduledAt: scheduled ? scheduleDate : null,
           templateId: selectedTemplate ? Number(selectedTemplate) : null,
@@ -317,7 +362,7 @@ export default function BroadcastClient({
         <div className="absolute inset-0 flex flex-col bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
         <p className="text-sm font-semibold text-[var(--color-text-dark)] mb-3">対象プレビュー ({targetCount} 社)</p>
         <div className="flex-1 min-h-0 space-y-1 overflow-y-auto">
-          {(mode === "filter" ? filtered : []).map((p) => (
+          {targetPartners.map((p) => (
             <div key={p.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50">
               <div className="w-7 h-7 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center text-xs font-bold shrink-0">
                 {p.name[0]}
@@ -335,12 +380,11 @@ export default function BroadcastClient({
               </span>
             </div>
           ))}
-          {mode === "filter" && filtered.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-6">対象パートナーがいません</p>
-          )}
-          {mode === "group" && (
+          {targetPartners.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-6">
-              {selectedGroup ? `${targetCount} 社が対象` : "グループを選択してください"}
+              {mode === "group" && !selectedGroup
+                ? "グループを選択してください"
+                : "対象パートナーがいません"}
             </p>
           )}
         </div>
@@ -353,7 +397,7 @@ export default function BroadcastClient({
         <div className="space-y-5">
           <div className="flex gap-3">
             <button
-              onClick={() => handleSend(false)}
+              onClick={() => requestSend(false)}
               disabled={sending}
               className="flex-1 bg-[var(--color-primary)] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
             >
@@ -377,7 +421,7 @@ export default function BroadcastClient({
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               />
               <button
-                onClick={() => handleSend(true)}
+                onClick={() => requestSend(true)}
                 disabled={sending}
                 className="w-full bg-[var(--color-primary)] text-white py-2 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
               >
@@ -387,6 +431,74 @@ export default function BroadcastClient({
           )}
         </div>
       </div>
+
+      {/* 送信前 確認モーダル: 対象パートナーの最終確認 */}
+      {confirmingScheduled !== null ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="border-b border-gray-100 px-6 py-4">
+              <h2 className="text-lg font-bold text-[var(--color-text-dark)]">
+                配信前の最終確認
+              </h2>
+              <p className="mt-1 text-xs text-gray-500">
+                以下 <span className="font-semibold text-[var(--color-text-dark)]">{targetPartners.length} 社</span>{" "}
+                のパートナーへ送信します。これ以外のパートナーには送信されません。
+              </p>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-3">
+              <ul className="divide-y divide-gray-100">
+                {targetPartners.map((p) => (
+                  <li key={p.id} className="flex items-center gap-3 py-2">
+                    <span className="font-mono text-[11px] text-gray-400 shrink-0">#{p.id}</span>
+                    <span className="text-sm text-[var(--color-text-dark)] truncate flex-1">{p.name}</span>
+                    <span className="text-[10px] text-gray-400 shrink-0">
+                      {p.lineGroupId
+                        ? "LINEグループ"
+                        : p.lineUserId
+                          ? "LINE個人"
+                          : p.whatsappId
+                            ? "WhatsApp"
+                            : p.messengerPsid
+                              ? "Messenger"
+                              : p.email
+                                ? "メール"
+                                : "未登録"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmingScheduled(null)}
+                disabled={sending}
+                className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const scheduled = confirmingScheduled ?? false;
+                  setConfirmingScheduled(null);
+                  await handleSend(scheduled);
+                }}
+                disabled={sending}
+                className="rounded-full bg-[var(--color-primary)] px-6 py-2 text-sm font-semibold text-white shadow-md hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+              >
+                {sending
+                  ? "送信中..."
+                  : confirmingScheduled
+                    ? `${targetPartners.length} 社へ予約確定`
+                    : `${targetPartners.length} 社へ配信実行`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

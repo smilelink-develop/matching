@@ -37,6 +37,7 @@ export async function POST(req: Request) {
       introNationality,
       introField,
       groupId,
+      partnerIds,
       message,
       scheduledAt,
       templateId,
@@ -46,11 +47,40 @@ export async function POST(req: Request) {
       introNationality: string | null;
       introField: string | null;
       groupId: number | null;
+      /**
+       * 送信対象パートナーの ID 配列。クライアント側のプレビューと完全に一致する
+       * 対象だけに送信するための明示的なホワイトリスト。
+       * これが指定されている場合は、フィルタ条件は MessageLog 記録用にのみ使う。
+       */
+      partnerIds?: number[];
       message: string;
       scheduledAt: string | null;
       /** MessageTemplate.id を渡すと、WhatsApp ではそのテンプレ承認名で送信できる */
       templateId?: number | null;
     };
+
+    // ── 安全装置: partnerIds が明示指定されていない場合は送信を拒否する ──
+    // プレビューと送信の不一致を防ぐため、フィルタ条件だけの送信は許可しない。
+    if (!Array.isArray(partnerIds) || partnerIds.length === 0) {
+      return Response.json(
+        {
+          ok: false,
+          error:
+            "送信対象パートナー (partnerIds) が指定されていません。プレビューに表示されたパートナーがそのまま送信対象になります。画面から正しく送信してください。",
+        },
+        { status: 400 }
+      );
+    }
+    // 重複除去 + 数値検証 (同じ partner に複数送信しないため)
+    const targetIds = [
+      ...new Set(partnerIds.map(Number).filter((n) => Number.isInteger(n) && n > 0)),
+    ];
+    if (targetIds.length === 0) {
+      return Response.json(
+        { ok: false, error: "送信対象パートナー ID が無効です" },
+        { status: 400 }
+      );
+    }
     const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
     const fbPageToken = process.env.FB_PAGE_ACCESS_TOKEN;
     const waToken = process.env.WA_ACCESS_TOKEN;
@@ -92,53 +122,34 @@ export async function POST(req: Request) {
       whatsappId: string | null;
       email: string | null;
     };
-    let targets: Target[] = [];
-
-    const includeLineGroups = {
-      lineGroups: {
-        where: { isActive: true },
-        orderBy: { lastSeenAt: "desc" as const },
-        take: 1,
+    // 明示指定された partnerIds の partner のみを取得 (フィルタ再評価せず)
+    const partners = await prisma.partner.findMany({
+      where: { id: { in: targetIds } },
+      include: {
+        lineGroups: {
+          where: { isActive: true },
+          orderBy: { lastSeenAt: "desc" as const },
+          take: 1,
+        },
       },
-    };
-
-    if (mode === "group" && groupId) {
-      const group = await prisma.group.findUnique({
-        where: { id: groupId },
-        include: { members: { include: { partner: { include: includeLineGroups } } } },
-      });
-      targets = (group?.members ?? []).map((m) => ({
-        id: m.partner.id,
-        name: m.partner.name,
-        contactName: m.partner.contactName,
-        country: m.partner.country,
-        introducibleFields: m.partner.introducibleFields,
-        lineUserId: m.partner.lineUserId,
-        lineGroupId: m.partner.lineGroups[0]?.groupId ?? null,
-        messengerPsid: m.partner.messengerPsid,
-        whatsappId: m.partner.whatsappId,
-        email: m.partner.email,
-      }));
-    } else {
-      const where: Record<string, unknown> = {};
-      if (relationshipStatus) where.relationshipStatus = relationshipStatus;
-      // CSV カラムは contains で簡易検索
-      if (introNationality) where.introducibleNationalities = { contains: introNationality };
-      if (introField) where.introducibleFields = { contains: introField };
-      const partners = await prisma.partner.findMany({ where, include: includeLineGroups });
-      targets = partners.map((p) => ({
-        id: p.id,
-        name: p.name,
-        contactName: p.contactName,
-        country: p.country,
-        introducibleFields: p.introducibleFields,
-        lineUserId: p.lineUserId,
-        lineGroupId: p.lineGroups[0]?.groupId ?? null,
-        messengerPsid: p.messengerPsid,
-        whatsappId: p.whatsappId,
-        email: p.email,
-      }));
-    }
+    });
+    // 戻り順を partnerIds の指定順に並び替え (UI 上の表示順と一致させる)
+    const partnersById = new Map(partners.map((p) => [p.id, p]));
+    const orderedPartners = targetIds
+      .map((id) => partnersById.get(id))
+      .filter((p): p is NonNullable<typeof p> => p !== undefined);
+    const targets: Target[] = orderedPartners.map((p) => ({
+      id: p.id,
+      name: p.name,
+      contactName: p.contactName,
+      country: p.country,
+      introducibleFields: p.introducibleFields,
+      lineUserId: p.lineUserId,
+      lineGroupId: p.lineGroups[0]?.groupId ?? null,
+      messengerPsid: p.messengerPsid,
+      whatsappId: p.whatsappId,
+      email: p.email,
+    }));
 
     // 変数展開のため案件スナップショットを 1 回ロード
     const { openDeals, urgentDeals } = await loadDealSnapshot();
@@ -164,6 +175,7 @@ export async function POST(req: Request) {
             introNationality,
             introField,
             groupId,
+            partnerIds: targetIds,
           }),
           status: "scheduled",
           matchedCount: targets.length,
@@ -402,6 +414,7 @@ export async function POST(req: Request) {
           introNationality,
           introField,
           groupId,
+          partnerIds: targetIds,
         }),
         status: "done",
         matchedCount: targets.length,

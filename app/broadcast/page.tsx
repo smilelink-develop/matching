@@ -20,7 +20,10 @@ export default async function BroadcastPage() {
     }),
     // 連絡テンプレートは全アカウント共通
     prisma.messageTemplate.findMany({ orderBy: { name: "asc" } }),
-    prisma.group.findMany({ include: { members: true }, orderBy: { name: "asc" } }),
+    prisma.group.findMany({
+      include: { members: { select: { partnerId: true } } },
+      orderBy: { name: "asc" },
+    }),
     prisma.deal.findMany({
       where: { status: { in: [...OPEN_DEAL_STATUSES] } },
       include: { company: { select: { name: true } } },
@@ -64,7 +67,12 @@ export default async function BroadcastPage() {
           introducibleResidenceStatuses: p.introducibleResidenceStatuses,
         }))}
         templates={templates.map((t) => ({ id: t.id, name: t.name, content: t.content }))}
-        groups={groups.map((g) => ({ id: g.id, name: g.name, memberCount: g.members.length }))}
+        groups={groups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          memberCount: g.members.length,
+          memberPartnerIds: g.members.map((m) => m.partnerId),
+        }))}
         openDeals={openDeals}
       />
     </div>
