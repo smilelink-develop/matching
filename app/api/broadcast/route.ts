@@ -124,6 +124,8 @@ export async function POST(req: Request) {
       messengerPsid: string | null;
       whatsappId: string | null;
       email: string | null;
+      /** 主な連絡手段 (channel) — メール送信判定に使う */
+      channel: string | null;
     };
     // 明示指定された partnerIds の partner のみを取得 (フィルタ再評価せず)
     const partners = await prisma.partner.findMany({
@@ -152,6 +154,7 @@ export async function POST(req: Request) {
       messengerPsid: p.messengerPsid,
       whatsappId: p.whatsappId,
       email: p.email,
+      channel: p.channel,
     }));
 
     // 変数展開のため案件スナップショットを 1 回ロード
@@ -363,8 +366,11 @@ export async function POST(req: Request) {
         continue;
       }
 
-      // 最終フォールバック: メール
-      if (t.email) {
+      // 最終フォールバック: メール (主な連絡手段がメール かつ email が有効形式 のときのみ)
+      const emailUsable =
+        (t.channel === "mail" || t.channel === "メール" || t.channel === "Email") &&
+        Boolean(t.email && /@/.test(t.email));
+      if (emailUsable && t.email) {
         const partnerCtx: PartnerForBroadcast = {
           name: t.name,
           contactName: t.contactName,

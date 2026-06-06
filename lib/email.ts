@@ -102,4 +102,4 @@ export function textToBasicHtml(text: string): string {
 }
 
 /** デフォルトの件名 (テンプレに emailSubject が無いときに使う) */
-export const DEFAULT_EMAIL_SUBJECT = "【SMILE MATCHING】ご連絡";
+export const DEFAULT_EMAIL_SUBJECT = "【株式会社CROSLAN-人材事業部】ご連絡";

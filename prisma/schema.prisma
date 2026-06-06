@@ -302,6 +302,10 @@ model Message {
   direction  String
   content    String
   externalId String?
+  /// LINE グループ内の送信者の表示名 (グループメッセージの場合のみ。1:1 では null)
+  senderName String?
+  /// LINE グループ内の送信者の userId (内部識別用)
+  senderId   String?
   sentAt     DateTime  @default(now())
   readAt     DateTime?
 }

@@ -21,6 +21,7 @@ type Message = {
   channel: string;
   direction: string;
   content: string;
+  senderName: string | null;
   sentAt: string;
   readAt: string | null;
 };
@@ -224,6 +225,7 @@ export default function ChatClient({ partners, initialMessages, templates }: {
             direction: "outbound",
             // サーバが {{変数}} を展開した本文を返すのでそれを表示
             content: data.content ?? input,
+            senderName: null,
             sentAt: new Date().toISOString(),
             readAt: null,
           },
@@ -363,7 +365,11 @@ export default function ChatClient({ partners, initialMessages, templates }: {
                 <p className="text-center text-sm text-gray-400 mt-10">メッセージはありません</p>
               )}
               {chat.map((m) => (
-                <div key={m.id} className={`flex ${m.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                <div key={m.id} className={`flex flex-col ${m.direction === "outbound" ? "items-end" : "items-start"}`}>
+                  {/* グループチャットなどで送信者名がある場合は吹き出しの上に表示 */}
+                  {m.direction === "inbound" && m.senderName ? (
+                    <p className="text-[11px] text-gray-500 mb-0.5 ml-2 font-medium">{m.senderName}</p>
+                  ) : null}
                   <div className={`max-w-xs px-4 py-2 rounded-2xl text-sm shadow-sm ${
                     m.direction === "outbound"
                       ? "bg-[var(--color-primary)] text-white rounded-br-sm"

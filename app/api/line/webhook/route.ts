@@ -7,6 +7,25 @@ export async function GET() {
   return new Response("LINE webhook endpoint is alive", { status: 200 });
 }
 
+/** グループ内メンバーの表示名を取得 (失敗時は null) */
+async function fetchGroupMemberName(
+  groupId: string,
+  userId: string,
+  token: string
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.line.me/v2/bot/group/${groupId}/member/${userId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { displayName?: string };
+    return data.displayName ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** LINE Messaging API でグループサマリーを取得 */
 async function fetchGroupSummary(
   groupId: string,
@@ -97,6 +116,10 @@ export async function POST(req: Request) {
             where: { groupId },
             select: { partnerId: true },
           });
+          // 送信者 (グループメンバー) の userId と表示名を取得
+          const senderId = typeof source?.userId === "string" ? source.userId : null;
+          const senderName =
+            senderId && token ? await fetchGroupMemberName(groupId, senderId, token) : null;
           await prisma.message.create({
             data: {
               partnerId: linked?.partnerId ?? null,
@@ -104,6 +127,8 @@ export async function POST(req: Request) {
               direction: "inbound",
               content: messageText,
               externalId: groupId, // group の場合は groupId を externalId として保存
+              senderId,
+              senderName,
             },
           });
         }

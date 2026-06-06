@@ -677,9 +677,11 @@ function LinkStatusDisplay({
   if (lineUserId) ids.push({ label: "LINE", value: lineUserId });
   if (messengerPsid) ids.push({ label: "Messenger", value: messengerPsid });
   if (whatsappId) ids.push({ label: "WhatsApp", value: whatsappId });
-  // 主な連絡手段がメール + メアド入力済みなら、メールも紐づけ済みとして表示
-  const emailLinked = (channel ?? "").toLowerCase().includes("メール") || channel === "Email" || channel === "mail";
-  if (emailLinked && email && email.trim()) {
+  // 主な連絡手段がメール + メアド入力済み (@ 含む有効形式) のときだけ、メールも紐づけ済みと判定
+  const emailLinked =
+    (channel === "mail" || channel === "メール" || channel === "Email") &&
+    Boolean(email && /@/.test(email));
+  if (emailLinked && email) {
     ids.push({ label: "Email", value: email });
   }
   const isLinked = ids.length > 0 || linkStatus === "完了";

@@ -63,6 +63,7 @@ export default async function ChatPage() {
         channel: m.channel,
         direction: m.direction,
         content: m.content,
+        senderName: m.senderName,
         sentAt: m.sentAt.toISOString(),
         readAt: m.readAt?.toISOString() ?? null,
       }))}

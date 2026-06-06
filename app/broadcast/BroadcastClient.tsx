@@ -95,7 +95,11 @@ export default function BroadcastClient({
         if (relationshipStatus !== ALL && (p.relationshipStatus ?? "") !== relationshipStatus) return false;
         if (introNationality !== ALL && !parseCsv(p.introducibleNationalities).includes(introNationality)) return false;
         if (introField !== ALL && !parseCsv(p.introducibleFields).includes(introField)) return false;
-        const isLinked = Boolean(p.lineGroupId || p.lineUserId || p.messengerPsid || p.whatsappId || p.email);
+        // メールは「主な連絡手段が mail」かつ「email が @ を含む有効形式」のときだけ紐づけ済みと判定
+        const emailUsable =
+          (p.channel === "mail" || p.channel === "メール" || p.channel === "Email") &&
+          Boolean(p.email && /@/.test(p.email));
+        const isLinked = Boolean(p.lineGroupId || p.lineUserId || p.messengerPsid || p.whatsappId || emailUsable);
         if (linkFilter === "linked" && !isLinked) return false;
         if (linkFilter === "unlinked" && isLinked) return false;
         return true;
@@ -343,21 +347,21 @@ export default function BroadcastClient({
             <label className="block text-xs font-medium text-gray-500 mb-1">
               メール件名{" "}
               <span className="text-[10px] text-gray-400">
-                (メール経由のパートナーのみに適用。空欄なら「【SMILE MATCHING】ご連絡」)
+                (メール経由のパートナーのみに適用。空欄なら「【株式会社CROSLAN-人材事業部】ご連絡」)
               </span>
             </label>
             <input
               type="text"
               value={emailSubject}
               onChange={(e) => setEmailSubject(e.target.value)}
-              placeholder="例: 【SMILE MATCHING】今週の急ぎ案件のご案内"
+              placeholder="例: 今週の急ぎ案件のご案内"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
             />
           </div>
           <textarea
             ref={textareaRef}
             className="w-full mt-3 border border-gray-300 rounded-lg px-3 py-2 text-sm h-32 resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
-            placeholder={"{{パートナー名}} 様\n\n現在の急ぎ案件です:\n{{急ぎ案件一覧}}"}
+            placeholder="パートナーへの一斉メッセージを入力してください。下のボタンから変数を挿入できます (例: パートナー名 → 受信者ごとに自動で展開)"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
@@ -420,7 +424,17 @@ export default function BroadcastClient({
                 </p>
               </div>
               <span className="ml-auto text-xs text-gray-400 shrink-0">
-                {p.lineGroupId ? "LINE-Group" : p.lineUserId ? "LINE" : p.messengerPsid ? "MSG" : p.whatsappId ? "WA" : p.email ? "Mail" : "未登録"}
+                {p.lineGroupId
+                  ? "LINE-Group"
+                  : p.lineUserId
+                    ? "LINE"
+                    : p.messengerPsid
+                      ? "MSG"
+                      : p.whatsappId
+                        ? "WA"
+                        : (p.channel === "mail" || p.channel === "メール" || p.channel === "Email") && p.email && /@/.test(p.email)
+                          ? "Mail"
+                          : "未登録"}
               </span>
             </div>
           ))}
@@ -490,10 +504,17 @@ export default function BroadcastClient({
               </p>
               {/* メール経路のパートナーが含まれていれば件名を表示 */}
               {targetPartners.some(
-                (p) => !p.lineGroupId && !p.lineUserId && !p.whatsappId && !p.messengerPsid && p.email
+                (p) =>
+                  !p.lineGroupId &&
+                  !p.lineUserId &&
+                  !p.whatsappId &&
+                  !p.messengerPsid &&
+                  (p.channel === "mail" || p.channel === "メール" || p.channel === "Email") &&
+                  p.email &&
+                  /@/.test(p.email),
               ) ? (
                 <p className="mt-2 text-[11px] text-gray-500">
-                  📧 メール件名: <span className="font-medium text-[var(--color-text-dark)]">{emailSubject.trim() || "【SMILE MATCHING】ご連絡"}</span>
+                  📧 メール件名: <span className="font-medium text-[var(--color-text-dark)]">{emailSubject.trim() || "【株式会社CROSLAN-人材事業部】ご連絡"}</span>
                 </p>
               ) : null}
             </div>
@@ -513,7 +534,7 @@ export default function BroadcastClient({
                             ? "WhatsApp"
                             : p.messengerPsid
                               ? "Messenger"
-                              : p.email
+                              : (p.channel === "mail" || p.channel === "メール" || p.channel === "Email") && p.email && /@/.test(p.email)
                                 ? "メール"
                                 : "未登録"}
                     </span>
