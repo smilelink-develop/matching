@@ -25,13 +25,13 @@ export default function IntakeLinkButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <IconTooltip label="入力フォーム作成">
+      <IconTooltip label="入力フォーム作成 / 送信">
         <button
           type="button"
           onClick={() => setOpen(true)}
           className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[var(--color-primary)] transition-transform hover:scale-110 hover:bg-[var(--color-light)]"
         >
-          <FormIcon />
+          <PaperPlaneIcon />
         </button>
       </IconTooltip>
       {open ? (
@@ -46,11 +46,11 @@ export default function IntakeLinkButton({
   );
 }
 
-function FormIcon() {
+function PaperPlaneIcon() {
   return (
     <svg
-      width="20"
-      height="20"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -59,14 +59,9 @@ function FormIcon() {
       strokeLinejoin="round"
       aria-hidden
     >
-      {/* クリップボード型 + チェックリスト */}
-      <rect x="5" y="3" width="14" height="18" rx="2" />
-      <line x1="9" y1="8" x2="15" y2="8" />
-      <line x1="9" y1="12" x2="15" y2="12" />
-      <line x1="9" y1="16" x2="13" y2="16" />
-      <circle cx="7" cy="8" r="0.6" fill="currentColor" />
-      <circle cx="7" cy="12" r="0.6" fill="currentColor" />
-      <circle cx="7" cy="16" r="0.6" fill="currentColor" />
+      {/* 紙飛行機 (送信アイコン) */}
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
   );
 }

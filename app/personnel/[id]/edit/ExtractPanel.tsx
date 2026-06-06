@@ -22,6 +22,7 @@ export type ExtractedCandidate = {
   birthDate?: string;
   gender?: string;
   phoneNumber?: string;
+  email?: string;
   postalCode?: string;
   address?: string;
   spouseStatus?: string;
@@ -46,9 +47,10 @@ export type ExtractedCandidate = {
   retirementReason?: string;
   preferenceNote?: string;
   workExperiences?: { companyName?: string; startDate?: string; endDate?: string; reason?: string }[];
+  _warnings?: string[];
 };
 
-type FieldKey = Exclude<keyof ExtractedCandidate, "workExperiences">;
+type FieldKey = Exclude<keyof ExtractedCandidate, "workExperiences" | "_warnings">;
 
 const FIELD_LABELS: { key: FieldKey; label: string }[] = [
   { key: "name", label: "カナ名" },
@@ -59,6 +61,7 @@ const FIELD_LABELS: { key: FieldKey; label: string }[] = [
   { key: "birthDate", label: "生年月日" },
   { key: "gender", label: "性別" },
   { key: "phoneNumber", label: "携帯番号" },
+  { key: "email", label: "メール" },
   { key: "postalCode", label: "郵便番号" },
   { key: "address", label: "住所" },
   { key: "spouseStatus", label: "配偶者" },
@@ -377,6 +380,22 @@ function ExtractModal({
                 抽出が完了しました。新規 {newCount} / 同一 {sameCount} / 衝突 {conflictCount} 件。
                 衝突しているフィールドはどちらを採用するか選んでから反映してください。
               </div>
+
+              {/* AI が形式不正と判定して除外したフィールドの警告 */}
+              {extracted._warnings && extracted._warnings.length > 0 ? (
+                <div className="rounded-2xl border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-3 text-xs text-[#991B1B]">
+                  <p className="font-semibold mb-1">⚠️ AI が形式を確信できないため除外した値があります ({extracted._warnings.length} 件):</p>
+                  <ul className="space-y-0.5 list-disc pl-4">
+                    {extracted._warnings.slice(0, 8).map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                    {extracted._warnings.length > 8 ? <li>...他 {extracted._warnings.length - 8} 件</li> : null}
+                  </ul>
+                  <p className="mt-1.5 text-[10px] text-gray-600">
+                    必要であればフォームから手動で入力してください。これは「誤った値が自動で入る」事故を防ぐための安全装置です。
+                  </p>
+                </div>
+              ) : null}
 
               {driveWarning ? (
                 <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3 text-xs text-[#92400E]">

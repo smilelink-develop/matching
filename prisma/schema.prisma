@@ -150,6 +150,30 @@ model Partner {
   ratingHistory PartnerRatingHistory[]
   messages    Message[]
   lineGroups  LineGroup[]
+  contacts    PartnerContact[]
+}
+
+/// パートナー会社の担当者 (1 社につき複数人を登録できる)
+model PartnerContact {
+  id        Int      @id @default(autoincrement())
+  partnerId Int
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  /// 担当者名
+  name      String
+  /// 役職 / 肩書き (任意)
+  title     String?
+  /// メール
+  email     String?
+  /// 電話番号
+  phone     String?
+  /// 補足メモ (使用言語、時差、得意分野など)
+  notes     String?
+  /// 並び順 (社内の主担当を先頭に等)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([partnerId, sortOrder])
 }
 
 model PartnerRatingHistory {

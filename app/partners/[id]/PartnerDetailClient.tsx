@@ -90,6 +90,15 @@ export type PartnerDetailData = {
     recordedBy: string | null;
     createdAt: string;
   }[];
+  contacts: {
+    id: number;
+    name: string;
+    title: string | null;
+    email: string | null;
+    phone: string | null;
+    notes: string | null;
+    sortOrder: number;
+  }[];
 };
 
 export default function PartnerDetailClient({ initial }: { initial: PartnerDetailData }) {
@@ -351,6 +360,19 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
             </p>
           </Field>
         </Group>
+      </section>
+
+      {/* 担当者一覧 (別セクション、淡い青背景で会社情報と区別) */}
+      <section className="rounded-2xl border border-blue-100 bg-[#EFF6FF] p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--color-text-dark)]">担当者</h2>
+            <p className="mt-0.5 text-xs text-gray-500">
+              この会社の担当者を複数人登録できます。営業担当・経理担当 など役職別に管理可能。
+            </p>
+          </div>
+        </div>
+        <ContactsPanel partnerId={initial.id} initialContacts={initial.contacts} />
       </section>
 
       {/* 紹介可能 / 手数料 / メモ・特徴 (別セクション) */}
@@ -660,6 +682,277 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function ContactsPanel({
+  partnerId,
+  initialContacts,
+}: {
+  partnerId: number;
+  initialContacts: PartnerDetailData["contacts"];
+}) {
+  const router = useRouter();
+  const [contacts, setContacts] = useState(initialContacts);
+  const [addingMode, setAddingMode] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [draft, setDraft] = useState({
+    name: "",
+    title: "",
+    email: "",
+    phone: "",
+    notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const resetDraft = () => {
+    setDraft({ name: "", title: "", email: "", phone: "", notes: "" });
+    setAddingMode(false);
+    setEditingId(null);
+  };
+
+  const startEdit = (c: PartnerDetailData["contacts"][number]) => {
+    setEditingId(c.id);
+    setAddingMode(false);
+    setDraft({
+      name: c.name,
+      title: c.title ?? "",
+      email: c.email ?? "",
+      phone: c.phone ?? "",
+      notes: c.notes ?? "",
+    });
+  };
+
+  const submit = async () => {
+    if (!draft.name.trim()) {
+      alert("担当者名を入力してください");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editingId) {
+        const res = await fetch(`/api/partners/${partnerId}/contacts/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(draft),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          alert(`更新失敗: ${data.error ?? res.statusText}`);
+          return;
+        }
+        setContacts((cs) => cs.map((c) => (c.id === editingId ? { ...c, ...data.contact } : c)));
+      } else {
+        const res = await fetch(`/api/partners/${partnerId}/contacts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(draft),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          alert(`追加失敗: ${data.error ?? res.statusText}`);
+          return;
+        }
+        setContacts((cs) => [...cs, data.contact]);
+      }
+      resetDraft();
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id: number) => {
+    if (!confirm("この担当者を削除しますか?")) return;
+    const res = await fetch(`/api/partners/${partnerId}/contacts/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      alert(`削除失敗: ${data.error ?? res.statusText}`);
+      return;
+    }
+    setContacts((cs) => cs.filter((c) => c.id !== id));
+    router.refresh();
+  };
+
+  return (
+    <div className="mt-4 space-y-3">
+      {contacts.length === 0 && !addingMode ? (
+        <p className="rounded-lg border border-dashed border-blue-200 bg-white/50 px-4 py-6 text-center text-sm text-gray-500">
+          担当者が登録されていません
+        </p>
+      ) : null}
+
+      {contacts.map((c) =>
+        editingId === c.id ? (
+          <ContactForm
+            key={c.id}
+            draft={draft}
+            setDraft={setDraft}
+            onSubmit={submit}
+            onCancel={resetDraft}
+            saving={saving}
+            mode="edit"
+          />
+        ) : (
+          <div
+            key={c.id}
+            className="rounded-xl border border-blue-100 bg-white px-4 py-3 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-[var(--color-text-dark)]">
+                  {c.name}
+                  {c.title ? <span className="ml-2 text-xs font-normal text-gray-500">{c.title}</span> : null}
+                </p>
+                <div className="mt-1 grid gap-1 text-xs text-gray-600 md:grid-cols-2">
+                  {c.email ? (
+                    <p>
+                      📧 <a href={`mailto:${c.email}`} className="hover:underline">{c.email}</a>
+                    </p>
+                  ) : null}
+                  {c.phone ? (
+                    <p>
+                      📞 <a href={`tel:${c.phone}`} className="hover:underline">{c.phone}</a>
+                    </p>
+                  ) : null}
+                </div>
+                {c.notes ? (
+                  <p className="mt-1 text-[11px] text-gray-500 whitespace-pre-wrap">{c.notes}</p>
+                ) : null}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => startEdit(c)}
+                  className="rounded-md border border-gray-300 px-2.5 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
+                >
+                  編集
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void remove(c.id)}
+                  className="rounded-md border border-red-200 px-2.5 py-1 text-[11px] text-red-600 hover:bg-red-50"
+                >
+                  削除
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
+      {addingMode ? (
+        <ContactForm
+          draft={draft}
+          setDraft={setDraft}
+          onSubmit={submit}
+          onCancel={resetDraft}
+          saving={saving}
+          mode="add"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setAddingMode(true);
+            setEditingId(null);
+            setDraft({ name: "", title: "", email: "", phone: "", notes: "" });
+          }}
+          className="w-full rounded-lg border border-dashed border-blue-300 bg-white/60 px-4 py-3 text-sm font-medium text-[var(--color-primary)] hover:bg-white"
+        >
+          + 担当者を追加
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ContactForm({
+  draft,
+  setDraft,
+  onSubmit,
+  onCancel,
+  saving,
+  mode,
+}: {
+  draft: { name: string; title: string; email: string; phone: string; notes: string };
+  setDraft: React.Dispatch<React.SetStateAction<{ name: string; title: string; email: string; phone: string; notes: string }>>;
+  onSubmit: () => void;
+  onCancel: () => void;
+  saving: boolean;
+  mode: "add" | "edit";
+}) {
+  return (
+    <div className="rounded-xl border border-blue-200 bg-white px-4 py-4 shadow-sm space-y-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <label className="block text-[11px] font-medium text-gray-500 mb-1">担当者名 *</label>
+          <input
+            type="text"
+            value={draft.name}
+            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+            className={INPUT}
+            placeholder="山田 太郎"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] font-medium text-gray-500 mb-1">役職 / 肩書き</label>
+          <input
+            type="text"
+            value={draft.title}
+            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+            className={INPUT}
+            placeholder="営業部長 / 採用担当 など"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] font-medium text-gray-500 mb-1">メール</label>
+          <input
+            type="email"
+            value={draft.email}
+            onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
+            className={INPUT}
+            placeholder="taro@example.com"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] font-medium text-gray-500 mb-1">電話番号</label>
+          <input
+            type="tel"
+            value={draft.phone}
+            onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))}
+            className={INPUT}
+            placeholder="090-1234-5678"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-[11px] font-medium text-gray-500 mb-1">メモ (任意)</label>
+        <textarea
+          value={draft.notes}
+          onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+          className={`${INPUT} min-h-16`}
+          placeholder="使用言語、得意分野、時差などのメモ"
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+        >
+          キャンセル
+        </button>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={saving}
+          className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+        >
+          {saving ? "保存中..." : mode === "add" ? "追加" : "更新"}
+        </button>
+      </div>
     </div>
   );
 }

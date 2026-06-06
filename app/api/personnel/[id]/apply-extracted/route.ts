@@ -33,6 +33,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
     if (nonEmpty(extracted.phoneNumber)) onboardingUpdate.phoneNumber = extracted.phoneNumber!;
     if (nonEmpty(extracted.postalCode)) onboardingUpdate.postalCode = extracted.postalCode!;
     if (nonEmpty(extracted.address)) onboardingUpdate.address = extracted.address!;
+    if (nonEmpty(extracted.email)) personUpdate.email = extracted.email!;
 
     // resume profile
     if (nonEmpty(extracted.gender)) resumeUpdate.gender = extracted.gender!;

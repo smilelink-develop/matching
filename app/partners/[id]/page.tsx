@@ -65,6 +65,9 @@ export default async function PartnerDetailPage({
         orderBy: { lastSeenAt: "desc" },
         take: 1,
       },
+      contacts: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      },
     },
   });
   if (!partner) notFound();
@@ -142,6 +145,15 @@ export default async function PartnerDetailPage({
       reason: h.reason,
       recordedBy: h.recordedBy,
       createdAt: h.createdAt.toISOString(),
+    })),
+    contacts: partner.contacts.map((c) => ({
+      id: c.id,
+      name: c.name,
+      title: c.title,
+      email: c.email,
+      phone: c.phone,
+      notes: c.notes,
+      sortOrder: c.sortOrder,
     })),
   };
 

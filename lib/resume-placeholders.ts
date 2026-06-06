@@ -230,6 +230,11 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     // 日本語検定 (独立 placeholder としても残す)
     日本語検定: valueOrBlank(profile?.japaneseLevel),
     日本語検定取得日: formatYearMonth(profile?.japaneseLevelDate),
+    // テンプレで多用されるエイリアス
+    "合格している日本語検定": valueOrBlank(profile?.japaneseLevel),
+    "日本語レベル": valueOrBlank(profile?.japaneseLevel),
+    "日本語能力": valueOrBlank(profile?.japaneseLevel),
+    JLPT: valueOrBlank(profile?.japaneseLevel),
     配偶者: valueOrBlank(profile?.spouseStatus),
     子供数: valueOrBlank(profile?.childrenCount),
     子供: valueOrBlank(profile?.childrenCount),
