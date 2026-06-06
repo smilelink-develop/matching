@@ -38,6 +38,15 @@ export async function reconcileMessagePersonLinks() {
     partners.filter((p) => p.messengerPsid).map((p) => [p.messengerPsid as string, p.id])
   );
 
+  // LINE グループ → 紐づけ済みパートナー の map (groupId → partnerId)
+  const lineGroups = await prisma.lineGroup.findMany({
+    where: { isActive: true, partnerId: { not: null } },
+    select: { groupId: true, partnerId: true },
+  });
+  const partnerGroupMap = new Map(
+    lineGroups.map((g) => [g.groupId, g.partnerId as number])
+  );
+
   // Person 側 (フォールバック)
   const persons = await prisma.person.findMany({
     where: {
@@ -57,11 +66,11 @@ export async function reconcileMessagePersonLinks() {
       const externalId = message.externalId;
       if (!externalId) return null;
 
-      // Partner 優先
+      // Partner 優先 (LINE グループ → 個人 LINE / Messenger の順)
       const partnerId =
         message.channel === "Messenger"
           ? partnerMessengerMap.get(externalId)
-          : partnerLineMap.get(externalId);
+          : (partnerGroupMap.get(externalId) ?? partnerLineMap.get(externalId));
       if (partnerId) {
         return prisma.message.update({
           where: { id: message.id },

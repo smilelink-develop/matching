@@ -31,11 +31,13 @@ export default async function ChatPage() {
     orderBy: { name: "asc" },
   });
 
-  const messages = await prisma.message.findMany({
+  // 直近 500 件を取得 (orderBy desc + 結果を時系列に並び替え)
+  const recentMessages = await prisma.message.findMany({
     where: { partnerId: { not: null } },
-    orderBy: { sentAt: "asc" },
+    orderBy: { sentAt: "desc" },
     take: 500,
   });
+  const messages = recentMessages.reverse(); // チャット表示用に古い順に
 
   // メッセージテンプレートは全アカウント共通
   const templates = await prisma.messageTemplate.findMany({

@@ -20,10 +20,13 @@ export async function GET(req: Request) {
     return Response.json({ ok: true, unreadInboundCount });
   }
 
-  const messages = await prisma.message.findMany({
-    orderBy: { sentAt: "asc" },
+  // 直近 1000 件 (desc で取得 → 古い順に並び替えて返す)
+  const recent = await prisma.message.findMany({
+    where: { partnerId: { not: null } }, // チャット画面はパートナー宛のみ
+    orderBy: { sentAt: "desc" },
     take: 1000,
   });
+  const messages = recent.reverse();
   return Response.json({ ok: true, messages });
 }
 
