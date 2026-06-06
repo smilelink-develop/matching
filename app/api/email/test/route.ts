@@ -28,8 +28,8 @@ function fail(name: string, detail: string): StepResult {
 }
 
 function getGooglePrivateKey(): string {
-  const raw = process.env.GOOGLE_PRIVATE_KEY?.trim();
-  if (!raw) throw new Error("GOOGLE_PRIVATE_KEY が未設定です");
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim();
+  if (!raw) throw new Error("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY が未設定です");
   return raw.includes("\\n") ? raw.replace(/\\n/g, "\n") : raw;
 }
 
@@ -45,13 +45,13 @@ export async function GET() {
 
   // Step 1: 環境変数チェック
   const saEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim();
-  const saKey = process.env.GOOGLE_PRIVATE_KEY?.trim();
+  const saKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim();
   const sendAsUser = process.env.GMAIL_SEND_AS_USER?.trim();
   const gmailFrom = process.env.GMAIL_FROM?.trim();
 
   const envIssues: string[] = [];
   if (!saEmail) envIssues.push("GOOGLE_SERVICE_ACCOUNT_EMAIL 未設定");
-  if (!saKey) envIssues.push("GOOGLE_PRIVATE_KEY 未設定");
+  if (!saKey) envIssues.push("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY 未設定");
   if (!sendAsUser) envIssues.push("GMAIL_SEND_AS_USER 未設定");
   if (!gmailFrom) envIssues.push("GMAIL_FROM 未設定 (任意だが推奨)");
 
@@ -97,7 +97,7 @@ export async function GET() {
       hints.push("→ DwD のスコープが gmail.send になっているか確認してください。");
     }
     if (msg.includes("invalid_request") || msg.includes("private_key")) {
-      hints.push("→ GOOGLE_PRIVATE_KEY の改行 (\\n) が正しく展開されているか確認してください。");
+      hints.push("→ GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY の改行 (\\n) が正しく展開されているか確認してください。");
     }
     return Response.json({
       ok: false,

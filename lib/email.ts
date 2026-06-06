@@ -17,7 +17,7 @@
  *
  * 環境変数:
  *   GOOGLE_SERVICE_ACCOUNT_EMAIL = (既存)
- *   GOOGLE_PRIVATE_KEY           = (既存)
+ *   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY           = (既存)
  *   GMAIL_SEND_AS_USER           = recruit@croslan.co.jp (impersonate するアカウント)
  *   GMAIL_FROM                   = 株式会社CROSLAN-人材紹介事業部 <recruit@croslan.co.jp>
  *   GMAIL_REPLY_TO               = (任意)
@@ -29,8 +29,8 @@ export type EmailSendResult =
   | { ok: false; error: string };
 
 function getGooglePrivateKey(): string {
-  const raw = process.env.GOOGLE_PRIVATE_KEY?.trim();
-  if (!raw) throw new Error("GOOGLE_PRIVATE_KEY が未設定です");
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim();
+  if (!raw) throw new Error("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY が未設定です");
   // env では \n がエスケープされて入っているケースが多いので復元
   return raw.includes("\\n") ? raw.replace(/\\n/g, "\n") : raw;
 }
