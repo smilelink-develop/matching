@@ -20,7 +20,11 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/intake/") ||
     pathname.startsWith("/api/intake/") ||
     // 法的文書ページ (Meta App Review 要件) は完全公開
-    pathname.startsWith("/legal/")
+    pathname.startsWith("/legal/") ||
+    // アップロード画像の配信 (LINE / Messenger / メール添付の originalContentUrl)。
+    // GET /api/files/{cuid} のみ未ログイン可、POST /api/files (アップロード) は
+    // ハンドラ側で requireApiAccount により保護される (pathname に trailing slash 無し)。
+    pathname.startsWith("/api/files/")
   ) {
     return NextResponse.next();
   }
