@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
-import { ensurePersonDriveFolder } from "@/lib/google-docs";
+import { ensurePersonDriveFolder, buildPersonFolderName } from "@/lib/google-docs";
 import { google } from "googleapis";
 import { Readable } from "node:stream";
 import { getDocumentDefinitions } from "@/lib/candidate-profile";
@@ -36,9 +36,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
 
     // 候補者 Drive フォルダを確保 (無ければ ID プレフィックスで検索 → 新規作成)
+    // フォルダ名は "0192_DAO VAN HOANG" の形式に統一 (4桁ID prefix で見つけやすく)
     const folder = await ensurePersonDriveFolder({
       existingFolderUrl: person.driveFolderUrl,
-      personName: person.onboarding?.englishName?.trim() || person.name,
+      personName: buildPersonFolderName({
+        id: person.id,
+        englishName: person.onboarding?.englishName ?? null,
+        name: person.name,
+      }),
       personId: person.id,
     });
     if (!folder.folderId) {

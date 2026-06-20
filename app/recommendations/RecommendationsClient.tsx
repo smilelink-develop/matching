@@ -21,7 +21,7 @@ export default function RecommendationsClient({
     lockedDealId ? String(lockedDealId) : deals[0]?.id ? String(deals[0].id) : ""
   );
   // ステージ複数選択 (デフォルトは接続済みのみ)
-  const STAGE_OPTIONS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "不合格"] as const;
+  const STAGE_OPTIONS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "書類NG", "面談NG", "不合格"] as const;
   const [stageFilters, setStageFilters] = useState<string[]>(["接続済み"]);
   const [saving, setSaving] = useState(false);
 

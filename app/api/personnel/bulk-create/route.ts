@@ -15,6 +15,7 @@ import { NATIONALITIES, RESIDENCE_STATUSES, CHANNELS } from "@/lib/candidate-pro
 import {
   ensurePersonDriveFolder,
   buildPersonAssetName,
+  buildPersonFolderName,
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
 import { toDriveThumbUrl } from "@/lib/drive-url";
@@ -224,7 +225,11 @@ export async function POST(req: Request) {
             const englishName = s(c.englishName);
             const folder = await ensurePersonDriveFolder({
               existingFolderUrl: null,
-              personName: name,
+              personName: buildPersonFolderName({
+                id: person.id,
+                englishName,
+                name,
+              }),
               personId: person.id,
             });
             driveFolderUrl = folder.folderUrl ?? undefined;

@@ -94,6 +94,7 @@ export default function NewDealClient({
             <option value="募集中">募集中</option>
             <option value="面接中">面接中</option>
             <option value="成約">成約</option>
+            <option value="クローズ">クローズ</option>
           </select>
         </Field>
         <Field label="単価 (円)">

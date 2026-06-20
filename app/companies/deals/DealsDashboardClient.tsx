@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 // 「募集中」をデフォルトの主要カラムとして左端に、「至急募集」をその右に
-const STATUS_COLUMNS = ["募集中", "至急募集", "面接中", "成約"] as const;
+const STATUS_COLUMNS = ["募集中", "至急募集", "面接中", "成約", "クローズ"] as const;
 
 type Deal = {
   id: number;
@@ -25,7 +25,7 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
   const [draggingDealId, setDraggingDealId] = useState<number | null>(null);
 
   const summary = useMemo(() => {
-    const activeCount = deals.filter((deal) => deal.status !== "成約").length;
+    const activeCount = deals.filter((deal) => deal.status !== "成約" && deal.status !== "クローズ").length;
     const urgentCount = deals.filter((deal) => deal.status === "至急募集").length;
     const candidateCount = deals.reduce((sum, deal) => sum + deal.candidatesCount, 0);
     return { activeCount, urgentCount, candidateCount };

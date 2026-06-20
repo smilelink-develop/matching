@@ -9,9 +9,17 @@ import PersonAvatar from "@/app/components/PersonAvatar";
 import RecommendationsClient from "@/app/recommendations/RecommendationsClient";
 import CloseButton from "@/app/components/CloseButton";
 
-const CANDIDATE_COLUMNS = ["接続済み", "事前面談済み", "推薦済み", "内定済み", "不合格"] as const;
+const CANDIDATE_COLUMNS = [
+  "接続済み",
+  "事前面談済み",
+  "推薦済み",
+  "内定済み",
+  "書類NG",
+  "面談NG",
+  "不合格",
+] as const;
 
-// カンバン各カラムの色分け (見やすさのため緑系のグラデーション + 不合格は赤系)
+// カンバン各カラムの色分け (見やすさのため緑系のグラデーション + NG / 不合格は赤系)
 const COLUMN_COLOR: Record<string, { border: string; head: string; tile: string }> = {
   接続済み: {
     border: "border-[#BFDBFE]",
@@ -33,13 +41,23 @@ const COLUMN_COLOR: Record<string, { border: string; head: string; tile: string 
     head: "bg-[#DCFCE7] text-[#166534]",
     tile: "bg-[#F0FDF4] border-[#BBF7D0] hover:border-[#22C55E]",
   },
+  書類NG: {
+    border: "border-[#FED7AA]",
+    head: "bg-[#FFEDD5] text-[#9A3412]",
+    tile: "bg-[#FFF7ED] border-[#FED7AA] hover:border-[#FB923C]",
+  },
+  面談NG: {
+    border: "border-[#FBCFE8]",
+    head: "bg-[#FCE7F3] text-[#9D174D]",
+    tile: "bg-[#FDF2F8] border-[#FBCFE8] hover:border-[#EC4899]",
+  },
   不合格: {
     border: "border-[#FECACA]",
     head: "bg-[#FEE2E2] text-[#B91C1C]",
     tile: "bg-[#FEF2F2] border-[#FECACA] hover:border-[#EF4444]",
   },
 };
-const STATUS_OPTIONS = ["至急募集", "募集中", "面接中", "成約"] as const;
+const STATUS_OPTIONS = ["至急募集", "募集中", "面接中", "成約", "クローズ"] as const;
 const PRIORITY_OPTIONS = [
   { value: "normal", label: "通常" },
   { value: "high", label: "高" },
@@ -53,12 +71,20 @@ type CandidateCard = {
   person: {
     id: number;
     name: string;
+    englishName?: string | null;
     nationality: string;
     residenceStatus: string;
     photoUrl: string | null;
     partner: { id: number; name: string } | null;
   };
 };
+
+/** 候補者カード見出し用: 「001 DAO VAN HOANG」形式 (英語名がなければカナ名) */
+function formatCandidateLabel(person: { id: number; name: string; englishName?: string | null }): string {
+  const prefix = String(person.id).padStart(3, "0");
+  const label = person.englishName?.trim() || person.name;
+  return `${prefix} ${label}`;
+}
 
 type DealDetail = {
   id: number;
@@ -116,6 +142,23 @@ export default function DealDetailClient({
     acceptedAt: deal.acceptedAt ? deal.acceptedAt.slice(0, 10) : "",
     notes: deal.notes ?? "",
   });
+
+  const handleDeleteDeal = async () => {
+    const candidateCount = candidates.length;
+    const warning =
+      candidateCount > 0
+        ? `この案件には ${candidateCount} 名の候補者が紐づいています。\n削除すると候補者との関連も全て解除されます (候補者本体は残ります)。\n本当に削除しますか?`
+        : "この案件を削除します。よろしいですか?";
+    if (!confirm(warning)) return;
+    const response = await fetch(`/api/deals/${currentDeal.id}`, { method: "DELETE" });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      alert(result.error || "案件の削除に失敗しました");
+      return;
+    }
+    alert("削除しました");
+    router.push(`/companies/${currentDeal.company.id}`);
+  };
 
   const startEdit = () => {
     setEditForm({
@@ -288,6 +331,15 @@ export default function DealDetailClient({
                 編集
               </button>
             ) : null}
+            {!editing ? (
+              <button
+                type="button"
+                onClick={handleDeleteDeal}
+                className="self-start rounded-lg border border-red-300 bg-white px-4 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                削除
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -443,7 +495,12 @@ export default function DealDetailClient({
                         className="rounded-xl"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-[var(--color-text-dark)]">{candidate.person.name}</p>
+                        <p className="text-sm font-semibold text-[var(--color-text-dark)] truncate">
+                          {formatCandidateLabel(candidate.person)}
+                        </p>
+                        {candidate.person.englishName?.trim() ? (
+                          <p className="mt-0.5 text-[11px] text-gray-400 truncate">{candidate.person.name}</p>
+                        ) : null}
                         <p className="mt-1 text-xs text-gray-500">
                           {candidate.person.nationality} / {candidate.person.residenceStatus}
                         </p>
@@ -566,6 +623,7 @@ function statusClass(status: string) {
   if (status === "至急募集") return "rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[11px] font-medium text-[#B91C1C]";
   if (status === "募集中") return "rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-medium text-[#92400E]";
   if (status === "面接中") return "rounded-full bg-[#DBEAFE] px-2.5 py-1 text-[11px] font-medium text-[#1D4ED8]";
+  if (status === "クローズ") return "rounded-full bg-gray-200 px-2.5 py-1 text-[11px] font-medium text-gray-600";
   return "rounded-full bg-[#DCFCE7] px-2.5 py-1 text-[11px] font-medium text-[#166534]";
 }
 

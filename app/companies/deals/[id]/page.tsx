@@ -27,6 +27,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 residenceStatus: true,
                 photoUrl: true,
                 partner: { select: { id: true, name: true } },
+                onboarding: { select: { englishName: true } },
               },
             },
           },
@@ -91,7 +92,15 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 id: candidate.id,
                 note: candidate.note,
                 stage: candidate.stage,
-                person: candidate.person,
+                person: {
+                  id: candidate.person.id,
+                  name: candidate.person.name,
+                  englishName: candidate.person.onboarding?.englishName ?? null,
+                  nationality: candidate.person.nationality,
+                  residenceStatus: candidate.person.residenceStatus,
+                  photoUrl: candidate.person.photoUrl,
+                  partner: candidate.person.partner,
+                },
               })),
             }}
             persons={persons}

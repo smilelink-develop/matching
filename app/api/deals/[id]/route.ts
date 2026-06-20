@@ -95,3 +95,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     );
   }
 }
+
+export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    await requireApiAccount();
+    const { id } = await params;
+    // 関連 DealCandidate も cascade で削除 (schema 側で onDelete: Cascade)
+    await prisma.deal.delete({ where: { id: Number(id) } });
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json(
+      { ok: false, error: error instanceof Error ? error.message : "error" },
+      { status: error instanceof AuthError ? error.status : 500 }
+    );
+  }
+}
