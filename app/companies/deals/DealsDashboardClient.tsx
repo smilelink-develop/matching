@@ -59,7 +59,7 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
         <SummaryCard label="紐づき候補者" value={`${summary.candidateCount}名`} />
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-4">
+      <div className="flex gap-5 overflow-x-auto pb-2 -mx-1 px-1">
         {STATUS_COLUMNS.map((column) => {
           const columnDeals = deals.filter((deal) => deal.status === column);
           return (
@@ -73,7 +73,7 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
                   setDraggingDealId(null);
                 }
               }}
-              className="flex max-h-[calc(100vh-16rem)] flex-col rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+              className="flex max-h-[calc(100vh-16rem)] w-72 flex-shrink-0 flex-col rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold text-[var(--color-text-dark)]">{column}</h2>

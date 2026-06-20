@@ -454,7 +454,7 @@ export default function DealDetailClient({
           </button>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-5">
+        <div className="mt-4 flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
         {CANDIDATE_COLUMNS.map((column) => {
           const columnCandidates = candidates.filter((candidate) => candidate.stage === column);
           const colors = COLUMN_COLOR[column] ?? COLUMN_COLOR["接続済み"];
@@ -469,7 +469,7 @@ export default function DealDetailClient({
                   setDraggingCandidateId(null);
                 }
               }}
-              className={`flex max-h-[calc(100vh-18rem)] flex-col rounded-2xl border ${colors.border} bg-white p-3`}
+              className={`flex max-h-[calc(100vh-18rem)] w-72 flex-shrink-0 flex-col rounded-2xl border ${colors.border} bg-white p-3`}
             >
               <div className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 ${colors.head}`}>
                 <h3 className="text-sm font-semibold">{column}</h3>
