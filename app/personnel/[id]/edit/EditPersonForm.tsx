@@ -60,6 +60,7 @@ type Person = {
     workExperiences: unknown;
     certifications?: unknown;
     interviewAnswers?: unknown;
+    resumeFileUrl?: string | null;
   } | null;
   documents: {
     kind: string;
@@ -592,6 +593,37 @@ export default function EditPersonForm({
 
       {activeSection === "visa" ? (
         <section className="space-y-5">
+          {/* 島0: 履歴書原本 */}
+          <div className="rounded-2xl border border-[var(--color-primary)]/20 bg-[var(--color-light)] p-5 shadow-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <div>
+                <p className="text-base font-semibold text-[var(--color-text-dark)]">📄 履歴書原本</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  AI 取込やバルク取込で Drive に保管された履歴書ファイル本体。推薦リストの「履歴書 URL」列にも使われます。
+                </p>
+              </div>
+              {person.resumeProfile?.resumeFileUrl ? (
+                <a
+                  href={person.resumeProfile.resumeFileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+                >
+                  Drive で開く
+                </a>
+              ) : null}
+            </div>
+            {person.resumeProfile?.resumeFileUrl ? (
+              <p className="mt-3 break-all text-xs text-gray-600 font-mono">
+                {person.resumeProfile.resumeFileUrl}
+              </p>
+            ) : (
+              <p className="mt-3 text-xs text-gray-500">
+                履歴書がまだ保管されていません。AI 取込 (上部の「書類から自動入力」) で履歴書をアップロードすると、ここに自動表示されます。
+              </p>
+            )}
+          </div>
+
           {/* 島1: 在留資格・免許 */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-base font-semibold text-[var(--color-text-dark)]">在留資格・免許</p>

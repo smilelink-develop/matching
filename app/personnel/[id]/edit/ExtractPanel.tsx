@@ -326,12 +326,12 @@ function ExtractModal({
               >
                 <p className="text-sm font-semibold text-[var(--color-text-dark)]">複数ファイルをまとめてドラッグ&ドロップ または クリックして選択</p>
                 <p className="mt-1 text-xs text-gray-500">
-                  在留カード / パスポート / 履歴書など 画像 (JPEG/PNG) または PDF を一度に複数アップロードできます（1ファイル最大 20MB）
+                  在留カード / パスポート / 履歴書など 画像 (JPEG/PNG) / PDF / DOCX (Word) を一度に複数アップロードできます（1ファイル最大 20MB）
                 </p>
                 <input
                   type="file"
                   multiple
-                  accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+                  accept="image/jpeg,image/png,image/gif,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   className="hidden"
                   onChange={(e) => void addFiles(e.target.files)}
                 />

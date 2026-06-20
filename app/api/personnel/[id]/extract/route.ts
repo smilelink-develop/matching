@@ -1,12 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
-import { extractCandidateFromFiles, type SourceFile } from "@/lib/ai-extract";
+import {
+  extractCandidateFromFiles,
+  extractCandidateFromText,
+  type SourceFile,
+} from "@/lib/ai-extract";
 import {
   buildPersonAssetName,
   buildPersonFolderName,
   ensurePersonDriveFolder,
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
+import mammoth from "mammoth";
+
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 type Params = Promise<{ id: string }>;
 
@@ -64,22 +71,37 @@ export async function POST(req: Request, { params }: { params: Params }) {
     };
 
     // AI に渡すために base64 を抜き出す
+    // docx は mammoth でテキスト化、それ以外は Gemini multimodal にそのまま
     const sourceFiles: SourceFile[] = [];
+    const docxTexts: string[] = [];
     for (const file of files) {
       const parsed = parseDataUrl(file.dataUrl);
       if (!parsed) continue;
-      sourceFiles.push({
-        fileName: file.fileName,
-        mimeType: parsed.mimeType,
-        base64: parsed.base64,
-      });
+      if (parsed.mimeType === DOCX_MIME) {
+        try {
+          const buf = Buffer.from(parsed.base64, "base64");
+          const { value: text } = await mammoth.extractRawText({ buffer: buf });
+          if (text?.trim()) docxTexts.push(text);
+        } catch {
+          // docx 解析失敗 → 当該ファイルは無視
+        }
+      } else {
+        sourceFiles.push({
+          fileName: file.fileName,
+          mimeType: parsed.mimeType,
+          base64: parsed.base64,
+        });
+      }
     }
 
-    if (sourceFiles.length === 0) {
+    if (sourceFiles.length === 0 && docxTexts.length === 0) {
       return Response.json({ ok: false, error: "アップロードされたファイルを読み取れません" }, { status: 400 });
     }
 
-    const extracted = await extractCandidateFromFiles(sourceFiles);
+    // PDF/画像 が混じってる場合は multimodal を優先、docx のみなら text 抽出
+    const extracted = sourceFiles.length > 0
+      ? await extractCandidateFromFiles(sourceFiles)
+      : await extractCandidateFromText(docxTexts.join("\n\n"));
 
     // Google Drive は任意設定。未設定なら抽出結果のみ返す
     if (!isDriveConfigured()) {
@@ -137,6 +159,23 @@ export async function POST(req: Request, { params }: { params: Params }) {
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown error";
         driveFailures.push(`${file.fileName}: ${message}`);
+      }
+    }
+
+    // 履歴書ファイル本体の URL を ResumeProfile.resumeFileUrl に保存。
+    // 優先順位: ファイル名に "履歴書" を含むもの → 最初のアップロードファイル。
+    // 既に resumeFileUrl があれば 履歴書 名前付きのものだけ上書き (誤上書き防止)。
+    if (uploadedFiles.length > 0) {
+      const resumeFile =
+        uploadedFiles.find((f) => /履歴書|resume|cv/i.test(f.fileName)) ?? uploadedFiles[0];
+      try {
+        await prisma.resumeProfile.upsert({
+          where: { personId },
+          create: { personId, resumeFileUrl: resumeFile.fileUrl },
+          update: { resumeFileUrl: resumeFile.fileUrl },
+        });
+      } catch {
+        // resumeFileUrl の保存失敗は致命ではないのでサイレント
       }
     }
 
