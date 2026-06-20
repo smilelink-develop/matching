@@ -91,11 +91,16 @@ export default function BulkAddClient({ partners }: { partners: Partner[] }) {
 
   const handleFilePick = (picked: FileList | null) => {
     if (!picked || picked.length === 0) return;
-    const allowed = ["application/pdf", "image/jpeg", "image/png"];
+    const allowed = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+    ];
     const next: File[] = [];
     for (const f of Array.from(picked)) {
       if (!allowed.includes(f.type)) {
-        alert(`サポート外の形式: ${f.name} (${f.type})\nPDF / JPG / PNG のみ`);
+        alert(`サポート外の形式: ${f.name} (${f.type})\nPDF / DOCX / JPG / PNG のみ`);
         continue;
       }
       next.push(f);
@@ -271,7 +276,7 @@ export default function BulkAddClient({ partners }: { partners: Partner[] }) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="application/pdf,image/jpeg,image/png"
+            accept="application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             multiple
             className="hidden"
             onChange={(e) => {

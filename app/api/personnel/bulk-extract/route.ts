@@ -12,12 +12,21 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { extractCandidateFromFiles, type ExtractedCandidate, type SourceFile } from "@/lib/ai-extract";
+import {
+  extractCandidateFromFiles,
+  extractCandidateFromText,
+  type ExtractedCandidate,
+  type SourceFile,
+} from "@/lib/ai-extract";
 import { AuthError, requireApiAccount } from "@/lib/auth";
+import mammoth from "mammoth";
+
+// .docx (Microsoft Word) の MIME
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const MAX_FILES = 10;
 const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15MB (PDF 想定)
-const ALLOWED_MIME = new Set(["application/pdf", "image/jpeg", "image/png"]);
+const ALLOWED_MIME = new Set(["application/pdf", "image/jpeg", "image/png", DOCX_MIME]);
 const TEMP_FILE_TTL_HOURS = 24;
 
 type Duplicate = { id: number; name: string; similarity: number; reason: "name" | "email" };
@@ -157,9 +166,20 @@ export async function POST(req: Request) {
       select: { id: true, name: true, email: true },
     });
 
-    // 並列抽出
+    // 並列抽出 — docx は mammoth で text 抽出後 extractCandidateFromText
+    //          それ以外は そのまま extractCandidateFromFiles (Gemini multimodal)
     const results = await Promise.allSettled(
-      prepared.map((p) => extractCandidateFromFiles([p.source]))
+      prepared.map(async (p) => {
+        if (p.mimeType === DOCX_MIME) {
+          const buf = Buffer.from(p.source.base64, "base64");
+          const { value: text } = await mammoth.extractRawText({ buffer: buf });
+          if (!text?.trim()) {
+            throw new Error("docx からテキストを抽出できませんでした (空のファイル?)");
+          }
+          return extractCandidateFromText(text);
+        }
+        return extractCandidateFromFiles([p.source]);
+      })
     );
 
     const items: ExtractItem[] = results.map((r, idx) => {

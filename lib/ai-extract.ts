@@ -347,6 +347,41 @@ export async function extractCandidateFromFiles(files: SourceFile[]): Promise<Ex
 }
 
 /**
+ * docx 等から事前にテキスト抽出した文字列を Gemini に渡して JSON 化する。
+ * 履歴書 PDF/画像と違って画像 OCR は使わないので、レイアウトの細かい情報は失われる。
+ */
+export async function extractCandidateFromText(text: string): Promise<ExtractedCandidate> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new Error("GEMINI_API_KEY が未設定です");
+  const trimmed = text?.trim();
+  if (!trimmed) throw new Error("テキストが空です");
+
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+  const client = new GoogleGenAI({ apiKey });
+
+  const parts = [
+    { text: SYSTEM_PROMPT },
+    { text: "以下のテキスト (docx などから抽出した履歴書本文) から候補者情報を抽出して、指定のスキーマに沿う JSON を一つだけ返してください。説明や Markdown コードブロックは一切不要です。" },
+    { text: trimmed },
+  ];
+
+  const response = await callGeminiWithRetry(() =>
+    client.models.generateContent({
+      model,
+      contents: [{ role: "user", parts }],
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.1,
+      },
+    })
+  );
+
+  const out = response.text?.trim() ?? "";
+  const raw = parseJsonPayload(out);
+  return validateExtractedCandidate(raw);
+}
+
+/**
  * AI が返した候補者データを検証し、形式不正のフィールドは除去 + 警告を返す。
  * これで「曖昧なラベルを AI が誤って解釈した結果が、フォームに直接入る」事故を防ぐ。
  */
