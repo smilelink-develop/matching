@@ -343,14 +343,14 @@ export default function BulkAddClient({ partners }: { partners: Partner[] }) {
           disabled={extracting || files.length === 0}
           className="w-full bg-[var(--color-primary)] text-white py-2.5 rounded-lg text-sm font-medium hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
         >
-          {extracting ? `🤖 AI 解析中... (推定 ${files.length * 8} 秒)` : `② AI 解析開始 (${files.length} ファイル)`}
+          {extracting ? `📖 読み取り中... (推定 ${files.length * 8} 秒)` : `② 読み取り開始 (${files.length} ファイル)`}
         </button>
       </div>
 
       {/* ============== STEP 3: 結果カード ============== */}
       {extractFailures.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm">
-          <p className="font-semibold text-red-800 mb-2">⚠️ AI 解析に失敗したファイル ({extractFailures.length} 件)</p>
+          <p className="font-semibold text-red-800 mb-2">⚠️ 読み取りに失敗したファイル ({extractFailures.length} 件)</p>
           <ul className="space-y-1 text-xs text-red-700">
             {extractFailures.map((f, idx) => (
               <li key={idx}>📄 {f.fileName} — {f.error}</li>
