@@ -454,7 +454,7 @@ export default function DealDetailClient({
           </button>
         </div>
 
-        <div className="mt-4 flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
+        <div className="mt-4 grid grid-cols-7 gap-2">
         {CANDIDATE_COLUMNS.map((column) => {
           const columnCandidates = candidates.filter((candidate) => candidate.stage === column);
           const colors = COLUMN_COLOR[column] ?? COLUMN_COLOR["接続済み"];
@@ -469,15 +469,15 @@ export default function DealDetailClient({
                   setDraggingCandidateId(null);
                 }
               }}
-              className={`flex max-h-[calc(100vh-18rem)] w-72 flex-shrink-0 flex-col rounded-2xl border ${colors.border} bg-white p-3`}
+              className={`flex max-h-[calc(100vh-18rem)] min-w-0 flex-col rounded-xl border ${colors.border} bg-white p-2`}
             >
-              <div className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 ${colors.head}`}>
-                <h3 className="text-sm font-semibold">{column}</h3>
-                <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-semibold">
-                  {columnCandidates.length}名
+              <div className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 ${colors.head}`}>
+                <h3 className="text-[11px] font-semibold truncate">{column}</h3>
+                <span className="shrink-0 rounded-full bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold">
+                  {columnCandidates.length}
                 </span>
               </div>
-              <div className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
+              <div className="mt-2 flex-1 space-y-1.5 overflow-y-auto pr-0.5">
                 {columnCandidates.map((candidate) => (
                   <Link
                     key={candidate.id}
@@ -485,32 +485,27 @@ export default function DealDetailClient({
                     draggable
                     onDragStart={() => setDraggingCandidateId(candidate.id)}
                     onDragEnd={() => setDraggingCandidateId(null)}
-                    className={`block rounded-2xl border p-3 transition ${colors.tile}`}
+                    className={`block rounded-lg border p-2 transition ${colors.tile}`}
+                    title={`${formatCandidateLabel(candidate.person)}\n${candidate.person.name}\n${candidate.person.nationality} / ${candidate.person.residenceStatus}\n紹介パートナー: ${candidate.person.partner?.name ?? "未設定"}${candidate.note ? `\n備考: ${candidate.note}` : ""}`}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-1.5">
                       <PersonAvatar
                         photoUrl={candidate.person.photoUrl}
                         name={candidate.person.name}
-                        size={44}
-                        className="rounded-xl"
+                        size={28}
+                        className="rounded-lg shrink-0"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-[var(--color-text-dark)] truncate">
+                        <p className="text-[11px] font-semibold text-[var(--color-text-dark)] truncate leading-tight">
                           {formatCandidateLabel(candidate.person)}
                         </p>
-                        {candidate.person.englishName?.trim() ? (
-                          <p className="mt-0.5 text-[11px] text-gray-400 truncate">{candidate.person.name}</p>
-                        ) : null}
-                        <p className="mt-1 text-xs text-gray-500">
-                          {candidate.person.nationality} / {candidate.person.residenceStatus}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          紹介パートナー: {candidate.person.partner?.name ?? "未設定"}
+                        <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
+                          {candidate.person.nationality}
                         </p>
                       </div>
                     </div>
                     {candidate.note ? (
-                      <p className="mt-3 text-sm leading-6 text-gray-600">{candidate.note}</p>
+                      <p className="mt-1.5 text-[10px] text-gray-500 line-clamp-2">{candidate.note}</p>
                     ) : null}
                   </Link>
                 ))}
