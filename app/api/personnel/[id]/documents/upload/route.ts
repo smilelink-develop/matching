@@ -170,45 +170,60 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
 
     // 旧ファイルを Drive から削除 (差し替え)
-    //   ① DB の旧 fileUrl から取れる fileId を削除
-    //   ② docs フォルダ内に同名 / 同 kind プレフィックスの残骸ファイルがあれば
-    //      created.data.id 以外を全部削除 (Drive は同名複数ファイル許容のため)
+    //   方針:
+    //     - Drive の name contains クエリは日本語 + カッコで誤動作するため、
+    //       書類サブフォルダ内 を全件 list して JS 側でプレフィックス一致判定
+    //     - files.delete は権限が無いと失敗するので、files.update({trashed:true})
+    //       でゴミ箱に移動 (Service Account の編集権限さえあれば成功)
+    //     - 削除失敗時は応答に warning として返し、Railway ログにも console.error
     const deleteFailures: string[] = [];
     const idsToDelete = new Set<string>();
     if (oldFileId && oldFileId !== created.data.id) idsToDelete.add(oldFileId);
 
+    const namePrefix = buildPersonAssetName({
+      person: {
+        id: person.id,
+        name: person.name,
+        englishName: person.onboarding?.englishName ?? null,
+      },
+      assetName: docLabel,
+    });
+
     try {
-      // 同名ファイルの残骸を検出 — name の頭が "{4桁ID}_{name}_{label}" で
-      // 始まるファイル全部を対象 (拡張子違いも含めて差し替え対象)
-      const namePrefix = buildPersonAssetName({
-        person: {
-          id: person.id,
-          name: person.name,
-          englishName: person.onboarding?.englishName ?? null,
-        },
-        assetName: docLabel,
-      });
-      // Drive クエリ: name に singlequote を含むケースを念のためエスケープ
-      const safePrefix = namePrefix.replace(/'/g, "\\'");
+      // 書類サブフォルダ内の全ファイルを取得 (created.data.id 以外で
+      // namePrefix で始まるファイルを削除対象に)
       const listed = await drive.files.list({
-        q: `'${docFolderId}' in parents and trashed = false and name contains '${safePrefix}'`,
+        q: `'${docFolderId}' in parents and trashed = false`,
         fields: "files(id,name)",
         supportsAllDrives: true,
         includeItemsFromAllDrives: true,
-        pageSize: 50,
+        pageSize: 1000,
       });
       for (const f of listed.data.files ?? []) {
-        if (f.id && f.id !== created.data.id) idsToDelete.add(f.id);
+        if (!f.id || f.id === created.data.id) continue;
+        if (typeof f.name === "string" && f.name.startsWith(namePrefix)) {
+          idsToDelete.add(f.id);
+        }
       }
     } catch (e) {
-      deleteFailures.push(`list: ${e instanceof Error ? e.message : "error"}`);
+      const msg = e instanceof Error ? e.message : "list error";
+      deleteFailures.push(`list: ${msg}`);
+      console.error("documents/upload list error:", msg);
     }
 
     for (const fileId of idsToDelete) {
       try {
-        await drive.files.delete({ fileId, supportsAllDrives: true });
+        // files.delete だと所有権が必要なケースで失敗するので
+        // files.update({trashed: true}) でゴミ箱送り (編集権限のみでOK)
+        await drive.files.update({
+          fileId,
+          requestBody: { trashed: true },
+          supportsAllDrives: true,
+        });
       } catch (e) {
-        deleteFailures.push(`${fileId}: ${e instanceof Error ? e.message : "error"}`);
+        const msg = e instanceof Error ? e.message : "error";
+        deleteFailures.push(`${fileId}: ${msg}`);
+        console.error(`documents/upload delete failed for ${fileId}:`, msg);
       }
     }
 
