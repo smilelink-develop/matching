@@ -12,6 +12,7 @@ import {
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
 import mammoth from "mammoth";
+import { toDriveThumbUrl } from "@/lib/drive-url";
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -53,6 +54,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
         id: true,
         name: true,
         driveFolderUrl: true,
+        photoUrl: true,
         onboarding: { select: { englishName: true } },
       },
     });
@@ -164,7 +166,8 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
     // 履歴書ファイル本体の URL を ResumeProfile.resumeFileUrl に保存。
     // 優先順位: ファイル名に "履歴書" を含むもの → 最初のアップロードファイル。
-    // 既に resumeFileUrl があれば 履歴書 名前付きのものだけ上書き (誤上書き防止)。
+    // 同時に Person.photoUrl が未設定なら、Drive サムネ URL を photoUrl に設定。
+    // (PDF はページ 1 サムネ、画像は画像そのまま — bulk-add と同じ挙動)
     if (uploadedFiles.length > 0) {
       const resumeFile =
         uploadedFiles.find((f) => /履歴書|resume|cv/i.test(f.fileName)) ?? uploadedFiles[0];
@@ -176,6 +179,20 @@ export async function POST(req: Request, { params }: { params: Params }) {
         });
       } catch {
         // resumeFileUrl の保存失敗は致命ではないのでサイレント
+      }
+      // Person.photoUrl が空ならサムネ URL を設定 (既存の写真は上書きしない)
+      if (!person.photoUrl) {
+        const thumb = toDriveThumbUrl(resumeFile.fileUrl);
+        if (thumb) {
+          try {
+            await prisma.person.update({
+              where: { id: personId },
+              data: { photoUrl: thumb },
+            });
+          } catch {
+            // photoUrl 保存失敗もサイレント
+          }
+        }
       }
     }
 
