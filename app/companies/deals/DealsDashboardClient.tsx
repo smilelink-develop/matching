@@ -59,7 +59,7 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
         <SummaryCard label="紐づき候補者" value={`${summary.candidateCount}名`} />
       </section>
 
-      <div className="flex gap-5 overflow-x-auto pb-2 -mx-1 px-1">
+      <div className="grid grid-cols-5 gap-3">
         {STATUS_COLUMNS.map((column) => {
           const columnDeals = deals.filter((deal) => deal.status === column);
           return (
@@ -73,15 +73,15 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
                   setDraggingDealId(null);
                 }
               }}
-              className="flex max-h-[calc(100vh-16rem)] w-72 flex-shrink-0 flex-col rounded-3xl border border-gray-200 bg-white p-4 shadow-sm"
+              className="flex max-h-[calc(100vh-16rem)] min-w-0 flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-sm"
             >
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold text-[var(--color-text-dark)]">{column}</h2>
-                <span className="rounded-full bg-[var(--color-light)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-primary)]">
+              <div className="flex items-center justify-between gap-1.5">
+                <h2 className="text-xs font-semibold text-[var(--color-text-dark)] truncate">{column}</h2>
+                <span className="shrink-0 rounded-full bg-[var(--color-light)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
                   {columnDeals.length}件
                 </span>
               </div>
-              <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
+              <div className="mt-2 flex-1 space-y-1.5 overflow-y-auto pr-0.5">
                 {columnDeals.map((deal) => (
                   <Link
                     key={deal.id}
@@ -89,42 +89,26 @@ export default function DealsDashboardClient({ deals: initialDeals }: { deals: D
                     draggable
                     onDragStart={() => setDraggingDealId(deal.id)}
                     onDragEnd={() => setDraggingDealId(null)}
-                    className={`block rounded-2xl border p-4 transition ${cardPriorityClass(deal.priority)}`}
+                    className={`block rounded-lg border p-2 transition ${cardPriorityClass(deal.priority)}`}
+                    title={`${deal.companyName}\n${deal.title}\n担当: ${deal.ownerName}\n分野: ${deal.field ?? "未設定"}\n単価: ${formatUnitPrice(deal.unitPrice)}\n候補者: ${deal.candidatesCount}名${deal.deadline ? `\n期限: ${new Date(deal.deadline).toLocaleDateString("ja-JP")}` : ""}`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        {/* 企業名をメイン、案件名をサブで表示 (入れ替え) */}
-                        <p className="text-sm font-semibold text-[var(--color-text-dark)]">{deal.companyName}</p>
-                        <p className="mt-1 text-xs text-gray-500">{deal.title}</p>
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-semibold text-[var(--color-text-dark)] truncate leading-tight">{deal.companyName}</p>
+                        <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">{deal.title}</p>
                       </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1">
-                        {deal.priority && deal.priority !== "normal" ? (
-                          <span className={priorityClass(deal.priority)}>{priorityLabel(deal.priority)}</span>
-                        ) : null}
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            deal.deadline
-                              ? "bg-[var(--color-light)] text-[var(--color-primary)]"
-                              : "bg-gray-100 text-gray-400"
-                          }`}
-                          title={deal.deadline ? "期限" : "期限未設定"}
-                        >
-                          {deal.deadline
-                            ? new Date(deal.deadline).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })
-                            : "期限なし"}
-                        </span>
-                      </div>
+                      {deal.priority && deal.priority !== "normal" ? (
+                        <span className={`${priorityClass(deal.priority)} shrink-0 text-[9px] px-1 py-0`}>{priorityLabel(deal.priority)}</span>
+                      ) : null}
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-gray-500">
-                      <Pill>{deal.ownerName}</Pill>
-                      <Pill>{deal.field ?? "分野未設定"}</Pill>
-                      <Pill>{formatUnitPrice(deal.unitPrice)}</Pill>
-                      <Pill>{deal.candidatesCount}名</Pill>
+                    <div className="mt-1 flex items-center justify-between gap-1 text-[10px] text-gray-500">
+                      <span className="truncate">{deal.ownerName}</span>
+                      <span className="shrink-0">{deal.candidatesCount}名</span>
                     </div>
                   </Link>
                 ))}
                 {columnDeals.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-400">
+                  <div className="rounded-lg border border-dashed border-gray-200 px-2 py-4 text-center text-[10px] text-gray-400">
                     案件なし
                   </div>
                 ) : null}
