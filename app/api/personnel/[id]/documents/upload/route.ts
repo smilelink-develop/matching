@@ -169,12 +169,46 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       });
     }
 
-    // 旧ファイルを Drive から削除 (差し替え) — 新規ファイルが Drive に乗ったあとで実行
-    if (oldFileId && oldFileId !== created.data.id) {
+    // 旧ファイルを Drive から削除 (差し替え)
+    //   ① DB の旧 fileUrl から取れる fileId を削除
+    //   ② docs フォルダ内に同名 / 同 kind プレフィックスの残骸ファイルがあれば
+    //      created.data.id 以外を全部削除 (Drive は同名複数ファイル許容のため)
+    const deleteFailures: string[] = [];
+    const idsToDelete = new Set<string>();
+    if (oldFileId && oldFileId !== created.data.id) idsToDelete.add(oldFileId);
+
+    try {
+      // 同名ファイルの残骸を検出 — name の頭が "{4桁ID}_{name}_{label}" で
+      // 始まるファイル全部を対象 (拡張子違いも含めて差し替え対象)
+      const namePrefix = buildPersonAssetName({
+        person: {
+          id: person.id,
+          name: person.name,
+          englishName: person.onboarding?.englishName ?? null,
+        },
+        assetName: docLabel,
+      });
+      // Drive クエリ: name に singlequote を含むケースを念のためエスケープ
+      const safePrefix = namePrefix.replace(/'/g, "\\'");
+      const listed = await drive.files.list({
+        q: `'${docFolderId}' in parents and trashed = false and name contains '${safePrefix}'`,
+        fields: "files(id,name)",
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        pageSize: 50,
+      });
+      for (const f of listed.data.files ?? []) {
+        if (f.id && f.id !== created.data.id) idsToDelete.add(f.id);
+      }
+    } catch (e) {
+      deleteFailures.push(`list: ${e instanceof Error ? e.message : "error"}`);
+    }
+
+    for (const fileId of idsToDelete) {
       try {
-        await drive.files.delete({ fileId: oldFileId, supportsAllDrives: true });
-      } catch {
-        // 既に手動で消されていた等は無視
+        await drive.files.delete({ fileId, supportsAllDrives: true });
+      } catch (e) {
+        deleteFailures.push(`${fileId}: ${e instanceof Error ? e.message : "error"}`);
       }
     }
 
@@ -186,6 +220,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       fileUrl,
       mimeType: created.data.mimeType ?? mimeType,
       driveFolderUrl: folder.folderUrl,
+      deletedOld: idsToDelete.size,
+      deleteWarning: deleteFailures.length > 0 ? deleteFailures.join(" / ") : undefined,
     });
   } catch (error) {
     console.error("documents/upload error:", error);
