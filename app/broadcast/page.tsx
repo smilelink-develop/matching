@@ -55,10 +55,11 @@ export default async function BroadcastPage() {
           name: p.name,
           country: p.country,
           channel: p.channel,
+          preferredChannels: p.preferredChannels,
           linkStatus: p.linkStatus,
           contactName: p.contactName,
-          // メール宛先: 主担当のメアドを優先、無ければ legacy Partner.email
-          email: p.contacts[0]?.email ?? p.email,
+          // メール宛先: Partner 直下フィールドを優先、無ければ 主担当 のメアド
+          email: p.email ?? p.contacts[0]?.email ?? null,
           lineUserId: p.lineUserId,
           lineGroupName: p.lineGroups[0]?.groupName ?? null,
           lineGroupId: p.lineGroups[0]?.groupId ?? null,

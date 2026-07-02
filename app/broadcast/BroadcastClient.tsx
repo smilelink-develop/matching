@@ -23,6 +23,7 @@ type Partner = {
   name: string;
   country: string | null;
   channel: string | null;
+  preferredChannels: string | null;
   linkStatus: string;
   contactName: string | null;
   email: string | null;
@@ -262,7 +263,11 @@ export default function BroadcastClient({
 
   const targetCount = targetPartners.length;
 
-  /** 今回の配信で各チャネル何通使うかを試算 */
+  /** 今回の配信で各チャネル何通使うかを試算
+   *  各パートナーは preferredChannels の全チャネルに 同時 送信されるため、
+   *  「メール ✓ LINE ✓」の場合 1 パートナーがメール 1 通 + LINE 1〜5 通を消費する。
+   *  preferredChannels が空の場合は 従来の channel をフォールバック。
+   */
   const plannedUsage = useMemo(() => {
     let line = 0;
     let messenger = 0;
@@ -271,11 +276,17 @@ export default function BroadcastClient({
     const imgCount = Math.min(attachedImages.length, 4);
     const linePerPartner = 1 + imgCount;
     for (const p of targetPartners) {
-      const ch = p.channel ?? "";
-      if (ch === "LINE") line += linePerPartner;
-      else if (ch === "Messenger") messenger += 1;
-      else if (ch === "WhatsApp") whatsapp += 1;
-      else if (ch === "mail" || ch === "メール" || ch === "Email") email += 1;
+      const parsed = (p.preferredChannels ?? "")
+        .split(/[,、]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const channels = parsed.length > 0 ? parsed : p.channel ? [p.channel] : [];
+      for (const ch of channels) {
+        if (ch === "LINE") line += linePerPartner;
+        else if (ch === "Messenger") messenger += 1;
+        else if (ch === "WhatsApp") whatsapp += 1;
+        else if (ch === "mail" || ch === "メール" || ch === "Email") email += 1;
+      }
     }
     return { line, messenger, email, whatsapp };
   }, [targetPartners, attachedImages.length]);

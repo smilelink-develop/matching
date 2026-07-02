@@ -21,8 +21,12 @@ export type PartnerDetailData = {
   name: string;
   country: string | null;
   channel: string | null;
+  /** 一括送信で使う連絡手段の複数選択 (CSV: "LINE,mail,Messenger") */
+  preferredChannels: string | null;
   linkStatus: string;
   contactName: string | null;
+  /** 担当者の電話番号 */
+  contactPhone: string | null;
   notes: string | null;
   rating: number | null;
   ratingReason: string | null;
@@ -107,8 +111,15 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
   const [form, setForm] = useState({
     name: initial.name,
     country: initial.country ?? "",
+    // 単一の channel は互換用に残すが UI から編集不可 (preferredChannels に集約)
     channel: initial.channel ?? "未設定",
+    // 一括送信の連絡手段 (複数選択、CSV)
+    preferredChannels: parseCsv(initial.preferredChannels),
     linkStatus: initial.linkStatus,
+    // 担当者関連 (直下フィールド、1 人だけ想定)
+    contactName: initial.contactName ?? "",
+    contactPhone: initial.contactPhone ?? "",
+    email: initial.email ?? "",
     notes: initial.notes ?? "",
     rating: initial.rating ?? 0,
     ratingReason: initial.ratingReason ?? "",
@@ -179,6 +190,10 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
         body: JSON.stringify({
           ...form,
           rating: form.rating || null,
+          // preferredChannels は配列 → CSV に serialize
+          preferredChannels: toCsv(form.preferredChannels),
+          // レガシー channel は preferredChannels の先頭を採用
+          channel: form.preferredChannels[0] ?? form.channel,
           introducibleNationalities: toCsv(form.introducibleNationalities),
           introducibleFields: toCsv(form.introducibleFields),
           introducibleResidenceStatuses: toCsv(form.introducibleResidenceStatuses),
@@ -291,25 +306,80 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
           </Field>
         </Group>
 
-        {/* 連絡 */}
+        {/* 連絡 (統合: 担当者情報 + SNS 紐づけ + 連絡手段の複数選択) */}
         <Group title="連絡">
-          <Field label="SNS 連絡先">
+          {/* 担当者情報 (1 人だけ想定) */}
+          <Field label="担当者名">
+            <input
+              className={INPUT}
+              value={form.contactName}
+              onChange={(e) => set("contactName", e.target.value)}
+              placeholder="山田 太郎"
+            />
+          </Field>
+          <Field label="担当者の電話">
+            <input
+              className={INPUT}
+              value={form.contactPhone}
+              onChange={(e) => set("contactPhone", e.target.value)}
+              placeholder="090-1234-5678"
+            />
+          </Field>
+          <Field label="メール" className="md:col-span-2">
+            <input
+              type="email"
+              className={INPUT}
+              value={form.email}
+              onChange={(e) => set("email", e.target.value)}
+              placeholder="example@partner.com"
+            />
+          </Field>
+          <Field label="SNS 連絡先" className="md:col-span-2">
             <input className={INPUT} value={form.snsContact} onChange={(e) => set("snsContact", e.target.value)} placeholder="LINE / Facebook URL など" />
           </Field>
-          <Field label="主な連絡手段">
-            <select className={INPUT} value={form.channel} onChange={(e) => set("channel", e.target.value)}>
-              {CHANNELS.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+
+          {/* 連絡手段の複数選択 */}
+          <Field label="連絡手段 (複数選択可)" className="md:col-span-2">
+            <div className="flex flex-wrap gap-2">
+              {CHANNELS.filter((c) => c.value !== "未設定").map((c) => {
+                const checked = form.preferredChannels.includes(c.value);
+                return (
+                  <label
+                    key={c.value}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
+                      checked
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                        : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="hidden"
+                      checked={checked}
+                      onChange={() => {
+                        set(
+                          "preferredChannels",
+                          checked
+                            ? form.preferredChannels.filter((v) => v !== c.value)
+                            : [...form.preferredChannels, c.value]
+                        );
+                      }}
+                    />
+                    {c.label}
+                  </label>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[11px] text-gray-500">
+              一括送信の際、ここで選択したチャネル全てに 同時 送信されます (メール + LINE 両方など)
+            </p>
           </Field>
+
           <Field label="連絡先紐づけ" className="md:col-span-2">
             <LinkStatusDisplay
               linkStatus={form.linkStatus}
-              channel={form.channel}
-              email={initial.contacts.find((c) => c.isPrimary)?.email ?? null}
+              channel={form.preferredChannels[0] ?? form.channel}
+              email={form.email || null}
               lineUserId={initial.lineUserId}
               lineGroupId={initial.lineGroupId}
               lineGroupName={initial.lineGroupName}
@@ -351,18 +421,7 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
         </Group>
       </section>
 
-      {/* 担当者一覧 (別セクション、淡い青背景で会社情報と区別) */}
-      <section className="rounded-2xl border border-blue-100 bg-[#EFF6FF] p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-[var(--color-text-dark)]">担当者</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
-              この会社の担当者を複数人登録できます。営業担当・経理担当 など役職別に管理可能。
-            </p>
-          </div>
-        </div>
-        <ContactsPanel partnerId={initial.id} initialContacts={initial.contacts} />
-      </section>
+      {/* 担当者一覧セクションは削除: 担当者情報は「連絡」セクションに統合済み (1 人だけ想定) */}
 
       {/* 紹介可能 / 手数料 / メモ・特徴 (別セクション) */}
       <section className="rounded-2xl border border-gray-200 bg-[#FAF9F5] p-6 shadow-sm">

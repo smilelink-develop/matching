@@ -82,9 +82,14 @@ model Partner {
   id            Int     @id @default(autoincrement())
   name          String
   country       String?
+  /// レガシー: 単一チャネル (後方互換用、preferredChannels に集約)
   channel       String?
+  /// 一括送信で使う連絡手段の複数選択 (CSV: "LINE,mail,Messenger")。
+  /// この Partner に一斉配信する際、ここに列挙された全チャネルに 同時 送信する。
+  preferredChannels String?
   linkStatus    String  @default("未")
   contactName   String?
+  contactPhone  String?
   notes         String?
   lineUserId    String? @unique
   messengerPsid String? @unique
