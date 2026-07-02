@@ -4,6 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import PersonAvatar from "@/app/components/PersonAvatar";
 
+/**
+ * 候補者の顔写真パネル。
+ *   - アップロード: /api/personnel/[id]/documents/upload に kind="photo" で送る
+ *     (Drive 候補者フォルダに保存 → サムネ URL を Person.photoUrl に自動設定)
+ *   - 削除: PATCH /api/personnel/[id] で photoUrl を null に
+ */
 export default function PhotoPanel({
   personId,
   personName,
@@ -25,25 +31,32 @@ export default function PhotoPanel({
       alert("画像ファイルを選択してください");
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      alert("画像は 3MB 以下にしてください");
+    if (file.size > 10 * 1024 * 1024) {
+      alert("画像は 10MB 以下にしてください");
       return;
     }
     setUploading(true);
     try {
-      const dataUrl = await readAsDataUrl(file);
-      const response = await fetch(`/api/personnel/${personId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoUrl: dataUrl }),
+      // Drive 経由の正規ルート:
+      //   documents/upload が Drive にアップロード → サムネ URL を Person.photoUrl に自動設定
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", "photo");
+      const response = await fetch(`/api/personnel/${personId}/documents/upload`, {
+        method: "POST",
+        body: fd,
       });
       const result = await response.json();
       if (!response.ok || !result.ok) {
-        alert(result.error || "写真の保存に失敗しました");
+        alert(result.error || "写真のアップロードに失敗しました");
         return;
       }
-      setPhotoUrl(result.person?.photoUrl ?? dataUrl);
+      // documents/upload は Person.photoUrl をサムネ URL に更新済み。
+      // ページを refresh して最新の photoUrl を取得。
       router.refresh();
+      // 楽観的に自分の表示も更新 (fileUrl はサムネ URL ではないので、
+      // refresh 後の person.photoUrl が正しい値になる。プレビューは仮に。)
+      if (result.fileUrl) setPhotoUrl(result.fileUrl);
     } finally {
       setUploading(false);
     }
@@ -52,6 +65,7 @@ export default function PhotoPanel({
   const removePhoto = async () => {
     if (!photoUrl) return;
     if (!confirm("顔写真を削除しますか?")) return;
+    // 削除は Person.photoUrl を null に (Drive のファイル自体は温存)
     const response = await fetch(`/api/personnel/${personId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -100,13 +114,4 @@ export default function PhotoPanel({
       ) : null}
     </section>
   );
-}
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 }
