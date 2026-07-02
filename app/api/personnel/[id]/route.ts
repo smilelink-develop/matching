@@ -93,11 +93,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       })
     );
 
+    // photoUrl の扱い:
+    //   - 新規 data URL アップロード (photoUpload) → その URL を採用
+    //   - body.photoUrl が空文字/未指定 → PhotoPanel などフォーム外で更新済みの
+    //     可能性があるため DB を触らない (photoUrl フィールドを送らない)
+    //   - body.photoUrl が非空文字 → その値を採用
+    const photoUrlUpdate: { photoUrl?: string } = photoUpload?.fileUrl
+      ? { photoUrl: photoUpload.fileUrl }
+      : typeof body.photoUrl === "string" && body.photoUrl.trim().length > 0
+        ? { photoUrl: body.photoUrl }
+        : {};
+
     const person = await prisma.person.update({
       where: { id: personId },
       data: {
         name: body.name,
-        photoUrl: photoUpload?.fileUrl || body.photoUrl || null,
+        ...photoUrlUpdate,
         driveFolderUrl: folder.folderUrl,
         nationality: body.nationality,
         residenceStatus: body.residenceStatus,
