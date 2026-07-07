@@ -47,9 +47,45 @@ export const CONDITION_FIELDS: { key: string; label: string; group: string; mult
 
   { key: "otherBenefits", label: "その他手当・福利厚生", group: "その他", multiline: true },
   { key: "notes", label: "特記事項", group: "その他", multiline: true },
+
+  // ── 2026-06 求人票テンプレ拡張 (27 項目) ──
+  // 給与関連追加
+  { key: "salaryIncrease", label: "昇給有無", group: "給与" },
+  { key: "bonus", label: "賞与有無", group: "給与" },
+  { key: "salaryPayday", label: "給与支払日", group: "給与" },
+  { key: "salaryCutoff", label: "給与締日", group: "給与" },
+  { key: "monthlyDeduction", label: "月控除額", group: "控除" },
+  { key: "otherDeductions", label: "その他控除金額", group: "控除" },
+  { key: "socialInsuranceCoverage", label: "社会保険 (加入有無)", group: "控除" },
+  // 生活費追加
+  { key: "wifiFee", label: "Wifi代金額", group: "生活" },
+  { key: "waterFee", label: "水道代金額", group: "生活" },
+  { key: "foodProvision", label: "食事提供有無 (食費支給と別)", group: "生活" },
+  { key: "dormOccupants", label: "寮人数", group: "生活" },
+  { key: "bedroomShared", label: "寝室共有 (有/無)", group: "生活" },
+  { key: "dormCommuteTime", label: "寮から通勤時間", group: "生活" },
+  // 移住関連
+  { key: "movingSupport", label: "引越補助有無", group: "移住・応募" },
+  { key: "movingSupportDetails", label: "引越補助詳細", group: "移住・応募", multiline: true },
+  { key: "preferredEntryDate", label: "入国希望日", group: "移住・応募" },
+  { key: "foreignWorkers", label: "外国人就業者 (現在の人数など)", group: "移住・応募" },
+  { key: "overseasApplication", label: "海外応募可否", group: "移住・応募" },
+  // 募集条件追加
+  { key: "japaneseLevel", label: "日本語レベル", group: "募集条件" },
+  { key: "experienceYears", label: "経験年数", group: "募集条件" },
+  { key: "requiredQualifications", label: "必要資格", group: "募集条件", multiline: true },
+  // 選考
+  { key: "preferredInterviewDate", label: "面接希望日", group: "選考" },
+  { key: "selectionFlow", label: "選考フロー", group: "選考", multiline: true },
+  // 勤務条件追加
+  { key: "trialPeriod", label: "試用期間有無", group: "勤務" },
+  { key: "trialPeriodDetails", label: "試用期間詳細", group: "勤務" },
+  { key: "holidayCategory", label: "休日休暇区分", group: "勤務" },
+  { key: "facilities", label: "設備", group: "勤務", multiline: true },
+  { key: "commuteMethod", label: "通勤手段", group: "勤務" },
 ];
 
-const FIELD_GROUPS = ["基本", "勤務", "給与", "控除", "生活", "その他"];
+const FIELD_GROUPS = ["基本", "勤務", "給与", "控除", "生活", "移住・応募", "募集条件", "選考", "その他"];
 
 const CHAT_GPT_PROMPT = `以下の求人票 PDF / 画像を読み取り、構造化されたテキストとして抽出してください。
 

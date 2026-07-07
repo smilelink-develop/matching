@@ -627,6 +627,41 @@ model JobPosting {
   holidays            String?
   otherBenefits       String?
   notes               String?
+  // ── 新設 (2026-06 求人票テンプレ拡張) ──
+  // 給与関連
+  salaryIncrease         String? // 昇給有無
+  bonus                  String? // 賞与有無
+  salaryPayday           String? // 給与支払日
+  salaryCutoff           String? // 給与締日
+  monthlyDeduction       String? // 月控除額
+  otherDeductions        String? // その他控除金額
+  // 手当・生活費追加
+  wifiFee                String? // Wifi代金額
+  waterFee               String? // 水道代金額
+  movingSupport          String? // 引越補助有無
+  movingSupportDetails   String? // 引越補助詳細
+  // 寮関連追加
+  dormOccupants          String? // 寮人数
+  bedroomShared          String? // 寝室共有
+  dormCommuteTime        String? // 寮から通勤時間
+  foodProvision          String? // 食事提供有無 (食費支給有無と別)
+  // 募集条件
+  foreignWorkers         String? // 外国人就業者
+  overseasApplication    String? // 海外応募可否
+  japaneseLevel          String? // 日本語レベル
+  experienceYears        String? // 経験年数
+  requiredQualifications String? // 必要資格
+  commuteMethod          String? // 通勤手段
+  // 選考関連
+  preferredInterviewDate String? // 面接希望日
+  selectionFlow          String? // 選考フロー
+  preferredEntryDate     String? // 入国希望日
+  // 勤務条件追加
+  trialPeriod              String? // 試用期間有無
+  trialPeriodDetails       String? // 試用期間詳細
+  facilities               String? // 設備
+  holidayCategory          String? // 休日休暇区分
+  socialInsuranceCoverage  String? // 社会保険 (加入有無、料金は socialInsurance 列と別)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 

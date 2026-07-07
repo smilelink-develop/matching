@@ -40,6 +40,35 @@ type JobPostingFields = {
   holidays?: string;
   otherBenefits?: string;
   notes?: string;
+  // ── 2026-06 求人票テンプレ拡張分 (27 項目) ──
+  salaryIncrease?: string;
+  bonus?: string;
+  salaryPayday?: string;
+  salaryCutoff?: string;
+  monthlyDeduction?: string;
+  otherDeductions?: string;
+  wifiFee?: string;
+  waterFee?: string;
+  movingSupport?: string;
+  movingSupportDetails?: string;
+  dormOccupants?: string;
+  bedroomShared?: string;
+  dormCommuteTime?: string;
+  foodProvision?: string;
+  foreignWorkers?: string;
+  overseasApplication?: string;
+  japaneseLevel?: string;
+  experienceYears?: string;
+  requiredQualifications?: string;
+  commuteMethod?: string;
+  preferredInterviewDate?: string;
+  selectionFlow?: string;
+  preferredEntryDate?: string;
+  trialPeriod?: string;
+  trialPeriodDetails?: string;
+  facilities?: string;
+  holidayCategory?: string;
+  socialInsuranceCoverage?: string;
 };
 
 const STRING_FIELDS: (keyof JobPostingFields)[] = [
@@ -53,6 +82,16 @@ const STRING_FIELDS: (keyof JobPostingFields)[] = [
   "mealProvision", "mealAmount", "dormProvision", "dormAmount",
   "utilitiesProvision", "utilitiesAmount",
   "holidays", "otherBenefits", "notes",
+  // 拡張 27 項目
+  "salaryIncrease", "bonus", "salaryPayday", "salaryCutoff",
+  "monthlyDeduction", "otherDeductions",
+  "wifiFee", "waterFee", "movingSupport", "movingSupportDetails",
+  "dormOccupants", "bedroomShared", "dormCommuteTime", "foodProvision",
+  "foreignWorkers", "overseasApplication", "japaneseLevel", "experienceYears",
+  "requiredQualifications", "commuteMethod",
+  "preferredInterviewDate", "selectionFlow", "preferredEntryDate",
+  "trialPeriod", "trialPeriodDetails", "facilities",
+  "holidayCategory", "socialInsuranceCoverage",
 ];
 
 // Docs テンプレ側の日本語 placeholder ({{勤務地}} など) と、AI 抽出結果の英語キーのマッピング
@@ -94,6 +133,35 @@ const JP_KEY_MAP: Record<keyof JobPostingFields, string[]> = {
   holidays: ["休日詳細", "休日"],
   otherBenefits: ["福利厚生", "その他手当"],
   notes: ["特記事項", "備考"],
+  // ── 2026-06 拡張 ──
+  salaryIncrease: ["昇給有無"],
+  bonus: ["賞与有無"],
+  salaryPayday: ["給与支払日"],
+  salaryCutoff: ["給与締日"],
+  monthlyDeduction: ["月控除額"],
+  otherDeductions: ["その他控除金額"],
+  wifiFee: ["Wifi代金額"],
+  waterFee: ["水道代金額"],
+  movingSupport: ["引越補助有無"],
+  movingSupportDetails: ["引越補助詳細"],
+  dormOccupants: ["寮人数"],
+  bedroomShared: ["寝室共有"],
+  dormCommuteTime: ["寮から通勤時間"],
+  foodProvision: ["食事提供有無"],
+  foreignWorkers: ["外国人就業者"],
+  overseasApplication: ["海外応募可否"],
+  japaneseLevel: ["日本語レベル"],
+  experienceYears: ["経験年数"],
+  requiredQualifications: ["必要資格"],
+  commuteMethod: ["通勤手段"],
+  preferredInterviewDate: ["面接希望日"],
+  selectionFlow: ["選考フロー"],
+  preferredEntryDate: ["入国希望日"],
+  trialPeriod: ["試用期間有無"],
+  trialPeriodDetails: ["試用期間詳細"],
+  facilities: ["設備"],
+  holidayCategory: ["休日休暇区分"],
+  socialInsuranceCoverage: ["社会保険"],
 };
 
 // 勤務時間の結合キー (例: 勤務時間1 = 09:00〜18:00) も自動生成
