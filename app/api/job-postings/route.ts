@@ -190,6 +190,9 @@ export async function POST(req: Request) {
             タイトル: title,
             求人名: title,
             案件ID: String(deal.id),
+            // 企業 ID = Company.externalId (例: "66sv")、無ければ内部 id にフォールバック
+            企業ID: deal.company.externalId ?? String(deal.company.id),
+            企業D: deal.company.externalId ?? String(deal.company.id),
             作成日: new Date().toLocaleDateString("ja-JP"),
             分野: deal.field ?? "",
             // 未設定項目はよく聞かれるがフォームに無いので空で初期化 (テンプレに出ても空で消える)

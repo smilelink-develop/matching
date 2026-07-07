@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentAccount } from "@/lib/auth";
-import { compareExternalId, findExternalIdByName } from "@/lib/company-id-mapping";
+import { compareExternalIdDescendingWithFallback, findExternalIdByName } from "@/lib/company-id-mapping";
 import { findFolderByPrefix } from "@/lib/google-docs";
 import CompaniesListClient from "./CompaniesListClient";
 
@@ -27,8 +27,13 @@ export default async function CompaniesPage() {
     },
   });
 
-  // externalId (数値プレフィックス) で 降順 (新しい/大きい番号ほど上)。欠番は末尾。
-  const sorted = [...companies].sort((a, b) => compareExternalId(b.externalId, a.externalId));
+  // 並び順:
+  //   ① 数値プレフィックス付き (02sv 等) → 番号 降順 (大きい番号ほど上)
+  //   ② 数値なし (日本語企業名、AD 等) → 数値ブロックの下、あいうえお順
+  //   ③ null / 未設定 → 最下段
+  const sorted = [...companies].sort((a, b) =>
+    compareExternalIdDescendingWithFallback(a.externalId, b.externalId)
+  );
 
   const active = sorted
     .filter((company) => company.hiringStatus !== "停止")

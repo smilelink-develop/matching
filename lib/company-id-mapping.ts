@@ -59,3 +59,28 @@ export function compareExternalId(a: string | null, b: string | null): number {
   }
   return a.localeCompare(b);
 }
+
+/**
+ * 企業一覧用の 降順ソート。
+ *   ① 数値プレフィックス付き (02sv 等) → 数値降順 (大きい番号ほど上)
+ *   ② 数値なし (日本語企業名、AD、その他英字) → 数値ブロックの下
+ *   ③ null / 未設定 → 最下段
+ * これで新しい/大きい番号の企業から並び、未設定は末尾に落ちる。
+ */
+export function compareExternalIdDescendingWithFallback(a: string | null, b: string | null): number {
+  // 未設定は 最下段
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+  // 数値の有無で 2 group に分割 (数値あり = 上、なし = 下)
+  const numA = parseInt(a.replace(/[^\d]/g, ""), 10);
+  const numB = parseInt(b.replace(/[^\d]/g, ""), 10);
+  const hasNumA = Number.isFinite(numA) && a.match(/\d/) !== null;
+  const hasNumB = Number.isFinite(numB) && b.match(/\d/) !== null;
+  if (hasNumA && !hasNumB) return -1; // 数値あり が上
+  if (!hasNumA && hasNumB) return 1;
+  // 両方数値あり → 降順
+  if (hasNumA && hasNumB && numA !== numB) return numB - numA;
+  // それ以外 → localeCompare (昇順、日本語のあいうえお順)
+  return a.localeCompare(b, "ja");
+}
