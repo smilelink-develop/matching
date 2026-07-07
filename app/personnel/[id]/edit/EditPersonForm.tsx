@@ -202,6 +202,27 @@ export default function EditPersonForm({
   };
 
   const age = useMemo(() => calculateAge(form.birthDate), [form.birthDate]);
+
+  // 事前質問を 2 グループに分割:
+  //   - resume-linked (履歴書に反映される、existingField あり) → 基本情報 タブ
+  //   - interview-only (面接時のヒアリング、jsonKey のみ)     → 詳細情報 タブ
+  // 空になったセクションは 表示から除外。
+  const resumeLinkedSections = useMemo(
+    () =>
+      INTERVIEW_SECTIONS.map((s) => ({
+        ...s,
+        questions: s.questions.filter((q) => !!q.existingField),
+      })).filter((s) => s.questions.length > 0),
+    []
+  );
+  const interviewOnlySections = useMemo(
+    () =>
+      INTERVIEW_SECTIONS.map((s) => ({
+        ...s,
+        questions: s.questions.filter((q) => !q.existingField),
+      })).filter((s) => s.questions.length > 0),
+    []
+  );
   const visibleDocuments = useMemo(
     () => mergeDocumentsForStatus(form.documents, form.residenceStatus),
     [form.documents, form.residenceStatus]
@@ -490,8 +511,8 @@ export default function EditPersonForm({
             {/* 志望動機/自己紹介/来日目的/現在の仕事/退職理由 は下の「事前質問」セクションに統合 */}
           </div>
 
-          {/* 事前質問 (面接前ヒアリング) — 配偶者・子供以降の島セクション */}
-          {INTERVIEW_SECTIONS.map((section, sectionIdx) => (
+          {/* 事前質問 (履歴書に反映される項目のみ) — 面接前・企業推薦前に必要な情報 */}
+          {resumeLinkedSections.map((section, sectionIdx) => (
             <div key={sectionIdx} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <p className="text-base font-semibold text-[var(--color-text-dark)]">
                 {section.title}
@@ -575,7 +596,9 @@ export default function EditPersonForm({
         </section>
       ) : null}
 
-      {activeSection === "visa" ? (
+      {/* 履歴書に反映される項目 (在留資格・免許・学歴職歴・必要書類・履歴書原本) を
+          基本情報 タブに集約。詳細情報 タブは面接専用の質問だけを表示する。 */}
+      {activeSection === "basic" ? (
         <section className="space-y-5">
           {/* 島0: 履歴書原本 (resumeFileUrl がある時だけ表示) */}
           {person.resumeProfile?.resumeFileUrl ? (
@@ -847,6 +870,79 @@ export default function EditPersonForm({
             );
           })()}
 
+        </section>
+      ) : null}
+
+      {/* 詳細情報 タブ: 事前面接の内容 (履歴書に載らない interview-only 質問) + 個別質問 */}
+      {activeSection === "visa" ? (
+        <section className="space-y-5">
+          <div className="rounded-2xl border border-[var(--color-primary)]/20 bg-[var(--color-light)] p-5">
+            <p className="text-base font-semibold text-[var(--color-text-dark)]">💬 事前面接の内容</p>
+            <p className="mt-1 text-xs text-gray-500">
+              希望勤務地・希望勤務年数・将来など、履歴書には載らないが 事前面接時に確認する情報。
+              企業推薦後の擦り合わせでも参照。
+            </p>
+          </div>
+
+          {interviewOnlySections.map((section, sectionIdx) => (
+            <div key={sectionIdx} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <p className="text-base font-semibold text-[var(--color-text-dark)]">{section.title}</p>
+              {section.description ? (
+                <p className="mt-1 text-xs text-gray-500">{section.description}</p>
+              ) : null}
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                {section.questions.map((q) => {
+                  const value = q.existingField
+                    ? (form[q.existingField] as string)
+                    : form.interviewAnswers[q.jsonKey ?? q.key] ?? "";
+                  const onChange = (next: string) => {
+                    if (q.existingField) {
+                      setValue(q.existingField, next as never);
+                    } else {
+                      updateInterviewAnswer(q.jsonKey ?? q.key, next);
+                    }
+                  };
+                  return (
+                    <Field
+                      key={q.key}
+                      label={q.question}
+                      className={q.type === "textarea" ? "md:col-span-2" : ""}
+                    >
+                      {q.type === "textarea" ? (
+                        <textarea
+                          className={`${INPUT} min-h-20`}
+                          value={value}
+                          onChange={(e) => onChange(e.target.value)}
+                          placeholder={q.hint}
+                        />
+                      ) : q.type === "select" && q.options ? (
+                        <select className={INPUT} value={value} onChange={(e) => onChange(e.target.value)}>
+                          <option value="">未設定</option>
+                          {q.options.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          className={INPUT}
+                          value={value}
+                          onChange={(e) => onChange(e.target.value)}
+                          placeholder={q.hint}
+                        />
+                      )}
+                      {q.adminNote ? (
+                        <p className="mt-1 text-[10px] text-gray-400">{q.adminNote}</p>
+                      ) : null}
+                    </Field>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* 個別質問 (候補者ごとにカスタム設定した質問) — 詳細情報 タブに含める */}
           {customTabContent ? (
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               {customTabContent}
