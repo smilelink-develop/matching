@@ -160,19 +160,60 @@ export async function createResumeDocumentFromTemplate({
     }
   }
 
-  const copied = await drive.files.copy({
-    fileId: templateId,
-    supportsAllDrives: true,
-    requestBody: {
-      name: title,
-      parents: folderId ? [folderId] : undefined,
-    },
-    fields: "id,webViewLink",
-  });
+  // 2 段階コピー:
+  //   1) 親を指定せずにコピー (SA 自身の My Drive に作られる)
+  //   2) files.update で addParents + removeParents で目的フォルダに移動
+  //
+  // 理由: files.copy に parents を直接指定すると、Shared Drive 権限が
+  //       あっても「Insufficient permissions for the specified parent」
+  //       エラーになるケースが Google API 側であるため。
+  //       (テンプレートが個人 Drive にあり、目的が Shared Drive の時に発生しやすい)
+  let copied;
+  try {
+    copied = await drive.files.copy({
+      fileId: templateId,
+      supportsAllDrives: true,
+      requestBody: {
+        name: title,
+      },
+      fields: "id,webViewLink,parents",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    throw new Error(
+      `テンプレートの複製に失敗しました (Google Docs のコピー処理). 詳細: ${message}`
+    );
+  }
 
   const documentId = copied.data.id;
   if (!documentId) {
     throw new Error("Google Docs の複製に失敗しました");
+  }
+
+  // 目的フォルダに移動 (folderId が有効な場合のみ)
+  if (folderId) {
+    const previousParents = (copied.data.parents ?? []).join(",");
+    try {
+      await drive.files.update({
+        fileId: documentId,
+        addParents: folderId,
+        removeParents: previousParents || undefined,
+        supportsAllDrives: true,
+        fields: "id,parents",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown error";
+      // 移動失敗 = コピーされた Docs は SA の My Drive に残る (ゴミが残る)
+      // 削除してエラーを投げる
+      try {
+        await drive.files.delete({ fileId: documentId, supportsAllDrives: true });
+      } catch {
+        // 削除失敗は無視
+      }
+      throw new Error(
+        `目的フォルダへの移動に失敗しました。企業フォルダに Service Account (kodai-77@smile-link-493702.iam.gserviceaccount.com) が「編集者」以上で共有されているか、Shared Drive のメンバーになっているか確認してください。詳細: ${message}`
+      );
+    }
   }
 
   // 1) 空グループ行の自動削除 (大学なし、職歴1件のみ等)
