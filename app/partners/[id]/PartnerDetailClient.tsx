@@ -378,7 +378,13 @@ export default function PartnerDetailClient({ initial }: { initial: PartnerDetai
           <Field label="連絡先紐づけ" className="md:col-span-2">
             <LinkStatusDisplay
               linkStatus={form.linkStatus}
-              channel={form.preferredChannels[0] ?? form.channel}
+              channels={
+                form.preferredChannels.length > 0
+                  ? form.preferredChannels
+                  : form.channel
+                    ? [form.channel]
+                    : []
+              }
               email={form.email || null}
               lineUserId={initial.lineUserId}
               lineGroupId={initial.lineGroupId}
@@ -1152,7 +1158,7 @@ function MessengerSubscriptionPanel({
 
 function LinkStatusDisplay({
   linkStatus,
-  channel,
+  channels,
   email,
   lineUserId,
   lineGroupId,
@@ -1162,7 +1168,7 @@ function LinkStatusDisplay({
   whatsappId,
 }: {
   linkStatus: string;
-  channel: string | null;
+  channels: string[];
   email: string | null;
   lineUserId: string | null;
   lineGroupId: string | null;
@@ -1171,6 +1177,10 @@ function LinkStatusDisplay({
   messengerPsid: string | null;
   whatsappId: string | null;
 }) {
+  const hasEmail = Boolean(email && /@/.test(email));
+  const emailSelected = channels.some(
+    (c) => c === "mail" || c === "メール" || c === "Email",
+  );
   const ids: { label: string; value: string }[] = [];
   if (lineGroupId)
     ids.push({
@@ -1180,18 +1190,13 @@ function LinkStatusDisplay({
   if (lineUserId) ids.push({ label: "LINE", value: lineUserId });
   if (messengerPsid) ids.push({ label: "Messenger", value: messengerPsid });
   if (whatsappId) ids.push({ label: "WhatsApp", value: whatsappId });
-  // 主な連絡手段がメール + メアド入力済み (@ 含む有効形式) のときだけ、メールも紐づけ済みと判定
-  const emailLinkedByChannel =
-    (channel === "mail" || channel === "メール" || channel === "Email") &&
-    Boolean(email && /@/.test(email));
-  if (emailLinkedByChannel && email) {
+  if (emailSelected && hasEmail && email) {
     ids.push({ label: "Email", value: email });
   }
-  // 「紐づけ完了」: 何らかの連絡先 ID が紐づいているか (チャネル設定は問わない)
   const isLinked = ids.length > 0 || linkStatus === "完了";
-  // 「配信対象」: 主な連絡手段が設定済 かつ それに対応する ID が登録されているか
-  const isBroadcastReady = (() => {
-    switch (channel) {
+  // 「配信対象」: preferredChannels に選ばれたチャネルのいずれかに、対応 ID が登録されているか
+  const isBroadcastReady = channels.some((c) => {
+    switch (c) {
       case "LINE":
         return Boolean(lineGroupId || lineUserId);
       case "Messenger":
@@ -1201,11 +1206,11 @@ function LinkStatusDisplay({
       case "mail":
       case "メール":
       case "Email":
-        return emailLinkedByChannel;
+        return hasEmail;
       default:
         return false;
     }
-  })();
+  });
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -1229,11 +1234,19 @@ function LinkStatusDisplay({
           </Link>
         ) : null}
       </div>
-      {/* 紐づけは完了しているのに主な連絡手段が未設定/不一致な場合は警告表示 */}
       {isLinked && !isBroadcastReady ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
-          ⚠️ 連絡先 ID は紐づいていますが、<span className="font-semibold">「主な連絡手段」が未設定 (または対応 ID 未登録)</span> のため
-          一斉配信の対象外になります。配信したい場合は上の「連絡」セクションで主な連絡手段を選択してください。
+          {channels.length === 0 ? (
+            <>
+              ⚠️ 連絡先 ID は紐づいていますが、<span className="font-semibold">「連絡手段」が 1 つも選択されていません</span>ため
+              一斉配信の対象外になります。上の「連絡」セクションで送信したいチャネル (LINE / メール など) にチェックを入れてください。
+            </>
+          ) : (
+            <>
+              ⚠️ 選択中の連絡手段 <span className="font-semibold">「{channels.join(" / ")}」</span> に対応する ID が未登録のため
+              一斉配信の対象外になります。ID を登録するか、登録済みのチャネルを選択してください。
+            </>
+          )}
         </div>
       ) : null}
       {ids.length > 0 ? (
