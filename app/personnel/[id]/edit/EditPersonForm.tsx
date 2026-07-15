@@ -566,9 +566,6 @@ export default function EditPersonForm({
                           placeholder={q.hint}
                         />
                       )}
-                      {q.adminNote ? (
-                        <p className="mt-1 text-[10px] text-gray-400">{q.adminNote}</p>
-                      ) : null}
                     </Field>
                   );
                 })}
@@ -932,9 +929,6 @@ export default function EditPersonForm({
                           placeholder={q.hint}
                         />
                       )}
-                      {q.adminNote ? (
-                        <p className="mt-1 text-[10px] text-gray-400">{q.adminNote}</p>
-                      ) : null}
                     </Field>
                   );
                 })}
