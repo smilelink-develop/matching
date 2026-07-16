@@ -60,7 +60,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       await prisma.person.update({ where: { id: person.id }, data: { driveFolderUrl: folder.folderUrl } });
     }
 
-    // 書類サブフォルダ "書類" を確保
+    // 保存先は候補者フォルダ直下 (以前は "書類" サブフォルダを掘っていたが廃止)
     const auth = new google.auth.JWT({
       email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
       key: (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "").replace(/\\n/g, "\n"),
@@ -69,34 +69,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await auth.authorize();
     const drive = google.drive({ version: "v3", auth });
 
-    const subFolderName = "書類";
-    let docFolderId: string | null = null;
-    {
-      const list = await drive.files.list({
-        q: `name = '${subFolderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and '${folder.folderId}' in parents and trashed = false`,
-        fields: "files(id,name)",
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
-      });
-      const found = list.data.files?.[0];
-      if (found?.id) {
-        docFolderId = found.id;
-      } else {
-        const created = await drive.files.create({
-          supportsAllDrives: true,
-          requestBody: {
-            name: subFolderName,
-            mimeType: "application/vnd.google-apps.folder",
-            parents: [folder.folderId],
-          },
-          fields: "id",
-        });
-        docFolderId = created.data.id ?? null;
-      }
-    }
-    if (!docFolderId) {
-      return Response.json({ ok: false, error: "Drive 書類フォルダの確保に失敗しました" }, { status: 500 });
-    }
+    const docFolderId = folder.folderId;
 
     // ファイル名: "{4桁ID}_{englishName または name}_{書類名}{元拡張子}"
     //   例: "0192_DAO VAN HOANG_在留カード (表面).jpg"

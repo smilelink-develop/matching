@@ -347,6 +347,120 @@ export async function extractCandidateFromFiles(files: SourceFile[]): Promise<Ex
 }
 
 /**
+ * 添付ファイルを AI に見せて、各ファイルがどの書類種別か分類させる。
+ * classifyByFileName でファイル名から判定できなかったファイルの後段フォールバック。
+ *
+ * 入力: files (mimeType + base64)
+ * 返り値: 各ファイルの index に対応する { kind, confidence, reasoning }
+ *   kind は ALL_DOCUMENT_KINDS の kind 文字列、判定不可なら "unknown"
+ */
+export type AiFileClassification = {
+  index: number;
+  kind: string;
+  confidence: "high" | "medium" | "low";
+  reasoning?: string;
+};
+
+const KIND_CATALOG_FOR_PROMPT = [
+  { kind: "photo", label: "顔写真 (人物の顔がはっきり写った証明写真)" },
+  { kind: "residence-card", label: "在留カード (表面 - 個人情報と写真)" },
+  { kind: "residence-card-back", label: "在留カード (裏面 - 資格変更履歴等)" },
+  { kind: "passport", label: "パスポート (旅券)" },
+  { kind: "resume", label: "履歴書 (Rirekisho / CV)" },
+  { kind: "career-history", label: "職務経歴書" },
+  { kind: "jlpt-certificate", label: "JLPT (日本語能力試験) 合格証書" },
+  { kind: "driver-license", label: "運転免許証" },
+  { kind: "trainee-evaluation", label: "実習生評価書 / 終了証明書 / 専門級・随時3級" },
+  { kind: "skill-test-certificate", label: "技能検定の合格証書 (特定技能評価試験など)" },
+  { kind: "designation-letter", label: "指定書 (在留資格関連)" },
+  { kind: "tokutei-2-certificate", label: "特定技能2号 合格資格" },
+  { kind: "graduation-prospect", label: "卒業見込み" },
+  { kind: "graduation-certificate", label: "卒業証明書" },
+  { kind: "transcript", label: "成績証明書" },
+  { kind: "transcript-jp", label: "成績証明書 (日本語版)" },
+  { kind: "transcript-original", label: "成績証明書 (原版・海外卒業者)" },
+  { kind: "student-id", label: "学生証" },
+  { kind: "other", label: "その他 (上記いずれにも該当しない)" },
+];
+
+export async function classifyFilesByAi(files: SourceFile[]): Promise<AiFileClassification[]> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new Error("GEMINI_API_KEY が未設定です");
+  const supportedFiles = files.filter((file) => isSupported(file.mimeType));
+  if (supportedFiles.length === 0) return [];
+
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+  const client = new GoogleGenAI({ apiKey });
+
+  const catalogText = KIND_CATALOG_FOR_PROMPT.map(
+    (k) => `  - ${k.kind}: ${k.label}`,
+  ).join("\n");
+
+  const parts: {
+    text?: string;
+    inlineData?: { mimeType: string; data: string };
+  }[] = [
+    {
+      text:
+        "あなたは書類分類アシスタントです。添付された複数の書類ファイルについて、各ファイルの書類種別を判定してください。\n\n" +
+        `使用可能な種別 (kind) は以下のみです:\n${catalogText}\n\n` +
+        "指示:\n" +
+        "- 添付ファイルの順に、index 0 から順番に分類してください\n" +
+        "- kind は必ず上記の kind 文字列のいずれかにしてください (判定不能なら other)\n" +
+        "- confidence は high / medium / low の 3 段階\n" +
+        "- reasoning に判定理由を短く日本語で書いてください\n\n" +
+        "出力は次のスキーマの JSON 配列だけを返してください (説明不要):\n" +
+        '[ { "index": 0, "kind": "resume", "confidence": "high", "reasoning": "..." }, ... ]',
+    },
+    ...supportedFiles.map((file, i) => ({
+      inlineData: {
+        mimeType: file.mimeType,
+        data: file.base64,
+      },
+      // 参考: ファイル名は本文には入れず、AI には順序だけ意識させる
+      // (index i と supportedFiles[i] の対応を維持)
+      // 変数 i の未使用警告回避
+      ...(i >= 0 ? {} : {}),
+    })),
+    { text: "以上のファイルを分類してください。" },
+  ];
+
+  const response = await callGeminiWithRetry(() =>
+    client.models.generateContent({
+      model,
+      contents: [{ role: "user", parts }],
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.1,
+      },
+    }),
+  );
+
+  const text = response.text?.trim() ?? "";
+  try {
+    const parsed = parseJsonPayload(text);
+    if (!Array.isArray(parsed)) return [];
+    const results: AiFileClassification[] = [];
+    for (const row of parsed) {
+      if (!row || typeof row !== "object") continue;
+      const r = row as Record<string, unknown>;
+      const index = typeof r.index === "number" ? r.index : Number(r.index);
+      if (!Number.isFinite(index)) continue;
+      const kind = typeof r.kind === "string" ? r.kind : "other";
+      const conf = r.confidence;
+      const confidence: "high" | "medium" | "low" =
+        conf === "high" || conf === "medium" || conf === "low" ? conf : "medium";
+      const item: AiFileClassification = { index, kind, confidence };
+      if (typeof r.reasoning === "string") item.reasoning = r.reasoning;
+      results.push(item);
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+/**
  * docx 等から事前にテキスト抽出した文字列を Gemini に渡して JSON 化する。
  * 履歴書 PDF/画像と違って画像 OCR は使わないので、レイアウトの細かい情報は失われる。
  */

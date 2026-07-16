@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 import {
+  classifyFilesByAi,
   extractCandidateFromFiles,
   extractCandidateFromText,
+  type AiFileClassification,
   type SourceFile,
 } from "@/lib/ai-extract";
 import {
@@ -12,7 +14,8 @@ import {
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
 import mammoth from "mammoth";
-import { toDriveThumbUrl } from "@/lib/drive-url";
+import { toDriveThumbUrl, extractDriveFileId } from "@/lib/drive-url";
+import { classifyByFileName, getDocumentKindLabel } from "@/lib/file-classifier";
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -143,21 +146,133 @@ export async function POST(req: Request, { params }: { params: Params }) {
       });
     }
 
-    const uploadedFiles: { fileName: string; fileUrl: string; mimeType: string }[] = [];
-    for (const file of files) {
+    // 各ファイルを分類: まずファイル名 → 判定できないものだけ AI で分類
+    const suggestions: Array<{
+      kind: string;
+      label: string;
+      confidence: "high" | "medium" | "low";
+      source: "filename" | "ai" | "unknown";
+    }> = files.map((file) => {
+      const bynn = classifyByFileName(file.fileName);
+      if (bynn) {
+        return {
+          kind: bynn.kind,
+          label: bynn.label,
+          confidence: bynn.confidence,
+          source: "filename" as const,
+        };
+      }
+      return {
+        kind: "other",
+        label: getDocumentKindLabel("other"),
+        confidence: "low" as const,
+        source: "unknown" as const,
+      };
+    });
+
+    // ファイル名で判定できなかった (source=unknown) ものを AI で分類
+    const aiTargets: { fileIndex: number; source: SourceFile }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      if (suggestions[i].source !== "unknown") continue;
+      const parsed = parseDataUrl(files[i].dataUrl);
+      if (!parsed) continue;
+      if (parsed.mimeType === DOCX_MIME) continue; // docx は AI 分類対象外 (テキストのみ)
+      aiTargets.push({
+        fileIndex: i,
+        source: {
+          fileName: files[i].fileName,
+          mimeType: parsed.mimeType,
+          base64: parsed.base64,
+        },
+      });
+    }
+    if (aiTargets.length > 0) {
+      try {
+        const aiResults: AiFileClassification[] = await classifyFilesByAi(
+          aiTargets.map((t) => t.source),
+        );
+        // aiResults の index は aiTargets 配列上の index。ファイル配列にマッピングし直す
+        for (const r of aiResults) {
+          if (r.index < 0 || r.index >= aiTargets.length) continue;
+          const fileIndex = aiTargets[r.index].fileIndex;
+          suggestions[fileIndex] = {
+            kind: r.kind,
+            label: getDocumentKindLabel(r.kind),
+            confidence: r.confidence,
+            source: "ai",
+          };
+        }
+      } catch (err) {
+        console.warn("[extract] AI 分類失敗:", err instanceof Error ? err.message : err);
+      }
+    }
+
+    const uploadedFiles: {
+      fileName: string;
+      originalFileName: string;
+      fileUrl: string;
+      fileId: string | null;
+      mimeType: string;
+      suggestedKind: string;
+      suggestedLabel: string;
+      confidence: "high" | "medium" | "low";
+      source: "filename" | "ai" | "unknown";
+    }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const suggestion = suggestions[i];
       try {
         const ext = file.fileName.match(/\.[^.]+$/)?.[0] ?? "";
-        const assetName = file.fileName.replace(/\.[^.]+$/, "");
+        // 分類の label でファイル名を組み立て。unknown なら元のファイル名を採用
+        const assetName =
+          suggestion.source === "unknown"
+            ? file.fileName.replace(/\.[^.]+$/, "")
+            : suggestion.label;
         const uploaded = await uploadDataUrlToDrive({
           dataUrl: file.dataUrl,
           fileName: `${buildPersonAssetName({ person: personForName, assetName })}${ext}`,
           folderUrl: folderUrl!,
         });
+        const fileId = extractDriveFileId(uploaded.fileUrl);
         uploadedFiles.push({
           fileName: file.fileName,
+          originalFileName: file.fileName,
           fileUrl: uploaded.fileUrl,
+          fileId,
           mimeType: uploaded.mimeType,
+          suggestedKind: suggestion.kind,
+          suggestedLabel: suggestion.label,
+          confidence: suggestion.confidence,
+          source: suggestion.source,
         });
+
+        // PortalDocument に upsert (suggestion の kind で保存)
+        // unknown の場合はいったん kind="other" として保存する
+        if (suggestion.source !== "unknown") {
+          try {
+            await prisma.portalDocument.upsert({
+              where: { personId_kind: { personId, kind: suggestion.kind } },
+              create: {
+                personId,
+                kind: suggestion.kind,
+                fileName: file.fileName,
+                fileUrl: uploaded.fileUrl,
+                mimeType: uploaded.mimeType,
+                autoJudgeStatus: "pending_review",
+                autoJudgeNote: `AI 分類 (${suggestion.source}, ${suggestion.confidence})`,
+              },
+              update: {
+                fileName: file.fileName,
+                fileUrl: uploaded.fileUrl,
+                mimeType: uploaded.mimeType,
+                autoJudgeStatus: "pending_review",
+                autoJudgeNote: `AI 分類 (${suggestion.source}, ${suggestion.confidence})`,
+              },
+            });
+          } catch {
+            // PortalDocument 保存失敗はサイレント (画面確認で後追い可能)
+          }
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown error";
         driveFailures.push(`${file.fileName}: ${message}`);
