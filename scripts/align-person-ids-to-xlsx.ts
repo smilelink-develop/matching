@@ -187,6 +187,36 @@ async function main() {
     console.log("");
   }
 
+  // ---- 3.5. 移動先が非plan の人に占用されているか検出 (orphan 検出) ----
+  const fromSet = new Set(plan.map((p) => p.fromPid));
+  const displaced: { pid: number; label: string }[] = [];
+  for (const p of plan) {
+    const occupant = systemById.get(p.toPid);
+    if (!occupant) continue; // 空き
+    if (fromSet.has(p.toPid)) continue; // 占用者は plan で退去する
+    displaced.push({ pid: p.toPid, label: `${occupant.kana} / ${occupant.english}` });
+  }
+
+  if (displaced.length > 0) {
+    // xlsx にない ID 帯 (MAX 以降) に退避
+    const allTakenIds = new Set<number>();
+    for (const p of persons) allTakenIds.add(p.id);
+    for (const p of plan) allTakenIds.add(p.toPid);
+    for (const xr of xlsxRows) allTakenIds.add(xr.id);
+    let nextFree = Math.max(...allTakenIds) + 1;
+    console.log(`⚠️ ID 衝突の解消: 系-only な ${displaced.length} 名を高い ID 帯に退避します:`);
+    for (const orphan of displaced) {
+      const newPid = nextFree++;
+      plan.push({
+        fromPid: orphan.pid,
+        toPid: newPid,
+        label: `[退避] ${orphan.label}`,
+      });
+      console.log(`  pid ${orphan.pid} → ${newPid}  (${orphan.label})`);
+    }
+    console.log("");
+  }
+
   if (plan.length === 0) {
     console.log("✅ 変更する必要はありません");
     await prisma.$disconnect();
