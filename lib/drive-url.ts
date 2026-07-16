@@ -12,12 +12,15 @@
 
 const FILE_ID_PATTERN = /[a-zA-Z0-9_-]+/;
 
-/** URL から Drive ファイル ID を抽出 (取れなければ null) */
+/** URL から Drive ファイル ID or フォルダ ID を抽出 (取れなければ null) */
 export function extractDriveFileId(url: string | null | undefined): string | null {
   if (!url) return null;
   // /file/d/{id}/...
   const m1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (m1) return m1[1];
+  // /drive/folders/{id}/... or /drive/u/N/folders/{id}/...
+  const m3 = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (m3) return m3[1];
   // ?id=XXX or &id=XXX (open, uc, thumbnail 全部対応)
   const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (m2) return m2[1];
