@@ -227,6 +227,8 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     日本就労ビザ: visaWorkAriNashi,
     就労ビザ: visaWorkAriNashi,
     就労: visaWorkAriNashi,
+    "有/無": visaWorkAriNashi,
+    "有無": visaWorkAriNashi,
     // 互換用: 期限など詳細が必要なテンプレ用
     日本就労ビザ詳細: [visaTypeLabel, visaExpiry ? `(${visaExpiry}まで)` : ""].filter(Boolean).join(" "),
     // 日本語検定 (独立 placeholder としても残す)
