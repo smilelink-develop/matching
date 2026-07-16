@@ -222,9 +222,11 @@ export function buildResumePlaceholders(input: ResumeDocumentInput) {
     ビザの種類: visaTypeLabel,
     在留資格: valueOrBlank(person.residenceStatus),
     在留資格の有効期限: formatYearMonth(profile?.visaExpiryDate),
-    // 「日本就労ビザ」: 就労可能ビザの有無 (あり / なし)
+    // 「日本就労」の判定 (有 / 無)。テンプレの表記ゆれに対応
+    日本就労: visaWorkAriNashi,
     日本就労ビザ: visaWorkAriNashi,
     就労ビザ: visaWorkAriNashi,
+    就労: visaWorkAriNashi,
     // 互換用: 期限など詳細が必要なテンプレ用
     日本就労ビザ詳細: [visaTypeLabel, visaExpiry ? `(${visaExpiry}まで)` : ""].filter(Boolean).join(" "),
     // 日本語検定 (独立 placeholder としても残す)
