@@ -35,6 +35,27 @@ export const SYNC_SHEET_TAB_NAME = "DB";
 export const HEADER_ROW = 2;
 export const DATA_START_ROW = 3;
 
+/**
+ * 日付が入る列の index (0 始まり)。B 追加日付 / P 生年月日 / Q ビザ期限。
+ * これらは スプシ上で「日付セル」として扱われているため、
+ * 文字列として書き込むと請求シート等の日付計算が壊れる。
+ * 書式を YYYY/MM/DD に揃えたうえで USER_ENTERED で書き込み、日付型を維持する。
+ */
+export const DATE_COLUMN_INDEXES = [1, 15, 16] as const;
+
+/**
+ * "2026-04-04" / "2026-4-4" → "2026/04/04" に揃える。
+ * 日付として解釈できない文字列 (「2026年4月」等) はそのまま返す。
+ */
+export function toSheetDate(value: string): string {
+  const v = (value ?? "").trim();
+  if (!v) return "";
+  const m = v.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (!m) return v;
+  const [, y, mo, d] = m;
+  return `${y}/${mo.padStart(2, "0")}/${d.padStart(2, "0")}`;
+}
+
 /** 23 列の見出し (A〜W の順) */
 export const SYNC_HEADERS: string[] = [
   "ID",
@@ -209,7 +230,7 @@ export function buildCandidateRow(p: PersonForSync): (string | number)[] {
 
   return [
     idStr, // A ID
-    createdAt, // B 追加日付
+    toSheetDate(createdAt), // B 追加日付 (スプシの書式 YYYY/MM/DD に揃える)
     englishName, // C 候補者名 (英語)
     p.name, // D カタカナ名
     field, // E 分野
@@ -223,8 +244,8 @@ export function buildCandidateRow(p: PersonForSync): (string | number)[] {
     address, // M 現住所
     s(p.onboarding?.postalCode), // N 郵便番号
     age, // O 年齢
-    birth, // P 生年月日
-    visaExpiry, // Q ビザ期限
+    toSheetDate(birth), // P 生年月日
+    toSheetDate(visaExpiry), // Q ビザ期限
     "", // R 特定技能経過年数 (未実装)
     trainee, // S 実習経験有無
     japaneseLevel, // T 日本語レベル
@@ -492,6 +513,7 @@ export async function syncCandidatesUpsert(args: {
 
   if (opts.apply) {
     if (updates.length > 0) {
+      // ① 行全体を RAW で書く。ID の "0056" が 56 に化けないよう RAW は必須
       await sheets.spreadsheets.values.batchUpdate({
         spreadsheetId: opts.spreadsheetId,
         requestBody: {
@@ -499,6 +521,31 @@ export async function syncCandidatesUpsert(args: {
           data: updates.map((u) => ({ range: u.range, values: u.values })),
         },
       });
+
+      // ② 日付列だけ USER_ENTERED で上書きし、日付セルとして解釈させる。
+      //    RAW のままだと文字列になり、請求シート等の日付計算が壊れるため。
+      const dateData: { range: string; values: (string | number)[][] }[] = [];
+      for (const u of updates) {
+        // range は "'DB'!A12:W12" 形式。行番号を取り出す
+        const rowNo = Number(u.range.match(/!A(\d+):W\d+$/)?.[1] ?? 0);
+        if (!rowNo) continue;
+        const row = u.values[0] ?? [];
+        for (const col of DATE_COLUMN_INDEXES) {
+          const value = cellStr(row[col]);
+          if (!value) continue;
+          const colLetter = String.fromCharCode("A".charCodeAt(0) + col);
+          dateData.push({
+            range: `${quoteSheetName(sheetName)}!${colLetter}${rowNo}`,
+            values: [[value]],
+          });
+        }
+      }
+      if (dateData.length > 0) {
+        await sheets.spreadsheets.values.batchUpdate({
+          spreadsheetId: opts.spreadsheetId,
+          requestBody: { valueInputOption: "USER_ENTERED", data: dateData },
+        });
+      }
     }
     if (appends.length > 0) {
       await sheets.spreadsheets.values.append({
