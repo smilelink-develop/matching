@@ -244,6 +244,12 @@ export type SyncOptions = {
   apply: boolean; // false ならドライラン
   /** sampleChanges に含める件数 (デフォルト 5) */
   sampleLimit?: number;
+  /**
+   * "changed" (既定): システム側で変更があった候補者だけを反映 (更新 + 追記)
+   * "append-missing": 変更の有無を無視し、スプシに ID が無い候補者を追記するだけ。
+   *   既存行は一切更新しない。移行時の取りこぼしを埋める用。
+   */
+  mode?: "changed" | "append-missing";
 };
 
 export type SyncResult = {
@@ -321,9 +327,14 @@ export async function syncCandidatesUpsert(args: {
   const { opts } = args;
   const sheetName = opts.sheetName ?? SYNC_SHEET_TAB_NAME;
 
-  // ── システム側で変更があったものだけに絞る ──
+  const mode = opts.mode ?? "changed";
+
+  // ── 対象候補者を絞る ──
+  // changed        : システム側で変更があったものだけ
+  // append-missing : 全件を候補にし、後段でスプシに ID が無いものだけ追記する
   const allCandidates = args.candidates;
-  const candidates = allCandidates.filter(hasSystemChange);
+  const candidates =
+    mode === "append-missing" ? allCandidates : allCandidates.filter(hasSystemChange);
   const skippedUnchanged = allCandidates.length - candidates.length;
 
   if (candidates.length === 0) {
@@ -384,6 +395,11 @@ export async function syncCandidatesUpsert(args: {
     const rowNumber = idToRowNumber.get(idStr);
 
     if (rowNumber) {
+      // append-missing モードでは既存行を一切触らない
+      if (mode === "append-missing") {
+        unchanged++;
+        continue;
+      }
       const existing = existingRows[rowNumber - 1] ?? [];
       // 列単位マージ: 系に値があればそれを採用、系が空欄なら既存値を残す
       const merged: (string | number)[] = systemRow.map((v, col) => {

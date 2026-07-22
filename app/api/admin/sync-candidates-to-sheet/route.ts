@@ -4,6 +4,9 @@
  * GET  /api/admin/sync-candidates-to-sheet             ← ドライラン (更新/追記の予定件数だけ返す)
  * GET  /api/admin/sync-candidates-to-sheet?apply=1     ← 本実行
  * GET  /api/admin/sync-candidates-to-sheet?sheet=名前  ← 別シートを指定
+ * GET  /api/admin/sync-candidates-to-sheet?mode=append-missing
+ *        ← スプシに ID が無い候補者を追記するだけ (既存行は一切更新しない)。
+ *          移行時にスプシへ載っていなかった候補者を埋める用。
  *
  * 差分同期なので、スプシにしか無い旧データ (Google フォーム時代の行など) は消えない。
  * 詳細は lib/sheets-sync.ts のヘッダコメントを参照。
@@ -30,6 +33,8 @@ export async function GET(req: Request) {
     const sheetName = searchParams.get("sheet") ?? SYNC_SHEET_TAB_NAME;
     // ?sample=20 で差分プレビューの件数を増やせる (最大 50)
     const sampleLimit = Math.max(1, Math.min(50, Number(searchParams.get("sample") ?? 5)));
+    // ?mode=append-missing でスプシに無い候補者の追記だけを行う (既存行は触らない)
+    const mode = searchParams.get("mode") === "append-missing" ? "append-missing" : "changed";
 
     const sheetUrl = process.env.SYNC_SHEET_URL?.trim();
     if (!sheetUrl) {
@@ -93,7 +98,7 @@ export async function GET(req: Request) {
     const candidates: PersonForSync[] = rawPersons;
 
     const result = await syncCandidatesUpsert({
-      opts: { spreadsheetId, sheetName, apply, sampleLimit },
+      opts: { spreadsheetId, sheetName, apply, sampleLimit, mode },
       candidates,
     });
 
