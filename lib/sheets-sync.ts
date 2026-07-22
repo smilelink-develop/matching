@@ -305,6 +305,51 @@ export function hasSystemChange(p: PersonForSync): boolean {
 }
 
 /**
+ * スプシ DB に行が無い候補者の 23 列データを返す (書き込みは一切しない)。
+ * 手動でスプシに貼り付けるための TSV 生成に使う。
+ */
+export async function findMissingCandidateRows(args: {
+  spreadsheetId: string;
+  sheetName?: string;
+  candidates: PersonForSync[];
+}): Promise<{
+  sheetName: string;
+  /** スプシに存在した ID の数 */
+  existingIdCount: number;
+  missing: { id: string; name: string; row: (string | number)[] }[];
+}> {
+  const sheetName = args.sheetName ?? SYNC_SHEET_TAB_NAME;
+  const sheets = await getSheetsClient();
+
+  const sheetIdNumeric = await findSheetIdByName(sheets, args.spreadsheetId, sheetName);
+  if (sheetIdNumeric === null) {
+    throw new Error(`スプシ内にシート「${sheetName}」が見つかりません`);
+  }
+
+  // A 列 (ID) だけ読めば十分
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: args.spreadsheetId,
+    range: `${quoteSheetName(sheetName)}!A:A`,
+  });
+  const rows: string[][] = (res.data.values ?? []) as string[][];
+
+  const existingIds = new Set<string>();
+  for (let i = DATA_START_ROW - 1; i < rows.length; i++) {
+    const raw = cellStr(rows[i]?.[0]);
+    if (/^\d{1,6}$/.test(raw)) existingIds.add(raw.padStart(4, "0"));
+  }
+
+  const missing: { id: string; name: string; row: (string | number)[] }[] = [];
+  for (const p of args.candidates) {
+    const idStr = formatPersonIdPrefix(p.id);
+    if (existingIds.has(idStr)) continue;
+    missing.push({ id: idStr, name: p.name, row: buildCandidateRow(p) });
+  }
+
+  return { sheetName, existingIdCount: existingIds.size, missing };
+}
+
+/**
  * 系 → スプシ DB の 変更分のみ 反映。
  *
  * 方針:
