@@ -56,6 +56,51 @@ export function toSheetDate(value: string): string {
   return `${y}/${mo.padStart(2, "0")}/${d.padStart(2, "0")}`;
 }
 
+/** Google Sheets のシリアル値の起点 (Excel 互換: 1899-12-30) */
+const SHEET_EPOCH_MS = Date.UTC(1899, 11, 30);
+
+/** シリアル値 → "YYYY/MM/DD"。範囲外なら null */
+export function serialToDateString(n: number): string | null {
+  if (!Number.isFinite(n) || n <= 0 || n > 100000) return null;
+  const d = new Date(SHEET_EPOCH_MS + Math.round(n) * 86400000);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getUTCFullYear();
+  const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}/${mo}/${day}`;
+}
+
+/** "YYYY/MM/DD" / "YYYY-MM-DD" → シリアル値。解釈できなければ null */
+export function dateStringToSerial(value: string): number | null {
+  const m = (value ?? "").trim().match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  const ms = Date.UTC(Number(y), Number(mo) - 1, Number(d));
+  if (Number.isNaN(ms)) return null;
+  return Math.round((ms - SHEET_EPOCH_MS) / 86400000);
+}
+
+/**
+ * 比較用にセルの値を表示文字列へ正規化する。
+ * UNFORMATTED_VALUE で読むと日付はシリアル値 (数値) で返るため、
+ * 日付列の数値は日付文字列に直してから比べる。
+ */
+function normalizeCell(v: unknown, col: number): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "number") {
+    if ((DATE_COLUMN_INDEXES as readonly number[]).includes(col)) {
+      return serialToDateString(v) ?? String(v);
+    }
+    // ID や年齢は数値で入っていることがある。"0056" と 56 を同一視するため 0 埋めを外す
+    return String(v);
+  }
+  const s = String(v).trim();
+  if ((DATE_COLUMN_INDEXES as readonly number[]).includes(col)) return toSheetDate(s);
+  // "0056" → "56" として比べる (型が違うだけで内容は同じ、を差分にしない)
+  if (/^0\d+$/.test(s)) return String(Number(s));
+  return s;
+}
+
 /** 23 列の見出し (A〜W の順) */
 export const SYNC_HEADERS: string[] = [
   "ID",
@@ -428,12 +473,16 @@ export async function syncCandidatesUpsert(args: {
     throw new Error(`スプシ内にシート「${sheetName}」が見つかりません`);
   }
 
-  // 既存の全行を読む (A〜W)
+  // 既存の全行を読む (A〜W)。
+  // UNFORMATTED_VALUE にすることで、セルが数値なのか文字列なのかを判別できる。
+  // (スプシ側は ID や年齢が数値の行と文字列の行が混在しているため、
+  //  書き戻すときに元の型へ合わせる必要がある)
   const existingRes = await sheets.spreadsheets.values.get({
     spreadsheetId: opts.spreadsheetId,
     range: `${quoteSheetName(sheetName)}!A:W`,
+    valueRenderOption: "UNFORMATTED_VALUE",
   });
-  const existingRows: string[][] = (existingRes.data.values ?? []) as string[][];
+  const existingRows: unknown[][] = (existingRes.data.values ?? []) as unknown[][];
 
   // ID (4桁 0 埋め) → シート行番号 (1-based)。データは 3 行目以降のみ対象。
   // 数字だけの ID の行だけマッチ対象にする ("IDなし" や "5月" の区切り行は自然と外れる)
@@ -446,6 +495,28 @@ export async function syncCandidatesUpsert(args: {
       else warnings.push(`スプシに ID ${key} の行が複数あります (行 ${idToRowNumber.get(key)} を使用)`);
     }
   }
+
+  /**
+   * 系の値を、既存セルの型に合わせた書き込み値に変換する。
+   *   - 日付列: 既存が数値 (=日付セル) ならシリアル値で書く → 日付型を維持
+   *   - 既存が数値の列 (ID / 年齢 など): 数値で書く → 右寄せ表示のまま
+   *   - それ以外: 文字列のまま
+   */
+  const toWriteValue = (sysValue: string | number, col: number, existingCell: unknown) => {
+    const sys = cellStr(sysValue);
+    if (sys === "") return "";
+    const existedNumber = typeof existingCell === "number";
+    const existedEmpty = existingCell === undefined || existingCell === null || existingCell === "";
+
+    if ((DATE_COLUMN_INDEXES as readonly number[]).includes(col)) {
+      const serial = dateStringToSerial(sys);
+      // 既存が日付セル、または空セル → シリアル値で書いて日付として扱わせる
+      if (serial !== null && (existedNumber || existedEmpty)) return serial;
+      return toSheetDate(sys);
+    }
+    if (existedNumber && /^\d+$/.test(sys)) return Number(sys);
+    return sysValue;
+  };
 
   const updates: { range: string; values: (string | number)[][] }[] = [];
   const appends: (string | number)[][] = [];
@@ -467,15 +538,19 @@ export async function syncCandidatesUpsert(args: {
         continue;
       }
       const existing = existingRows[rowNumber - 1] ?? [];
-      // 列単位マージ: 系に値があればそれを採用、系が空欄なら既存値を残す
+      // 列単位マージ:
+      //   系に値がある → 既存セルの型に合わせて書き込む
+      //   系が空欄     → 既存の値をそのまま (型も含めて) 残す
       const merged: (string | number)[] = systemRow.map((v, col) => {
         const sys = cellStr(v);
-        return sys !== "" ? v : (existing[col] ?? "");
+        if (sys === "") return (existing[col] ?? "") as string | number;
+        return toWriteValue(v, col, existing[col]);
       });
+      // 差分判定は表示文字列で行う。型だけの違い (56 と "0056") は差分にしない
       const diffs: { column: string; before: string; after: string }[] = [];
       merged.forEach((v, col) => {
-        const before = cellStr(existing[col]);
-        const after = cellStr(v);
+        const before = normalizeCell(existing[col], col);
+        const after = normalizeCell(v, col);
         if (before !== after) {
           const column = (SYNC_HEADERS[col] ?? `列${col + 1}`).replace(/\n/g, "");
           diffs.push({ column, before, after });
@@ -503,7 +578,9 @@ export async function syncCandidatesUpsert(args: {
         syncedPersonIds.push(p.id);
       }
     } else {
-      appends.push(systemRow);
+      // 新規行には合わせる既存セルが無い。日付だけはシリアル値で書いて
+      // 日付セルとして扱わせる (既存行と同じ見え方にするため)
+      appends.push(systemRow.map((v, col) => toWriteValue(v, col, undefined)));
       syncedPersonIds.push(p.id);
       if (sampleChanges.length < sampleLimit) {
         sampleChanges.push({ id: idStr, action: "append", name: p.name });
@@ -513,7 +590,9 @@ export async function syncCandidatesUpsert(args: {
 
   if (opts.apply) {
     if (updates.length > 0) {
-      // ① 行全体を RAW で書く。ID の "0056" が 56 に化けないよう RAW は必須
+      // RAW で書く。数値は数値、文字列は文字列としてそのまま入るため、
+      // toWriteValue で決めた型 (日付=シリアル値 / ID・年齢=数値 / 他=文字列) が保たれる。
+      // USER_ENTERED だと "0056" が 56 に化けるので使わない。
       await sheets.spreadsheets.values.batchUpdate({
         spreadsheetId: opts.spreadsheetId,
         requestBody: {
@@ -521,31 +600,6 @@ export async function syncCandidatesUpsert(args: {
           data: updates.map((u) => ({ range: u.range, values: u.values })),
         },
       });
-
-      // ② 日付列だけ USER_ENTERED で上書きし、日付セルとして解釈させる。
-      //    RAW のままだと文字列になり、請求シート等の日付計算が壊れるため。
-      const dateData: { range: string; values: (string | number)[][] }[] = [];
-      for (const u of updates) {
-        // range は "'DB'!A12:W12" 形式。行番号を取り出す
-        const rowNo = Number(u.range.match(/!A(\d+):W\d+$/)?.[1] ?? 0);
-        if (!rowNo) continue;
-        const row = u.values[0] ?? [];
-        for (const col of DATE_COLUMN_INDEXES) {
-          const value = cellStr(row[col]);
-          if (!value) continue;
-          const colLetter = String.fromCharCode("A".charCodeAt(0) + col);
-          dateData.push({
-            range: `${quoteSheetName(sheetName)}!${colLetter}${rowNo}`,
-            values: [[value]],
-          });
-        }
-      }
-      if (dateData.length > 0) {
-        await sheets.spreadsheets.values.batchUpdate({
-          spreadsheetId: opts.spreadsheetId,
-          requestBody: { valueInputOption: "USER_ENTERED", data: dateData },
-        });
-      }
     }
     if (appends.length > 0) {
       await sheets.spreadsheets.values.append({
