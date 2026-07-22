@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import PersonnelTableClient from "./PersonnelTableClient";
+import SyncSheetNowButton from "./SyncSheetNowButton";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default async function PersonnelPage() {
         </div>
       </div>
       <PersonnelTableClient
-        headerExtras={null}
+        headerExtras={<SyncSheetNowButton />}
         persons={persons.map((person) => ({
           id: person.id,
           name: person.name,
