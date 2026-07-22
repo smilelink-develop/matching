@@ -1,18 +1,19 @@
 /**
- * 全候補者を SYNC_SHEET_URL の「DB」シートに書き出す admin エンドポイント。
+ * 系の候補者を SYNC_SHEET_URL の「DB」シートに 差分同期 する admin エンドポイント。
  *
- * GET  /api/admin/sync-candidates-to-sheet             ← ドライラン (件数と先頭 3 行のプレビューだけ)
- * GET  /api/admin/sync-candidates-to-sheet?apply=1     ← 本実行 (ヘッダ 2 行目, データ 3 行目 以降を全上書き)
- * GET  /api/admin/sync-candidates-to-sheet?sheet=名前  ← 別シートを指定して上書き (旧: !バックアップ! など)
+ * GET  /api/admin/sync-candidates-to-sheet             ← ドライラン (更新/追記の予定件数だけ返す)
+ * GET  /api/admin/sync-candidates-to-sheet?apply=1     ← 本実行
+ * GET  /api/admin/sync-candidates-to-sheet?sheet=名前  ← 別シートを指定
  *
- * 同期先シートは lib/sheets-sync.ts の SYNC_SHEET_TAB_NAME で管理 (`DB`)。
+ * 差分同期なので、スプシにしか無い旧データ (Google フォーム時代の行など) は消えない。
+ * 詳細は lib/sheets-sync.ts のヘッダコメントを参照。
  */
 
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
 import {
   parseSheetIdFromUrl,
-  syncAllCandidatesFullOverwrite,
+  syncCandidatesUpsert,
   SYNC_SHEET_TAB_NAME,
   type PersonForSync,
 } from "@/lib/sheets-sync";
@@ -85,7 +86,7 @@ export async function GET(req: Request) {
     });
     const candidates: PersonForSync[] = rawPersons;
 
-    const result = await syncAllCandidatesFullOverwrite({
+    const result = await syncCandidatesUpsert({
       opts: { spreadsheetId, sheetName, apply },
       candidates,
     });

@@ -1,15 +1,20 @@
 /**
  * Google Sheets 同期ヘルパー。
  *
- * 用途: 系 → スプシ の 一方向 同期 (系が真の情報源、スプシは閲覧用)。
+ * 用途: 系 → スプシ の 一方向 差分同期。
  *
  * 対象:
  *   環境変数 SYNC_SHEET_URL で指定された Google Sheets の
- *   「DB」シート (正規のメインシート)
+ *   「DB」シート (請求シート・管理シートが参照する正規のマスタ)
  *   ※旧: 「!バックアップ!」シート → 2026-07-09 に DB へ切替
  *
- * ⚠️ 全上書きなので、DB の A〜W 列 3 行目以降に手入力データがあれば消える。
- *    (G「推薦先企業」/ H「状況」は DealCandidate から導出するため、系が真の情報源)
+ * 同期方針 (2026-07-16 に全上書き → 差分更新へ変更):
+ *   - A 列の候補者 ID で行を突合する
+ *   - 既存行は、系に値がある列だけ書き換える。系が空欄の列は既存値を残す
+ *   - 系にいる新規候補者だけ末尾に追記する
+ *   - スプシにしか無い行 (旧 Google フォーム由来 / 「IDなし」/「5月」等の区切り行)
+ *     およびヘッダ行は 一切触らない
+ *   - X 列より右 (請求シート用の追加列など) も触らない
  *
  * 列構成 (23 列、既存 候補者データベース.xlsx の DB シートに準拠):
  *   A ID / B 追加日付 / C 候補者名 (英語) / D カタカナ名 / E 分野 /
@@ -224,7 +229,7 @@ export function buildCandidateRow(p: PersonForSync): (string | number)[] {
 }
 
 // ============================================================
-// 同期の実行
+// 同期の実行 (差分更新 / upsert 方式)
 // ============================================================
 
 export type SyncOptions = {
@@ -237,19 +242,36 @@ export type SyncResult = {
   ok: boolean;
   apply: boolean;
   sheetName: string;
-  headerWritten: boolean;
-  rowsWritten: number;
   candidatesConsidered: number;
-  sampleRows: (string | number)[][];
+  /** 既存行のうち値が変わって更新した数 */
+  updated: number;
+  /** 新規に追記した数 */
+  appended: number;
+  /** 変更なしでスキップした数 */
+  unchanged: number;
+  /** 更新/追記のプレビュー (先頭 5 件) */
+  sampleChanges: { id: string; action: "update" | "append"; name: string }[];
   warnings: string[];
 };
 
+/** セル比較用の正規化 (undefined/null → "", 数値 → 文字列, trim) */
+function cellStr(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
+}
+
 /**
- * ヘッダを書き込み (2 行目)、その下 (3 行目〜) に全候補者を並べる。
- * 全上書き方式: 既存データはクリアしてから書き直す。
- * → 差分更新にすると複雑度が上がるので、初期実装はシンプルに丸ごと書き直す。
+ * 系 → スプシ DB の差分同期。
+ *
+ * 方針 (全上書きはしない):
+ *   - スプシの A 列 (候補者 ID) と系の Person.id (4桁 0 埋め) で行を突合
+ *   - 既存行: 系に値がある列だけ書き換える (系が空欄の列は既存値を残す)。
+ *     変化がなければその行は一切触らない
+ *   - 系にいる新規候補者: 末尾に追記
+ *   - スプシにしかない行 (旧 Google フォーム由来 / 「IDなし」/「5月」等の区切り行):
+ *     一切触らない
  */
-export async function syncAllCandidatesFullOverwrite(args: {
+export async function syncCandidatesUpsert(args: {
   opts: SyncOptions;
   candidates: PersonForSync[];
 }): Promise<SyncResult> {
@@ -264,56 +286,88 @@ export async function syncAllCandidatesFullOverwrite(args: {
     throw new Error(`スプシ内にシート「${sheetName}」が見つかりません`);
   }
 
-  // マッピング
-  const rows = candidates.map((p) => buildCandidateRow(p));
+  // 既存の全行を読む (A〜W)
+  const existingRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: opts.spreadsheetId,
+    range: `${quoteSheetName(sheetName)}!A:W`,
+  });
+  const existingRows: string[][] = (existingRes.data.values ?? []) as string[][];
 
-  if (!opts.apply) {
-    return {
-      ok: true,
-      apply: false,
-      sheetName,
-      headerWritten: false,
-      rowsWritten: 0,
-      candidatesConsidered: candidates.length,
-      sampleRows: rows.slice(0, 3),
-      warnings,
-    };
+  // ID (4桁 0 埋め) → シート行番号 (1-based)。データは 3 行目以降のみ対象。
+  // 数字だけの ID の行だけマッチ対象にする ("IDなし" や "5月" の区切り行は自然と外れる)
+  const idToRowNumber = new Map<string, number>();
+  for (let i = DATA_START_ROW - 1; i < existingRows.length; i++) {
+    const rawId = cellStr(existingRows[i]?.[0]);
+    if (/^\d{1,6}$/.test(rawId)) {
+      const key = rawId.padStart(4, "0");
+      if (!idToRowNumber.has(key)) idToRowNumber.set(key, i + 1);
+      else warnings.push(`スプシに ID ${key} の行が複数あります (行 ${idToRowNumber.get(key)} を使用)`);
+    }
   }
 
-  // ヘッダ書き込み (2 行目)
-  const headerRange = `${quoteSheetName(sheetName)}!A${HEADER_ROW}:W${HEADER_ROW}`;
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: opts.spreadsheetId,
-    range: headerRange,
-    valueInputOption: "RAW",
-    requestBody: { values: [SYNC_HEADERS] },
-  });
+  const updates: { range: string; values: (string | number)[][] }[] = [];
+  const appends: (string | number)[][] = [];
+  const sampleChanges: { id: string; action: "update" | "append"; name: string }[] = [];
+  let unchanged = 0;
 
-  // データ範囲を一旦クリア (3 行目以降、A〜W)
-  const dataRange = `${quoteSheetName(sheetName)}!A${DATA_START_ROW}:W`;
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId: opts.spreadsheetId,
-    range: dataRange,
-  });
+  for (const p of candidates) {
+    const systemRow = buildCandidateRow(p);
+    const idStr = formatPersonIdPrefix(p.id);
+    const rowNumber = idToRowNumber.get(idStr);
 
-  // データ書き込み
-  if (rows.length > 0) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: opts.spreadsheetId,
-      range: `${quoteSheetName(sheetName)}!A${DATA_START_ROW}:W${DATA_START_ROW + rows.length - 1}`,
-      valueInputOption: "RAW",
-      requestBody: { values: rows },
-    });
+    if (rowNumber) {
+      const existing = existingRows[rowNumber - 1] ?? [];
+      // 列単位マージ: 系に値があればそれを採用、系が空欄なら既存値を残す
+      const merged: (string | number)[] = systemRow.map((v, col) => {
+        const sys = cellStr(v);
+        return sys !== "" ? v : (existing[col] ?? "");
+      });
+      const changed = merged.some((v, col) => cellStr(v) !== cellStr(existing[col]));
+      if (changed) {
+        updates.push({
+          range: `${quoteSheetName(sheetName)}!A${rowNumber}:W${rowNumber}`,
+          values: [merged],
+        });
+        if (sampleChanges.length < 5) sampleChanges.push({ id: idStr, action: "update", name: p.name });
+      } else {
+        unchanged++;
+      }
+    } else {
+      appends.push(systemRow);
+      if (sampleChanges.length < 5) sampleChanges.push({ id: idStr, action: "append", name: p.name });
+    }
+  }
+
+  if (opts.apply) {
+    if (updates.length > 0) {
+      await sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: opts.spreadsheetId,
+        requestBody: {
+          valueInputOption: "RAW",
+          data: updates.map((u) => ({ range: u.range, values: u.values })),
+        },
+      });
+    }
+    if (appends.length > 0) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: opts.spreadsheetId,
+        range: `${quoteSheetName(sheetName)}!A:W`,
+        valueInputOption: "RAW",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: appends },
+      });
+    }
   }
 
   return {
     ok: true,
-    apply: true,
+    apply: opts.apply,
     sheetName,
-    headerWritten: true,
-    rowsWritten: rows.length,
     candidatesConsidered: candidates.length,
-    sampleRows: rows.slice(0, 3),
+    updated: updates.length,
+    appended: appends.length,
+    unchanged,
+    sampleChanges,
     warnings,
   };
 }

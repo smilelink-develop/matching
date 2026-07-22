@@ -13,7 +13,7 @@
 import { prisma } from "@/lib/prisma";
 import {
   parseSheetIdFromUrl,
-  syncAllCandidatesFullOverwrite,
+  syncCandidatesUpsert,
   SYNC_SHEET_TAB_NAME,
   type PersonForSync,
 } from "@/lib/sheets-sync";
@@ -89,7 +89,7 @@ export async function GET(req: Request) {
   const candidates: PersonForSync[] = rawPersons;
 
   try {
-    const result = await syncAllCandidatesFullOverwrite({
+    const result = await syncCandidatesUpsert({
       opts: { spreadsheetId, sheetName: SYNC_SHEET_TAB_NAME, apply: true },
       candidates,
     });
