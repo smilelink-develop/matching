@@ -236,6 +236,8 @@ export type SyncOptions = {
   spreadsheetId: string;
   sheetName?: string; // デフォルト SYNC_SHEET_TAB_NAME
   apply: boolean; // false ならドライラン
+  /** sampleChanges に含める件数 (デフォルト 5) */
+  sampleLimit?: number;
 };
 
 export type SyncResult = {
@@ -249,8 +251,16 @@ export type SyncResult = {
   appended: number;
   /** 変更なしでスキップした数 */
   unchanged: number;
-  /** 更新/追記のプレビュー (先頭 5 件) */
-  sampleChanges: { id: string; action: "update" | "append"; name: string }[];
+  /** 更新/追記のプレビュー (先頭 sampleLimit 件)。列ごとの before/after 付き */
+  sampleChanges: {
+    id: string;
+    action: "update" | "append";
+    name: string;
+    row?: number;
+    diffs?: { column: string; before: string; after: string }[];
+  }[];
+  /** 列ごとの変更件数 (どの列が原因で更新が多いのか把握する用) */
+  changesByColumn: Record<string, number>;
   warnings: string[];
 };
 
@@ -307,7 +317,9 @@ export async function syncCandidatesUpsert(args: {
 
   const updates: { range: string; values: (string | number)[][] }[] = [];
   const appends: (string | number)[][] = [];
-  const sampleChanges: { id: string; action: "update" | "append"; name: string }[] = [];
+  const sampleChanges: SyncResult["sampleChanges"] = [];
+  const changesByColumn: Record<string, number> = {};
+  const sampleLimit = opts.sampleLimit ?? 5;
   let unchanged = 0;
 
   for (const p of candidates) {
@@ -322,19 +334,38 @@ export async function syncCandidatesUpsert(args: {
         const sys = cellStr(v);
         return sys !== "" ? v : (existing[col] ?? "");
       });
-      const changed = merged.some((v, col) => cellStr(v) !== cellStr(existing[col]));
-      if (changed) {
+      const diffs: { column: string; before: string; after: string }[] = [];
+      merged.forEach((v, col) => {
+        const before = cellStr(existing[col]);
+        const after = cellStr(v);
+        if (before !== after) {
+          const column = (SYNC_HEADERS[col] ?? `列${col + 1}`).replace(/\n/g, "");
+          diffs.push({ column, before, after });
+          changesByColumn[column] = (changesByColumn[column] ?? 0) + 1;
+        }
+      });
+      if (diffs.length > 0) {
         updates.push({
           range: `${quoteSheetName(sheetName)}!A${rowNumber}:W${rowNumber}`,
           values: [merged],
         });
-        if (sampleChanges.length < 5) sampleChanges.push({ id: idStr, action: "update", name: p.name });
+        if (sampleChanges.length < sampleLimit) {
+          sampleChanges.push({
+            id: idStr,
+            action: "update",
+            name: p.name,
+            row: rowNumber,
+            diffs,
+          });
+        }
       } else {
         unchanged++;
       }
     } else {
       appends.push(systemRow);
-      if (sampleChanges.length < 5) sampleChanges.push({ id: idStr, action: "append", name: p.name });
+      if (sampleChanges.length < sampleLimit) {
+        sampleChanges.push({ id: idStr, action: "append", name: p.name });
+      }
     }
   }
 
@@ -368,6 +399,7 @@ export async function syncCandidatesUpsert(args: {
     appended: appends.length,
     unchanged,
     sampleChanges,
+    changesByColumn,
     warnings,
   };
 }

@@ -28,6 +28,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const apply = searchParams.get("apply") === "1";
     const sheetName = searchParams.get("sheet") ?? SYNC_SHEET_TAB_NAME;
+    // ?sample=20 で差分プレビューの件数を増やせる (最大 50)
+    const sampleLimit = Math.max(1, Math.min(50, Number(searchParams.get("sample") ?? 5)));
 
     const sheetUrl = process.env.SYNC_SHEET_URL?.trim();
     if (!sheetUrl) {
@@ -87,7 +89,7 @@ export async function GET(req: Request) {
     const candidates: PersonForSync[] = rawPersons;
 
     const result = await syncCandidatesUpsert({
-      opts: { spreadsheetId, sheetName, apply },
+      opts: { spreadsheetId, sheetName, apply, sampleLimit },
       candidates,
     });
 
