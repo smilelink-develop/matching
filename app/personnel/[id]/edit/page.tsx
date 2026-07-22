@@ -11,6 +11,13 @@ import DriveActionsPanel from "./DriveActionsPanel";
 import PhotoPanel from "./PhotoPanel";
 import CreateResumeButton from "./CreateResumeButton";
 import IntakeLinkButton from "./IntakeLinkButton";
+import PreparationPanel, { type PreparationState } from "./PreparationPanel";
+import {
+  LOCATION_QUESTION_KEY,
+  buildInterviewSections,
+  parseLocationAnswer,
+  type InterviewQuestion,
+} from "@/lib/interview-questions";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +79,54 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
     sixMonthStatus: placement?.sixMonthStatus ?? null,
     consultation: placement?.consultation ?? null,
     currentAction: placement?.currentAction ?? null,
+  };
+
+  // ── 事前面談の準備 ステータスを計算 ──
+  const rp = person.resumeProfile;
+  const interviewAnswers: Record<string, string> =
+    rp?.interviewAnswers && typeof rp.interviewAnswers === "object"
+      ? (rp.interviewAnswers as Record<string, string>)
+      : {};
+
+  const isQuestionAnswered = (q: InterviewQuestion): boolean => {
+    if (q.existingField) return ((rp?.[q.existingField] as string | null) ?? "").trim().length > 0;
+    return (interviewAnswers[q.jsonKey ?? q.key] ?? "").trim().length > 0;
+  };
+
+  const mustQuestions = buildInterviewSections({
+    priority: "must",
+    ctx: {
+      residenceStatus: person.residenceStatus,
+      location: parseLocationAnswer(interviewAnswers[LOCATION_QUESTION_KEY]),
+    },
+  }).flatMap((s) => s.questions);
+  const unansweredMust = mustQuestions.filter((q) => !isQuestionAnswered(q));
+
+  // AI 抽出等で埋まっている主要項目数 (表示用)
+  const extractedFieldCount = [
+    person.onboarding?.englishName,
+    person.onboarding?.birthDate,
+    person.onboarding?.address,
+    person.onboarding?.phoneNumber,
+    rp?.gender,
+    rp?.visaExpiryDate,
+    rp?.japaneseLevel,
+    rp?.highSchoolName,
+    rp?.universityName,
+    rp?.motivation,
+    rp?.selfIntroduction,
+    rp?.currentJob,
+  ].filter((v) => typeof v === "string" && v.trim().length > 0).length;
+
+  const preparationState: PreparationState = {
+    resumeImported: Boolean(rp?.resumeFileUrl) || extractedFieldCount >= 5,
+    extractedFieldCount,
+    intakeIssued: Boolean(person.intakeToken),
+    intakeToken: person.intakeToken ?? null,
+    mustTotal: mustQuestions.length,
+    mustAnswered: mustQuestions.length - unansweredMust.length,
+    // 長すぎると横に溢れるので 5 件まで
+    unansweredLabels: unansweredMust.slice(0, 5).map((q) => shortLabel(q.question)),
   };
 
   return (
@@ -193,6 +248,8 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
             }
           />
 
+          <PreparationPanel personName={person.name} state={preparationState} />
+
           <EditPersonForm
             person={person}
             partners={partners}
@@ -231,4 +288,10 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
       </div>
     </div>
   );
+}
+
+/** 質問文をチップ表示用に短くする (「?」以降や補足括弧を落とす) */
+function shortLabel(question: string): string {
+  const cut = question.split(/[？?（(]/)[0].trim();
+  return cut.length > 16 ? `${cut.slice(0, 16)}…` : cut;
 }
