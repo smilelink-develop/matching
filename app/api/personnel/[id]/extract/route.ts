@@ -11,6 +11,7 @@ import {
   buildPersonAssetName,
   buildPersonFolderName,
   ensurePersonDriveFolder,
+  trashOldAssetVersions,
   uploadDataUrlToDrive,
 } from "@/lib/google-docs";
 import mammoth from "mammoth";
@@ -228,12 +229,27 @@ export async function POST(req: Request, { params }: { params: Params }) {
           suggestion.source === "unknown"
             ? file.fileName.replace(/\.[^.]+$/, "")
             : suggestion.label;
+        const namePrefix = buildPersonAssetName({ person: personForName, assetName });
         const uploaded = await uploadDataUrlToDrive({
           dataUrl: file.dataUrl,
-          fileName: `${buildPersonAssetName({ person: personForName, assetName })}${ext}`,
+          fileName: `${namePrefix}${ext}`,
           folderUrl: folderUrl!,
         });
         const fileId = extractDriveFileId(uploaded.fileUrl);
+
+        // 同じ書類の古いバージョンをゴミ箱へ (Drive に重複が溜まるのを防ぐ)。
+        // 分類できなかったファイルは元のファイル名のままなので対象外にする
+        // (別書類を巻き込んで消す恐れがあるため)
+        if (suggestion.source !== "unknown" && uploaded.fileId) {
+          const { failures } = await trashOldAssetVersions({
+            folderUrl: folderUrl!,
+            namePrefix,
+            keepFileId: uploaded.fileId,
+          });
+          if (failures.length > 0) {
+            console.warn(`[extract] 旧ファイルの整理に一部失敗 (${namePrefix}):`, failures.join(" / "));
+          }
+        }
         uploadedFiles.push({
           fileName: file.fileName,
           originalFileName: file.fileName,
@@ -279,13 +295,13 @@ export async function POST(req: Request, { params }: { params: Params }) {
       }
     }
 
-    // 履歴書ファイル本体の URL を ResumeProfile.resumeFileUrl に保存。
-    // 優先順位: ファイル名に "履歴書" を含むもの → 最初のアップロードファイル。
-    // 同時に Person.photoUrl が未設定なら、Drive サムネ URL を photoUrl に設定。
-    // (PDF はページ 1 サムネ、画像は画像そのまま — bulk-add と同じ挙動)
     if (uploadedFiles.length > 0) {
+      // 履歴書本体の URL を ResumeProfile.resumeFileUrl に保存。
+      // 分類結果 (kind=resume) を最優先し、無ければファイル名、最後に先頭ファイル
       const resumeFile =
-        uploadedFiles.find((f) => /履歴書|resume|cv/i.test(f.fileName)) ?? uploadedFiles[0];
+        uploadedFiles.find((f) => f.suggestedKind === "resume") ??
+        uploadedFiles.find((f) => /履歴書|resume|cv/i.test(f.fileName)) ??
+        uploadedFiles[0];
       try {
         await prisma.resumeProfile.upsert({
           where: { personId },
@@ -295,9 +311,15 @@ export async function POST(req: Request, { params }: { params: Params }) {
       } catch {
         // resumeFileUrl の保存失敗は致命ではないのでサイレント
       }
-      // Person.photoUrl が空ならサムネ URL を設定 (既存の写真は上書きしない)
-      if (!person.photoUrl) {
-        const thumb = toDriveThumbUrl(resumeFile.fileUrl);
+
+      // 顔写真として分類されたファイルがあれば Person.photoUrl を差し替える。
+      // 候補者詳細からの写真アップロードと挙動を揃えるため、既存の写真も上書きする
+      // (以前は「未設定のときだけ」かつ 履歴書 のサムネを使っており、
+      //  AI 取込で顔写真を入れても一覧に反映されなかった)
+      const photoFile = uploadedFiles.find((f) => f.suggestedKind === "photo");
+      const photoSource = photoFile ?? (person.photoUrl ? null : resumeFile);
+      if (photoSource) {
+        const thumb = toDriveThumbUrl(photoSource.fileUrl);
         if (thumb) {
           try {
             await prisma.person.update({

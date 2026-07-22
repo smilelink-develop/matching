@@ -746,3 +746,63 @@ export async function uploadDataUrlToDrive({
     mimeType,
   };
 }
+
+/**
+ * 同じ書類の 古いバージョン をゴミ箱に移す。
+ *
+ * 書類は "{ID}_{名前}_{書類名}.ext" という規約で保存しているので、
+ * namePrefix ("0275_KODAI TEST_顔写真") で始まるファイルは同じ書類の別バージョン。
+ * 新しくアップロードしたファイル (keepFileId) 以外を trashed にする。
+ *
+ * files.delete は所有権が必要で失敗しやすいため、files.update({trashed:true}) を使う
+ * (Service Account に編集権限さえあれば通る)。
+ * 失敗しても致命的ではないので、エラーは配列で返して呼び出し側の判断に委ねる。
+ */
+export async function trashOldAssetVersions({
+  folderUrl,
+  namePrefix,
+  keepFileId,
+}: {
+  folderUrl: string;
+  namePrefix: string;
+  keepFileId: string;
+}): Promise<{ trashed: number; failures: string[] }> {
+  const failures: string[] = [];
+  const folderId = parseGoogleDriveFolderId(folderUrl);
+  if (!folderId) return { trashed: 0, failures: ["フォルダ ID を解決できません"] };
+
+  const { drive } = await getGoogleClients();
+  const idsToTrash: string[] = [];
+  try {
+    // name contains は日本語 + 記号で誤動作するため、フォルダ内を列挙して JS 側で判定する
+    const listed = await drive.files.list({
+      q: `'${folderId}' in parents and trashed = false`,
+      fields: "files(id,name)",
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      pageSize: 1000,
+    });
+    for (const f of listed.data.files ?? []) {
+      if (!f.id || f.id === keepFileId) continue;
+      if (typeof f.name === "string" && f.name.startsWith(namePrefix)) idsToTrash.push(f.id);
+    }
+  } catch (e) {
+    failures.push(`list: ${e instanceof Error ? e.message : "error"}`);
+    return { trashed: 0, failures };
+  }
+
+  let trashed = 0;
+  for (const fileId of idsToTrash) {
+    try {
+      await drive.files.update({
+        fileId,
+        requestBody: { trashed: true },
+        supportsAllDrives: true,
+      });
+      trashed++;
+    } catch (e) {
+      failures.push(`${fileId}: ${e instanceof Error ? e.message : "error"}`);
+    }
+  }
+  return { trashed, failures };
+}
