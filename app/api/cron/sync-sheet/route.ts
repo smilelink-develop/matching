@@ -4,10 +4,12 @@
  * Railway 側で Scheduled Job / GitHub Actions cron などから毎正時に叩く想定:
  *   GET /api/cron/sync-sheet
  *
- * 認証: CRON_SECRET が設定されている場合、Authorization: Bearer <CRON_SECRET>
- *      か ?secret=<CRON_SECRET> で認証。未設定なら誰でも実行可 (開発用)。
+ * 認証: Authorization: Bearer <CRON_SECRET> または ?secret=<CRON_SECRET>。
+ *      本番 (NODE_ENV=production) では CRON_SECRET 必須。未設定なら 401 を返して実行しない。
+ *      開発時のみ未設定で実行可。
+ *      ※このパスは proxy.ts でログイン不要にしているため、ここが唯一の防御線。
  *
- * 動作: sync-candidates-to-sheet の apply=1 相当を無認証で実行。
+ * 動作: 系で変更があった候補者だけをスプシに反映する (apply=1 相当)。
  */
 
 import { prisma } from "@/lib/prisma";
@@ -22,19 +24,34 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-function verifySecret(req: Request): boolean {
+/**
+ * 認証結果。
+ *   ok        … 実行してよい
+ *   reason    … 失敗理由 (ログ/レスポンス用)
+ *
+ * このパスは proxy.ts でログイン不要にしているため、
+ * 本番では CRON_SECRET を必須にする (未設定なら実行させない)。
+ */
+function verifySecret(req: Request): { ok: boolean; reason?: string } {
   const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return true; // 未設定なら認証スキップ (開発用)
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      return { ok: false, reason: "CRON_SECRET が未設定です (本番では必須)" };
+    }
+    return { ok: true }; // 開発時のみ認証スキップ
+  }
   const auth = req.headers.get("authorization") ?? "";
   const bearer = auth.replace(/^Bearer\s+/i, "");
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("secret");
-  return bearer === secret || q === secret;
+  if (bearer === secret || q === secret) return { ok: true };
+  return { ok: false, reason: "unauthorized" };
 }
 
 export async function GET(req: Request) {
-  if (!verifySecret(req)) {
-    return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  const auth = verifySecret(req);
+  if (!auth.ok) {
+    return Response.json({ ok: false, error: auth.reason ?? "unauthorized" }, { status: 401 });
   }
 
   const sheetUrl = process.env.SYNC_SHEET_URL?.trim();

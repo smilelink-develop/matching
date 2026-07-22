@@ -16,6 +16,9 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/api/line/webhook") ||
     pathname.startsWith("/api/messenger/webhook") ||
     pathname.startsWith("/api/whatsapp/webhook") ||
+    // 定期実行 (GitHub Actions 等の外部 cron から呼ばれる) はログインセッションを持てない。
+    // ハンドラ側で CRON_SECRET (Authorization: Bearer) により保護する。
+    pathname.startsWith("/api/cron/") ||
     // 候補者向け公開フォーム (intake) は token 認証で動作するため未ログイン可
     pathname.startsWith("/intake/") ||
     pathname.startsWith("/api/intake/") ||
