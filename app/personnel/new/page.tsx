@@ -49,12 +49,13 @@ export default function NewPersonnelPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.englishName.trim()) { alert("英語名を入力してください"); return; }
+    if (!form.name.trim()) { alert("カタカナ名を入力してください"); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/personnel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, name: form.name.trim() || form.englishName.trim() }),
+        body: JSON.stringify({ ...form, name: form.name.trim() }),
       });
       const data = await res.json();
       if (!data.ok) { alert(`登録失敗: ${data.error}`); return; }
@@ -80,8 +81,8 @@ export default function NewPersonnelPage() {
         <Field label="英語名 *">
           <input className={INPUT} value={form.englishName} onChange={(e) => set("englishName", e.target.value)} placeholder="NGUYEN VAN AN" />
         </Field>
-        <Field label="カタカナ名">
-          <input className={INPUT} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="グエン ヴァン アン (任意)" />
+        <Field label="カタカナ名 *">
+          <input className={INPUT} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="グエン ヴァン アン" />
         </Field>
         <Field label="紹介パートナー">
           <SearchableSelect

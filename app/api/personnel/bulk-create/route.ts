@@ -11,7 +11,12 @@
 
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireApiAccount } from "@/lib/auth";
-import { NATIONALITIES, RESIDENCE_STATUSES, CHANNELS } from "@/lib/candidate-profile";
+import {
+  NATIONALITIES,
+  RESIDENCE_STATUSES,
+  CHANNELS,
+  REGISTRANT_OPTIONS,
+} from "@/lib/candidate-profile";
 import {
   ensurePersonDriveFolder,
   buildPersonAssetName,
@@ -27,6 +32,8 @@ type BulkCandidate = {
   nationality?: string | null;
   residenceStatus?: string | null;
   channel?: string | null;
+  /** 登録者 (固定リストのいずれか)。一括登録画面で全件共通に指定する */
+  registeredBy?: string | null;
   email?: string | null;
   phoneNumber?: string | null;
   partnerId?: number | null;
@@ -94,6 +101,13 @@ function normalizeChannel(v: string | null | undefined): string {
   const t = s(v);
   if (!t) return "未設定";
   return CHANNELS.some((c) => c.value === t) ? t : "未設定";
+}
+
+/** 登録者は固定リストのみ許可。想定外の値は null (未設定) にする */
+function normalizeRegistrant(v: unknown): string | null {
+  const t = s(typeof v === "string" ? v : "");
+  if (!t) return null;
+  return (REGISTRANT_OPTIONS as readonly string[]).includes(t) ? t : null;
 }
 
 /**
@@ -172,6 +186,7 @@ export async function POST(req: Request) {
             channel: normalizeChannel(c.channel),
             partnerId: typeof c.partnerId === "number" ? c.partnerId : null,
             email: s(c.email) || null,
+            registeredBy: normalizeRegistrant(c.registeredBy),
             onboarding: {
               create: {
                 englishName: s(c.englishName),

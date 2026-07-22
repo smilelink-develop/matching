@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CHANNELS, NATIONALITIES, RESIDENCE_STATUSES } from "@/lib/candidate-profile";
+import {
+  CHANNELS,
+  NATIONALITIES,
+  REGISTRANT_OPTIONS,
+  RESIDENCE_STATUSES,
+  inferRegistrantFromAccount,
+} from "@/lib/candidate-profile";
 import SearchableSelect from "@/app/components/SearchableSelect";
 
 type Partner = { id: number; name: string; country: string | null };
@@ -80,6 +86,9 @@ const MAX_FILES = 10;
 export default function BulkAddClient({ partners }: { partners: Partner[] }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // ドラッグ中の見た目切り替え用。dragDepth は子要素をまたぐ際のちらつき防止
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
 
   const [files, setFiles] = useState<File[]>([]);
   const [extracting, setExtracting] = useState(false);
@@ -88,7 +97,24 @@ export default function BulkAddClient({ partners }: { partners: Partner[] }) {
   const [extractFailures, setExtractFailures] = useState<{ fileName: string; error: string }[]>([]);
   const [creating, setCreating] = useState(false);
   const [bulkPartnerId, setBulkPartnerId] = useState<string>("");
-  const [bulkChannel, setBulkChannel] = useState<string>("未設定");
+  // 連絡手段は登録後に候補者詳細で設定するため、この画面では聞かない
+  const bulkChannel = "未設定";
+  // 登録者。ログイン中のアカウントから推定して初期値にする
+  const [registeredBy, setRegisteredBy] = useState<string>("");
+
+  useEffect(() => {
+    void fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const inferred = inferRegistrantFromAccount({
+          name: d?.account?.name,
+          loginId: d?.account?.loginId,
+        });
+        // ユーザーが既に選び直していたら上書きしない
+        if (inferred) setRegisteredBy((current) => current || inferred);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const handleFilePick = (picked: FileList | null) => {
     if (!picked || picked.length === 0) return;
@@ -194,6 +220,7 @@ export default function BulkAddClient({ partners }: { partners: Partner[] }) {
             nationality: c.nationality,
             residenceStatus: c.residenceStatus,
             channel: c.channel,
+            registeredBy: registeredBy || null,
             email: c.email,
             phoneNumber: c.phoneNumber,
             partnerId: c.partnerId,
@@ -266,11 +293,38 @@ export default function BulkAddClient({ partners }: { partners: Partner[] }) {
           )}
         </div>
 
+        {/*
+          ドラッグ中は枠線・背景・拡大でドロップ先を明示する。
+          子要素をまたぐと dragleave が発火してちらつくため、
+          カウンタで「本当に領域から出たか」を判定する。
+        */}
         <label
-          className="block border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[var(--color-primary)] hover:bg-[var(--color-light)]"
-          onDragOver={(e) => e.preventDefault()}
+          className={`block rounded-xl p-8 text-center cursor-pointer border-2 border-dashed transition-all duration-150 ${
+            dragging
+              ? "border-[var(--color-primary)] bg-[var(--color-light)] ring-4 ring-[var(--color-primary)]/20 scale-[1.01]"
+              : "border-gray-300 hover:border-[var(--color-primary)] hover:bg-[var(--color-light)]"
+          }`}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            dragDepth.current += 1;
+            setDragging(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            dragDepth.current -= 1;
+            if (dragDepth.current <= 0) {
+              dragDepth.current = 0;
+              setDragging(false);
+            }
+          }}
           onDrop={(e) => {
             e.preventDefault();
+            dragDepth.current = 0;
+            setDragging(false);
             handleFilePick(e.dataTransfer.files);
           }}
         >
@@ -285,10 +339,21 @@ export default function BulkAddClient({ partners }: { partners: Partner[] }) {
               e.target.value = "";
             }}
           />
-          <p className="text-sm text-gray-600">
-            📥 ここにファイルをドラッグ&ドロップ、または<span className="text-[var(--color-primary)] font-medium">クリックして選択</span>
-          </p>
-          <p className="text-xs text-gray-400 mt-1">PDF / JPG / PNG, 1 ファイル 15MB まで, 最大 {MAX_FILES} 件</p>
+          {dragging ? (
+            <>
+              <p className="text-sm font-semibold text-[var(--color-primary)]">
+                ここにドロップしてください
+              </p>
+              <p className="text-xs text-[var(--color-primary)]/70 mt-1">指を離すと追加されます</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                📥 ここにファイルをドラッグ&ドロップ、または<span className="text-[var(--color-primary)] font-medium">クリックして選択</span>
+              </p>
+              <p className="text-xs text-gray-400 mt-1">PDF / JPG / PNG, 1 ファイル 15MB まで, 最大 {MAX_FILES} 件</p>
+            </>
+          )}
         </label>
 
         {files.length > 0 && (
@@ -322,15 +387,16 @@ export default function BulkAddClient({ partners }: { partners: Partner[] }) {
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-600">主な連絡手段 (全件共通の初期値)</label>
+            <label className="text-xs font-medium text-gray-600">登録者 (全件共通)</label>
             <select
-              value={bulkChannel}
-              onChange={(e) => setBulkChannel(e.target.value)}
+              value={registeredBy}
+              onChange={(e) => setRegisteredBy(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm mt-1"
             >
-              {CHANNELS.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
+              <option value="">選択してください</option>
+              {REGISTRANT_OPTIONS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
                 </option>
               ))}
             </select>
