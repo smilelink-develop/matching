@@ -371,6 +371,104 @@ export function hasSystemChange(p: PersonForSync): boolean {
 }
 
 /**
+ * 過去の同期が文字列で書いてしまったセルを、シート本来の型 (数値 / 日付) に戻す。
+ * 表示される値は変えず、型だけを揃える。
+ *
+ * 対象は「A 列 (ID) が文字列になっている行」のみ。
+ * 元から文字列で運用している行 (「IDなし」「5月」等) は ID が数字ではないので対象外。
+ */
+export async function repairSheetCellTypes(args: {
+  spreadsheetId: string;
+  sheetName?: string;
+  apply: boolean;
+}): Promise<{
+  sheetName: string;
+  apply: boolean;
+  targetRows: number;
+  changedCells: number;
+  details: { row: number; id: string; cells: { column: string; from: string; to: string }[] }[];
+}> {
+  const sheetName = args.sheetName ?? SYNC_SHEET_TAB_NAME;
+  const sheets = await getSheetsClient();
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: args.spreadsheetId,
+    range: `${quoteSheetName(sheetName)}!A:W`,
+    valueRenderOption: "UNFORMATTED_VALUE",
+  });
+  const rows: unknown[][] = (res.data.values ?? []) as unknown[][];
+
+  // 数値で書くべき列: A ID / O 年齢
+  const NUMERIC_COLUMNS = [0, 14];
+
+  const updates: { range: string; values: (string | number)[][] }[] = [];
+  const details: { row: number; id: string; cells: { column: string; from: string; to: string }[] }[] = [];
+  let changedCells = 0;
+
+  for (let i = DATA_START_ROW - 1; i < rows.length; i++) {
+    const row = rows[i] ?? [];
+    const idCell = row[0];
+    // ID が文字列の数字 ("0269") の行だけが修復対象
+    if (typeof idCell !== "string") continue;
+    const idStr = idCell.trim();
+    if (!/^\d{1,6}$/.test(idStr)) continue;
+
+    const cells: { column: string; from: string; to: string }[] = [];
+    const newRow: (string | number)[] = [];
+    for (let col = 0; col < SYNC_HEADERS.length; col++) {
+      const cur = row[col];
+      const label = (SYNC_HEADERS[col] ?? `列${col + 1}`).replace(/\n/g, "");
+      let next: string | number = (cur ?? "") as string | number;
+
+      if (typeof cur === "string" && cur.trim() !== "") {
+        const t = cur.trim();
+        if ((DATE_COLUMN_INDEXES as readonly number[]).includes(col)) {
+          const serial = dateStringToSerial(t);
+          if (serial !== null) next = serial;
+        } else if (NUMERIC_COLUMNS.includes(col) && /^\d+$/.test(t)) {
+          next = Number(t);
+        }
+      }
+      newRow.push(next);
+
+      if (typeof cur !== typeof next && String(cur ?? "") !== String(next)) {
+        cells.push({
+          column: label,
+          from: `${typeof cur === "string" ? "文字列" : typeof cur} "${String(cur ?? "")}"`,
+          to: `${typeof next === "number" ? "数値" : "文字列"} ${JSON.stringify(next)}`,
+        });
+      }
+    }
+
+    if (cells.length === 0) continue;
+    changedCells += cells.length;
+    details.push({ row: i + 1, id: idStr.padStart(4, "0"), cells });
+    updates.push({
+      range: `${quoteSheetName(sheetName)}!A${i + 1}:W${i + 1}`,
+      values: [newRow],
+    });
+  }
+
+  if (args.apply && updates.length > 0) {
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: args.spreadsheetId,
+      requestBody: {
+        valueInputOption: "RAW",
+        data: updates.map((u) => ({ range: u.range, values: u.values })),
+      },
+    });
+  }
+
+  return {
+    sheetName,
+    apply: args.apply,
+    targetRows: updates.length,
+    changedCells,
+    details,
+  };
+}
+
+/**
  * ID 列 (A 列) の実データを診断する。書き込みは一切しない。
  * 数値セルと文字列セルの混在、重複 ID を洗い出す用。
  */
