@@ -15,6 +15,7 @@
  */
 
 import { Fragment, useEffect, useMemo, useState } from "react";
+import UnsavedChangesBar from "@/app/components/UnsavedChangesBar";
 
 type DealRow = {
   id: number;
@@ -542,7 +543,6 @@ function MonthlyTargetTable({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-[var(--color-text-dark)]">月次目標</h2>
         <div className="flex items-center gap-2">
-          {dirty ? <span className="text-[11px] text-[#92400E]">未保存の変更があります</span> : null}
           <button
             type="button"
             onClick={() => void save()}
@@ -553,6 +553,14 @@ function MonthlyTargetTable({
           </button>
         </div>
       </div>
+
+      {/* 未保存の変更があるときに画面下から出す保存バー (全画面共通) */}
+      <UnsavedChangesBar
+        visible={dirty}
+        saving={saving}
+        onSave={() => void save()}
+        saveLabel="目標を保存"
+      />
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-sm">
           <thead>

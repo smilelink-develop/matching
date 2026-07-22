@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CloseButton from "@/app/components/CloseButton";
+import UnsavedChangesBar from "@/app/components/UnsavedChangesBar";
 
 export const CONDITION_FIELDS: { key: string; label: string; group: string; multiline?: boolean }[] = [
   { key: "title", label: "タイトル", group: "基本" },
@@ -219,9 +220,13 @@ export default function ConditionsPanel({
           </div>
         </div>
 
-        {dirty ? (
-          <p className="mt-2 text-[11px] text-[#92400E]">未保存の変更があります</p>
-        ) : null}
+        {/* 未保存の変更があるときに画面下から出す保存バー (全画面共通) */}
+        <UnsavedChangesBar
+          visible={dirty}
+          saving={saving}
+          onSave={() => void save()}
+          saveLabel="条件を保存"
+        />
 
         <div className="mt-5 space-y-6">
           {FIELD_GROUPS.map((group) => {

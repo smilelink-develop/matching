@@ -12,6 +12,7 @@
 
 import { AuthError, requireApiAccount } from "@/lib/auth";
 import {
+  applySheetColumnFormats,
   parseSheetIdFromUrl,
   repairSheetCellTypes,
   SYNC_SHEET_TAB_NAME,
@@ -40,8 +41,15 @@ export async function GET(req: Request) {
       );
     }
 
+    // ?formats=1 … 値は触らず、列の表示形式だけを揃える
+    // (追記行に 0000 や日付書式が付かず「271」「46225」と表示される問題の対策)
+    if (searchParams.get("formats") === "1") {
+      const formatResult = await applySheetColumnFormats({ spreadsheetId, sheetName, apply });
+      return Response.json({ ok: true, mode: "formats", ...formatResult });
+    }
+
     const result = await repairSheetCellTypes({ spreadsheetId, sheetName, apply });
-    return Response.json({ ok: true, ...result });
+    return Response.json({ ok: true, mode: "values", ...result });
   } catch (error) {
     return Response.json(
       { ok: false, error: error instanceof Error ? error.message : "error" },

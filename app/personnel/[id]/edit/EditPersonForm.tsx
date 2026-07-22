@@ -14,6 +14,7 @@ import {
 } from "@/lib/candidate-profile";
 import { INTERVIEW_SECTIONS } from "@/lib/interview-questions";
 import SearchableSelect from "@/app/components/SearchableSelect";
+import UnsavedChangesBar from "@/app/components/UnsavedChangesBar";
 
 type Person = {
   id: number;
@@ -994,24 +995,11 @@ export default function EditPersonForm({
         </div>
       ) : null}
 
-      {/* 未保存の変更があるときに画面下から浮上してくる固定保存バー */}
-      {dirty && (activeSection === "basic" || activeSection === "visa") ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4 sm:pb-6">
-          <div className="pointer-events-auto flex w-full max-w-3xl items-center justify-between gap-3 rounded-full border border-[var(--color-primary)]/30 bg-white/95 px-5 py-3 shadow-2xl ring-1 ring-black/5 backdrop-blur transition-all">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-[#F59E0B]" />
-              <span className="font-medium text-[var(--color-text-dark)]">未保存の変更があります</span>
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-full bg-[var(--color-primary)] px-6 py-2 text-sm font-semibold text-white shadow-md hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
-            >
-              {submitting ? "保存中..." : "保存する"}
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {/* 未保存の変更があるときに画面下から出す保存バー (全画面共通) */}
+      <UnsavedChangesBar
+        visible={dirty && (activeSection === "basic" || activeSection === "visa")}
+        saving={submitting}
+      />
     </form>
   );
 }

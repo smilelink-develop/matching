@@ -371,6 +371,84 @@ export function hasSystemChange(p: PersonForSync): boolean {
 }
 
 /**
+ * DB シートの表示形式を列単位で揃える。
+ *
+ * 追記・貼り付けで増えた行には列の書式が付かず、
+ *   ID    … 271 (0271 にならない)
+ *   日付   … 46225 (シリアル値が生で見える)
+ * という表記ズレが起きる。データ範囲の書式を一括で設定して揃える。
+ *
+ * 値は一切変更しない。表示形式だけを設定する。
+ */
+export async function applySheetColumnFormats(args: {
+  spreadsheetId: string;
+  sheetName?: string;
+  apply: boolean;
+}): Promise<{
+  sheetName: string;
+  apply: boolean;
+  lastRow: number;
+  applied: { column: string; header: string; format: string }[];
+}> {
+  const sheetName = args.sheetName ?? SYNC_SHEET_TAB_NAME;
+  const sheets = await getSheetsClient();
+
+  const sheetId = await findSheetIdByName(sheets, args.spreadsheetId, sheetName);
+  if (sheetId === null) throw new Error(`スプシ内にシート「${sheetName}」が見つかりません`);
+
+  // データの最終行を調べる (A 列の長さ)
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: args.spreadsheetId,
+    range: `${quoteSheetName(sheetName)}!A:A`,
+  });
+  const lastRow = (res.data.values ?? []).length;
+  if (lastRow < DATA_START_ROW) {
+    return { sheetName, apply: args.apply, lastRow, applied: [] };
+  }
+
+  // 列 index → 表示形式
+  const FORMATS: { col: number; type: "NUMBER" | "DATE"; pattern: string }[] = [
+    { col: 0, type: "NUMBER", pattern: "0000" }, // A ID → 0271
+    { col: 1, type: "DATE", pattern: "yyyy/mm/dd" }, // B 追加日付
+    { col: 14, type: "NUMBER", pattern: "0" }, // O 年齢
+    { col: 15, type: "DATE", pattern: "yyyy/mm/dd" }, // P 生年月日
+    { col: 16, type: "DATE", pattern: "yyyy/mm/dd" }, // Q ビザ期限
+  ];
+
+  const requests = FORMATS.map((f) => ({
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: DATA_START_ROW - 1, // 0-based。ヘッダは含めない
+        endRowIndex: lastRow,
+        startColumnIndex: f.col,
+        endColumnIndex: f.col + 1,
+      },
+      cell: { userEnteredFormat: { numberFormat: { type: f.type, pattern: f.pattern } } },
+      fields: "userEnteredFormat.numberFormat",
+    },
+  }));
+
+  if (args.apply) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: args.spreadsheetId,
+      requestBody: { requests },
+    });
+  }
+
+  return {
+    sheetName,
+    apply: args.apply,
+    lastRow,
+    applied: FORMATS.map((f) => ({
+      column: String.fromCharCode("A".charCodeAt(0) + f.col),
+      header: (SYNC_HEADERS[f.col] ?? "").replace(/\n/g, ""),
+      format: f.pattern,
+    })),
+  };
+}
+
+/**
  * 過去の同期が文字列で書いてしまったセルを、シート本来の型 (数値 / 日付) に戻す。
  * 表示される値は変えず、型だけを揃える。
  *
@@ -426,23 +504,20 @@ export async function repairSheetCellTypes(args: {
       const colLetter = String.fromCharCode("A".charCodeAt(0) + col);
 
       if ((DATE_COLUMN_INDEXES as readonly number[]).includes(col)) {
-        // 日付列: 数値 (シリアル値) も文字列も "YYYY/MM/DD" に直して書き直す。
-        // 日付書式が無く 37318 のような生の数値が見えている状態を直すのが目的
-        const asDate =
-          typeof cur === "number" ? serialToDateString(cur) : toSheetDate(String(cur).trim());
-        if (!asDate) continue;
-        const display = typeof cur === "number" ? String(cur) : String(cur).trim();
-        // 既に "YYYY/MM/DD" の文字列で、かつ数値でもないなら日付型にしたいので書き直す。
-        // 表示が同じでも型が違う可能性があるため、日付として解釈できるものは全て書き直す
+        // 数値のセルは既に日付値として入っている (シリアル値)。
+        // 生の数値に見えるのは表示形式の問題なので、値は触らず
+        // applySheetColumnFormats で直す。ここでは文字列だけを日付型に変換する。
+        if (typeof cur === "number") continue;
+        const t = String(cur).trim();
+        const asDate = toSheetDate(t);
+        if (!asDate || dateStringToSerial(asDate) === null) continue;
         dateData.push({
           range: `${quoteSheetName(sheetName)}!${colLetter}${rowNo}`,
           values: [[asDate]],
         });
-        if (display !== asDate) {
-          cells.push({ column: label, from: `"${display}"`, to: `日付 ${asDate}` });
-          changedCells++;
-          changedRows.add(rowNo);
-        }
+        cells.push({ column: label, from: `文字列 "${t}"`, to: `日付 ${asDate}` });
+        changedCells++;
+        changedRows.add(rowNo);
         continue;
       }
 
